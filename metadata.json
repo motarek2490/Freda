@@ -1,0 +1,8 @@
+{
+  "name": "Remix Vowly",
+  "description": "An elegant platform for creating immersive, cinematic digital invitations for life\u0027s most memorable and meaningful occasions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

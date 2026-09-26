@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "farid",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-18",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "SITE_URL": "https://farid.invitationes.workers.dev",
+    "BRAND_NAME": "FRIDA",
+    "BRAND_NAME_AR": "فريدا"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

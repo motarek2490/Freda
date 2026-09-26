@@ -1,0 +1,203 @@
+{
+  "entities": {
+    "invitation": {
+      "title": "Public Invitation",
+      "description": "Public invitation metadata and event presentation visible to guests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "templateId": { "type": "string" },
+        "layoutType": { "type": "string" },
+        "title": { "type": "string" },
+        "language": { "type": "string" },
+        "themeStyle": { "type": "string" },
+        "customColors": { "type": "object" },
+        "customFont": { "type": "string" },
+        "eventDetails": { "type": "object" },
+        "status": { "type": "string", "enum": ["draft", "pending_approval", "published", "expired", "rejected"] },
+        "ownerUid": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "slug": { "type": "string" },
+        "rsvpCount": { "type": "number" },
+        "planTier": { "type": "string", "enum": ["basic", "royal_vip", "diamond"] },
+        "expiresAt": { "type": "string" },
+        "isExpired": { "type": "boolean" }
+      },
+      "required": ["id", "title", "status", "slug", "ownerUid"]
+    },
+    "invitation_private": {
+      "title": "Invitation Private Host Credentials",
+      "description": "Sensitive credentials and host access codes, readable strictly by admin and the ownerUid",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invitationId": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "hostUsername": { "type": "string" },
+        "hostPasswordHash": { "type": "string" },
+        "hostAccessCode": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "invitationId", "ownerUid"]
+    },
+    "rsvp": {
+      "title": "RSVP Confirmation",
+      "description": "Guest attendance confirmation response with contact data protected from public view",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invitationId": { "type": "string" },
+        "guestName": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["attending", "declined", "maybe"] },
+        "guestCount": { "type": "number" },
+        "plusOneName": { "type": "string", "maxLength": 120 },
+        "dietaryNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "invitationId", "guestName", "status", "guestCount"]
+    },
+    "wish": {
+      "title": "Guestbook Wish",
+      "description": "Congratulatory guestbook message, displayed publicly only after moderation approval",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invitationId": { "type": "string" },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "relationship": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "approved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "invitationId", "authorName", "message"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "Vodafone Cash activation order record with verification tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invitationId": { "type": "string" },
+        "invitationTitle": { "type": "string" },
+        "customerName": { "type": "string", "maxLength": 120 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "vodafoneCashSender": { "type": "string", "maxLength": 30 },
+        "transactionReference": { "type": "string", "maxLength": 100 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "planTier": { "type": "string", "enum": ["basic", "royal_vip", "diamond"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "reviewedAt": { "type": "string" },
+        "rejectionReason": { "type": "string" }
+      },
+      "required": ["id", "invitationId", "customerName", "customerPhone", "vodafoneCashSender", "status", "amount"]
+    },
+    "settings": {
+      "title": "Admin Settings",
+      "description": "Global platform settings including Vodafone Cash payment parameters",
+      "type": "object",
+      "properties": {
+        "siteTitle": { "type": "string" },
+        "vodafoneCashNumber": { "type": "string" },
+        "contactWhatsapp": { "type": "string" },
+        "basicPriceEGP": { "type": "number" },
+        "royalPriceEGP": { "type": "number" },
+        "diamondPriceEGP": { "type": "number" },
+        "metaDescription": { "type": "string" },
+        "ogTitle": { "type": "string" },
+        "ogDescription": { "type": "string" },
+        "ogImage": { "type": "string" }
+      },
+      "required": ["siteTitle", "vodafoneCashNumber", "contactWhatsapp"]
+    },
+    "music_track": {
+      "title": "Music Track",
+      "description": "Preset and admin custom background music track",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "category": { "type": "string" },
+        "url": { "type": "string" },
+        "duration": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "label", "url"]
+    },
+    "review": {
+      "title": "Platform Review",
+      "description": "Verified client testimonial; visible to public only when approved",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 800 },
+        "designTitle": { "type": "string" },
+        "invitationTitle": { "type": "string" },
+        "approved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "rating", "comment"]
+    },
+    "custom_template": {
+      "title": "Custom Template",
+      "description": "Admin custom designed invitation layout template",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "object" },
+        "description": { "type": "object" },
+        "category": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "layoutType": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "category", "coverImage"]
+    }
+  },
+  "firestore": {
+    "/invitations/{invitationId}": {
+      "schema": "invitation",
+      "description": "Public invitation documents readable individually by guests"
+    },
+    "/invitation_private/{invitationId}": {
+      "schema": "invitation_private",
+      "description": "Private credentials and host codes, readable only by admin and owner"
+    },
+    "/invitations/{invitationId}/rsvps/{rsvpId}": {
+      "schema": "rsvp",
+      "description": "Guest RSVP attendance records for an invitation, protected from public reads"
+    },
+    "/invitations/{invitationId}/wishes/{wishId}": {
+      "schema": "wish",
+      "description": "Guestbook wishes; public read only for approved messages"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Customer payment orders, submitted with pending status, managed exclusively by admin"
+    },
+    "/settings/{settingId}": {
+      "schema": "settings",
+      "description": "Platform settings and payment parameters, public read and admin write"
+    },
+    "/music_library/{trackId}": {
+      "schema": "music_track",
+      "description": "Preset background music catalog, public read and admin write"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "review",
+      "description": "User reviews and ratings, public visible only when approved"
+    },
+    "/custom_templates/{templateId}": {
+      "schema": "custom_template",
+      "description": "Curated custom templates created by admin"
+    }
+  }
+}

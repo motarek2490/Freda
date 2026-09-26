@@ -1,0 +1,48 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // 1. User images (Galleries, Groom/Bride photos, Covers)
+    match /users/{userId}/images/{fileName} {
+      allow read: if true;
+      allow write: if (isOwner(userId) || isAdmin()) &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp|jpg)');
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // 2. User audio tracks
+    match /users/{userId}/audio/{fileName} {
+      allow read: if true;
+      allow write: if (isOwner(userId) || isAdmin()) &&
+        request.resource.size < 15 * 1024 * 1024 &&
+        request.resource.contentType.matches('audio/(mpeg|mp3|wav|ogg|aac|x-m4a)');
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // 3. Admin shared music library catalog
+    match /library/audio/{fileName} {
+      allow read: if true;
+      allow write, delete: if isAdmin() &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        request.resource.contentType.matches('audio/(mpeg|mp3|wav|ogg|aac)');
+    }
+  }
+}

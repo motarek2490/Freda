@@ -1,0 +1,313 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // GLOBAL SECURITY HELPERS (Zero-Trust ABAC)
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email == 'mohammedtarek2490@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(ownerUid) {
+      return isSignedIn() && request.auth.uid == ownerUid;
+    }
+
+    function hostActive(invId) {
+      return isSignedIn() &&
+        request.auth.token.hostOf == invId &&
+        get(/databases/$(database)/documents/invitations/$(invId)).data.status != 'expired';
+    }
+
+    function isValidSlug(s) {
+      return s is string && s.size() >= 3 && s.size() <= 64 && s.matches('^[\\p{L}\\p{N}_-]{3,64}$');
+    }
+
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 1.2 /admins/{id} - System Administrators Collection
+    // =========================================================================
+    match /admins/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // 1.3 /invitations/{id} - Core Public/Client Invitations
+    // =========================================================================
+    match /invitations/{id} {
+      // Single doc public view (only published & non-expired invitations are publicly accessible)
+      allow get: if (
+        resource.data.status == 'published' &&
+        resource.data.isExpired != true
+      ) ||
+      isAdmin() ||
+      isOwner(resource.data.ownerUid) ||
+      hostActive(id);
+
+      // Collection list queries are restricted strictly to admins or owner's own items (max 50)
+      allow list: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.ownerUid == request.auth.uid &&
+        request.query.limit <= 50
+      );
+
+      // Creation by authenticated owner only as draft or pending_approval, no secrets or pricing
+      allow create: if isSignedIn() &&
+        request.resource.data.id == id &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status in ['draft', 'pending_approval'] &&
+        isValidSlug(request.resource.data.slug) &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() <= 200 &&
+        request.resource.data.eventDetails is map &&
+        !('hostPassword' in request.resource.data) &&
+        !('hostAccessCode' in request.resource.data) &&
+        !('hostUsername' in request.resource.data) &&
+        !('customerPhone' in request.resource.data) &&
+        !('planTier' in request.resource.data) &&
+        !('expiresAt' in request.resource.data) &&
+        !('isExpired' in request.resource.data);
+
+      // Update by Admin or Owner (only whitelisted content fields, immutable state gates)
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'eventDetails', 'customColors', 'customFont',
+          'themeStyle', 'language', 'layoutType', 'templateId',
+          'updatedAt', 'status', 'slug', 'musicTrackUrl', 'musicTrackName',
+          'guestCount', 'galleryImages'
+        ]) &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (resource.data.status == 'draft' && request.resource.data.status == 'pending_approval')
+        ) &&
+        !('planTier' in request.resource.data.diff(resource.data).affectedKeys()) &&
+        !('expiresAt' in request.resource.data.diff(resource.data).affectedKeys()) &&
+        !('isExpired' in request.resource.data.diff(resource.data).affectedKeys())
+      );
+
+      // Deletion is strictly restricted to Admins
+      allow delete: if isAdmin();
+
+      // =======================================================================
+      // 1.5 Subcollection: /invitations/{id}/rsvps/{rsvpId}
+      // =======================================================================
+      match /rsvps/{rsvpId} {
+        // Public guests can create an RSVP only on published, active invitations
+        allow create: if exists(/databases/$(database)/documents/invitations/$(id)) &&
+          get(/databases/$(database)/documents/invitations/$(id)).data.status == 'published' &&
+          request.resource.data.id == rsvpId &&
+          request.resource.data.invitationId == id &&
+          request.resource.data.guestName is string &&
+          request.resource.data.guestName.size() >= 2 &&
+          request.resource.data.guestName.size() <= 100 &&
+          request.resource.data.status in ['attending', 'declined', 'tentative', 'maybe'] &&
+          request.resource.data.guestCount is number &&
+          request.resource.data.guestCount >= 1 &&
+          request.resource.data.guestCount <= 20 &&
+          request.resource.data.keys().hasOnly([
+            'id', 'invitationId', 'guestName', 'status', 'guestCount',
+            'email', 'phone', 'plusOneName', 'dietaryNotes', 'createdAt', 'submittedAt'
+          ]) &&
+          (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 150)) &&
+          (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() <= 50)) &&
+          (!('plusOneName' in request.resource.data) || (request.resource.data.plusOneName is string && request.resource.data.plusOneName.size() <= 100)) &&
+          (!('dietaryNotes' in request.resource.data) || (request.resource.data.dietaryNotes is string && request.resource.data.dietaryNotes.size() <= 500));
+
+        // Read, update, and manage RSVPs: Admin OR Owner OR Active Host
+        allow read, update, delete: if isAdmin() ||
+          (isSignedIn() && get(/databases/$(database)/documents/invitations/$(id)).data.ownerUid == request.auth.uid) ||
+          hostActive(id);
+      }
+    }
+
+    // =========================================================================
+    // 1.4 /slugs/{slug} - Clean Slug Routing (No alias docs, atomic ownership)
+    // =========================================================================
+    match /slugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+        !exists(/databases/$(database)/documents/slugs/$(slug)) &&
+        request.resource.data.keys().hasAll(['invitationId', 'ownerUid']) &&
+        request.resource.data.keys().hasOnly(['invitationId', 'ownerUid', 'createdAt']) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        (
+          (existsAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+           getAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
+          (exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+           get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid)
+        );
+
+      allow update: if isSignedIn() && (
+        (resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == request.auth.uid &&
+          (
+            (existsAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+             getAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
+            (exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+             get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid)
+          )
+        ) ||
+        isAdmin()
+      );
+
+      allow delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // =========================================================================
+    // 1.6 /wishes/{wishId} - Guest Wishes & Congratulatory Messages
+    // =========================================================================
+    match /wishes/{wishId} {
+      allow create: if exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.status == 'published' &&
+        request.resource.data.approved == false &&
+        request.resource.data.authorName is string &&
+        request.resource.data.authorName.size() >= 2 &&
+        request.resource.data.authorName.size() <= 100 &&
+        request.resource.data.message is string &&
+        request.resource.data.message.size() >= 2 &&
+        request.resource.data.message.size() <= 1000 &&
+        (!('relationship' in request.resource.data) || (request.resource.data.relationship is string && request.resource.data.relationship.size() <= 100)) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'invitationId', 'authorName', 'message', 'relationship', 'approved', 'createdAt'
+        ]);
+
+      // Public reads only approved messages; Admin / Owner / Host see all
+      allow read: if resource.data.approved == true ||
+        isAdmin() ||
+        (isSignedIn() && get(/databases/$(database)/documents/invitations/$(resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
+        hostActive(resource.data.invitationId);
+
+      allow update, delete: if isAdmin() ||
+        (isSignedIn() && get(/databases/$(database)/documents/invitations/$(resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
+        hostActive(resource.data.invitationId);
+    }
+
+    // =========================================================================
+    // 1.8 /invitation_private/{id} - Server Only Credentials Vault
+    // =========================================================================
+    match /invitation_private/{id} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 1.9 /orders/{id} - Package Orders with Price Integrity
+    // =========================================================================
+    match /orders/{id} {
+      allow create: if isSignedIn() &&
+        request.resource.data.id == id &&
+        id.matches('^ORD-[a-zA-Z0-9_-]+$') &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
+        request.resource.data.amount is number &&
+        request.resource.data.amount <= 100000 &&
+        (
+          !exists(/databases/$(database)/documents/settings/public_config) ||
+          (
+            (request.resource.data.planTier == 'basic' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.basicPriceEGP) ||
+            (request.resource.data.planTier == 'royal_vip' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.royalPriceEGP) ||
+            (request.resource.data.planTier == 'diamond' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.diamondPriceEGP)
+          ) ||
+          request.resource.data.amount in [199, 399, 799]
+        ) &&
+        request.resource.data.customerName is string &&
+        request.resource.data.customerName.size() >= 2 &&
+        request.resource.data.customerName.size() <= 100 &&
+        request.resource.data.customerPhone is string &&
+        request.resource.data.customerPhone.size() >= 6 &&
+        request.resource.data.customerPhone.size() <= 30 &&
+        request.resource.data.vodafoneCashSender is string &&
+        request.resource.data.vodafoneCashSender.size() >= 6 &&
+        request.resource.data.vodafoneCashSender.size() <= 30 &&
+        request.resource.data.invitationId is string &&
+        exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid &&
+        !('hostCredentials' in request.resource.data) &&
+        !('credentials' in request.resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'invitationId', 'planTier', 'amount', 'currency',
+          'customerName', 'customerPhone', 'vodafoneCashSender',
+          'transactionReference', 'status', 'createdAt', 'ownerUid', 'invitationSnapshot'
+        ]);
+
+      // Read by Admin or the order owner
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      );
+
+      // Update and deletion strictly restricted to Admin
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 1.10 Settings, Music Library, Templates, Reviews, Rate Limits
+    // =========================================================================
+    match /settings/public_config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/admin_config {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if id == 'public_config' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /music_library/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /custom_templates/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /reviews/{id} {
+      allow read: if resource.data.approved == true || isAdmin();
+      allow create: if request.resource.data.approved == false &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5 &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 2 &&
+        request.resource.data.name.size() <= 100 &&
+        request.resource.data.comment is string &&
+        request.resource.data.comment.size() >= 3 &&
+        request.resource.data.comment.size() <= 800 &&
+        request.resource.data.keys().hasOnly([
+          'id', 'name', 'rating', 'comment', 'approved', 'createdAt',
+          'templateId', 'avatarUrl', 'role'
+        ]);
+      allow update, delete: if isAdmin();
+    }
+
+    match /rate_limits/{id} {
+      allow read, write: if false;
+    }
+  }
+}

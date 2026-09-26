@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3E5AB"/>
+      <stop offset="50%" stop-color="#B99A65"/>
+      <stop offset="100%" stop-color="#8B6F3E"/>
+    </linearGradient>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#24221E"/>
+      <stop offset="100%" stop-color="#121212"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="none" stroke="url(#goldGrad)" stroke-width="8" opacity="0.6"/>
+  <!-- Gold Monogram F -->
+  <path d="M 170 120 L 340 120 C 355 120, 360 130, 350 145 L 330 170 C 325 175, 315 180, 300 180 L 230 180 L 230 230 L 310 230 C 325 230, 330 240, 320 255 L 305 275 C 300 280, 290 285, 275 285 L 230 285 L 230 380 C 230 395, 220 400, 205 400 L 185 400 C 175 400, 170 390, 170 380 Z" fill="url(#goldGrad)"/>
+  <!-- Decorative Sparkle -->
+  <path d="M 370 130 L 378 150 L 398 158 L 378 166 L 370 186 L 362 166 L 342 158 L 362 150 Z" fill="url(#goldGrad)"/>
+</svg>

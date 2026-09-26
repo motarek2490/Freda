@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
+  }
+  .font-cormorant {
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .font-sans-body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .font-arabic-calligraphy {
+    font-family: 'Amiri', serif;
+  }
+  .font-arabic-modern {
+    font-family: 'Cairo', sans-serif;
+  }
+}
+
+/* RTL Arabic Typography Rules (Zero-Pill, True Calligraphy, No Tracking/Italic on Arabic) */
+[dir="rtl"] {
+  font-family: 'Cairo', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: normal !important;
+}
+
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3,
+[dir="rtl"] .font-serif,
+[dir="rtl"] .font-playfair,
+[dir="rtl"] .font-cormorant {
+  font-family: 'Amiri', 'Reem Kufi', serif !important;
+  letter-spacing: normal !important;
+  font-style: normal !important;
+}
+
+[dir="rtl"] .uppercase {
+  text-transform: none !important;
+}
+
+[dir="rtl"] [class*="tracking-"] {
+  letter-spacing: 0 !important;
+}
+
+/* Respect prefers-reduced-motion everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Luxury Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #171717;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B99A65;
+}
+
+/* Gold shimmer animation */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.gold-shimmer-text {
+  background: linear-gradient(90deg, #B99A65 0%, #F7F4EE 50%, #B99A65 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: goldShimmer 6s linear infinite;
+}
+
+.gold-gradient-border {
+  border-image: linear-gradient(135deg, #B99A65, #E9E1D5, #8D8A84) 1;
+}
+
+/* Subtle grain overlay effect */
+.bg-grain {
+  background-image: radial-gradient(rgba(185, 154, 101, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Smooth page transitions */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Accessible focus states for keyboard navigation (WCAG compliance) */
+:focus-visible {
+  outline: 2px solid #C9A86A !important;
+  outline-offset: 3px !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #C9A86A !important;
+  outline-offset: 2px !important;
+}
