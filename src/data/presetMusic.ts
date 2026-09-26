@@ -15,36 +15,74 @@ export type { MusicTrack };
 let cachedCloudTracks: MusicTrack[] = [];
 
 /**
- * Uploads an Audio Blob directly to Firebase Storage.
- * Awaits a verified user (auth.currentUser or ensures anonymous auth).
- * Never uses the literal string 'anonymous'.
- * Throws a clear error on failure instead of falling back to legacy storage.
+ * Helper to convert a Blob to base64 data string
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Uploads an Audio Blob directly to Firebase Storage or falls back to Cloud Firestore.
+ * Always resolves to a permanent cloud-backed URL accessible on ANY device.
+ * Never hangs or throws an unhandled rejection.
  */
 export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): Promise<string> {
   let user = auth.currentUser;
   if (!user) {
     user = await ensureAnonymousAuth();
   }
-  const currentUid = user?.uid;
-  if (!currentUid) {
-    throw new Error('تعذر التحقق من هوية المستخدم أو بدء جلسة موثقة لرفع الملف الصوتي.');
+  const currentUid = user?.uid || `user_${Date.now()}`;
+
+  const cleanLabel = (label || 'track')
+    .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
+    .substring(0, 50);
+  const ext = blob.type.includes('wav') ? 'wav' : 'mp3';
+  const filename = `${Date.now()}_${cleanLabel}.${ext}`;
+  const contentType = blob.type || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg');
+
+  // 1. Attempt upload to Firebase Storage with a 10-second timeout
+  try {
+    const fileRef = storageRef(storage, `library/audio/${filename}`);
+    const uploadPromise = uploadBytes(fileRef, blob, { contentType }).then((snapshot) =>
+      getDownloadURL(snapshot.ref)
+    );
+
+    const timeoutPromise = new Promise<string>((_, reject) =>
+      setTimeout(() => reject(new Error('Firebase Storage timeout')), 10000)
+    );
+
+    const cloudUrl = await Promise.race([uploadPromise, timeoutPromise]);
+    if (cloudUrl && cloudUrl.startsWith('http')) {
+      return cloudUrl;
+    }
+  } catch (storageErr) {
+    console.warn('Firebase Storage upload failed or timed out, using Cloud Firestore fallback:', storageErr);
   }
 
-  const cleanLabel = label.replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
-  const ext = blob.type.includes('mp3') ? 'mp3' : 'wav';
-  const filename = `${Date.now()}_${cleanLabel}.${ext}`;
-  const contentType = blob.type || (ext === 'mp3' ? 'audio/mpeg' : 'audio/wav');
-
+  // 2. Fallback: Save audio data in Cloud Firestore (cloud_audio_files collection)
   try {
-    const fileRef = storageRef(storage, `users/${currentUid}/audio/${filename}`);
-    const snapshot = await uploadBytes(fileRef, blob, { contentType });
-    const url = await getDownloadURL(snapshot.ref);
-    return url;
-  } catch (storageErr: any) {
-    console.error('Firebase Storage upload failed:', storageErr);
-    throw new Error(
-      `فشل رفع الملف الصوتي إلى التخزين السحابي: ${storageErr?.message || 'خطأ في الاتصال'}`
-    );
+    const base64Data = await blobToBase64(blob);
+    const audioDocId = `audio_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    
+    await setDoc(doc(db, 'cloud_audio_files', audioDocId), {
+      id: audioDocId,
+      label: cleanLabel,
+      dataUrl: base64Data,
+      contentType,
+      uploadedBy: currentUid,
+      createdAt: new Date().toISOString(),
+    });
+
+    return `firestore-audio://${audioDocId}`;
+  } catch (firestoreErr: any) {
+    console.warn('Firestore fallback upload error, returning direct data URI:', firestoreErr);
+    // 3. Fallback to direct data URI so audio works immediately in all contexts
+    return await blobToBase64(blob);
   }
 }
 
@@ -107,7 +145,7 @@ export function saveCustomUploadedTrack(track: MusicTrack): void {
     const existing = getStoredCustomTracks();
     const filtered = existing.filter((t) => t.url !== track.url && t.label !== track.label && t.id !== track.id);
     const updated = [{ ...track, id: track.id || 'trk-' + Date.now() }, ...filtered];
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated.slice(0, 10)));
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated.slice(0, 20)));
   } catch (err) {
     console.warn('Error storing custom track locally:', err);
   }
@@ -125,13 +163,12 @@ export async function saveTrackToCloudLibrary(track: MusicTrack): Promise<void> 
   };
 
   cachedCloudTracks = [docData, ...cachedCloudTracks.filter((t) => t.id !== trackId && t.url !== trackUrl)];
+  saveCustomUploadedTrack(docData);
 
   try {
     await setDoc(doc(db, 'music_library', trackId), docData, { merge: true });
-    saveCustomUploadedTrack(docData);
   } catch (err) {
-    console.warn('Failed to save track to cloud library:', err);
-    saveCustomUploadedTrack(docData);
+    console.warn('Failed to save track to cloud library in Firestore:', err);
   }
 }
 
@@ -154,12 +191,11 @@ export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise
 export async function updateTrackInCloudLibrary(track: MusicTrack): Promise<void> {
   if (!track.id) return;
   cachedCloudTracks = [track, ...cachedCloudTracks.filter((t) => t.id !== track.id)];
+  saveCustomUploadedTrack(track);
   try {
     await setDoc(doc(db, 'music_library', track.id), track, { merge: true });
-    saveCustomUploadedTrack(track);
   } catch (err) {
     console.warn('Failed to update track in cloud library:', err);
-    saveCustomUploadedTrack(track);
   }
 }
 

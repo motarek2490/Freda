@@ -12,10 +12,9 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AdminSettings, Language, MusicTrack } from '../../types';
-import { storage } from '../../lib/firebase';
 import { resolveAudioTrackUrl } from '../../lib/audioStorage';
+import { uploadAudioFileToCloudStorage } from '../../data/presetMusic';
 import { AudioTrimmerModal } from '../AudioTrimmerModal';
 
 interface AdminMusicTabProps {
@@ -91,14 +90,6 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
     }
   };
 
-  const uploadAudioToFirebase = async (blob: Blob, name: string): Promise<string> => {
-    const cleanName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const path = `library/audio/${Date.now()}_${cleanName}.mp3`;
-    const sRef = storageRef(storage, path);
-    const snap = await uploadBytes(sRef, blob, { contentType: 'audio/mpeg' });
-    return getDownloadURL(snap.ref);
-  };
-
   const handleDirectFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -107,8 +98,8 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
     setUploadFeedback(null);
 
     try {
-      const cleanName = file.name.replace(/\.[^/.]+$/, '');
-      const cdnUrl = await uploadAudioToFirebase(file, cleanName);
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
+      const cdnUrl = await uploadAudioFileToCloudStorage(file, cleanName);
 
       if (cdnUrl) {
         const newTrack: MusicTrack = {
@@ -117,6 +108,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
             ar: cleanName,
             en: cleanName,
           },
+          label: cleanName,
           url: cdnUrl,
           category: 'classical',
           isDefault: false,
@@ -140,7 +132,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
   const handleFileForTrimmer = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const cleanName = file.name.replace(/\.[^/.]+$/, '');
+    const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
     setTrimmerTrackName(cleanName);
     setTrimmerAudioBlob(file);
     if (trimmerFileInputRef.current) trimmerFileInputRef.current.value = '';
@@ -341,7 +333,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                       </button>
                     )}
 
-                    {/* Delete Track Button (Available for ALL tracks in Admin dashboard) */}
+                    {/* Delete Track Button */}
                     <button
                       onClick={() => setTrackToDelete(track)}
                       className="px-2.5 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 hover:border-red-600 text-red-400 hover:text-red-200 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ml-auto"
@@ -432,28 +424,13 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
           currentLang={currentLang}
           isAdmin={true}
           onClose={() => setTrimmerAudioBlob(null)}
-          onSave={async (trimmedBlob) => {
-            const cdnUrl = await uploadAudioToFirebase(trimmedBlob, `${trimmerTrackName}_trimmed`);
-            if (cdnUrl) {
-              const newTrack: MusicTrack = {
-                id: `track-${Date.now()}`,
-                name: {
-                  ar: `${trimmerTrackName} (مقتطع)`,
-                  en: `${trimmerTrackName} (Trimmed)`,
-                },
-                url: cdnUrl,
-                category: 'classical',
-                isDefault: false,
-                isCloud: true,
-                createdAt: new Date().toISOString(),
-              };
-              await onSaveTrack(newTrack);
-              setUploadFeedback(
-                isRtl
-                  ? `تم قص المعزوفة وحفظها بنجاح في السحابة! ✂️🎵`
-                  : 'Track trimmed and saved to cloud library!'
-              );
-            }
+          onTrackReady={async (newTrack) => {
+            await onSaveTrack(newTrack);
+            setUploadFeedback(
+              isRtl
+                ? `تم قص المعزوفة وحفظها بنجاح في السحابة! ✂️🎵`
+                : 'Track trimmed and saved to cloud library!'
+            );
             setTrimmerAudioBlob(null);
           }}
         />

@@ -15,12 +15,22 @@ export interface TrimResult {
 }
 
 /**
+ * Valid sample rates supported by LAME MP3 Encoder
+ */
+const SUPPORTED_MP3_SAMPLE_RATES = new Set([8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000]);
+
+/**
  * Encodes an AudioBuffer into standard MP3 format (10x smaller than WAV)
  * At 96-128kbps, a 60s song is only ~700-900KB and loads instantly!
  */
 export function audioBufferToMp3(buffer: AudioBuffer, kbps: number = 96): Blob {
   const numChannels = Math.min(buffer.numberOfChannels, 2);
-  const sampleRate = buffer.sampleRate;
+  let sampleRate = buffer.sampleRate;
+
+  // Ensure sample rate is valid for MP3 encoder
+  if (!SUPPORTED_MP3_SAMPLE_RATES.has(sampleRate)) {
+    sampleRate = sampleRate >= 44100 ? 44100 : 32000;
+  }
 
   // LAME MP3 Encoder requires (channels, sampleRate, kbps)
   const encoder = new Mp3Encoder(numChannels, sampleRate, kbps);
@@ -51,17 +61,17 @@ export function audioBufferToMp3(buffer: AudioBuffer, kbps: number = 96): Blob {
     const leftChunk = leftInt16.subarray(i, i + blockSize);
     const rightChunk = rightInt16 ? rightInt16.subarray(i, i + blockSize) : undefined;
     const mp3buf = encoder.encodeBuffer(leftChunk, rightChunk);
-    if (mp3buf.length > 0) {
+    if (mp3buf && mp3buf.length > 0) {
       mp3Data.push(mp3buf);
     }
   }
 
   const flushed = encoder.flush();
-  if (flushed.length > 0) {
+  if (flushed && flushed.length > 0) {
     mp3Data.push(flushed);
   }
 
-  return new Blob(mp3Data as unknown as BlobPart[], { type: 'audio/mp3' });
+  return new Blob(mp3Data as unknown as BlobPart[], { type: 'audio/mpeg' });
 }
 
 /**
@@ -127,11 +137,11 @@ function writeString(view: DataView, offset: number, string: string) {
 }
 
 /**
- * Loads an audio File, decodes it, slices it strictly to a chosen window,
- * and encodes it into an optimized lightweight MP3 audio stream (96-128kbps).
+ * Loads an audio File or Blob, decodes it, slices it strictly to a chosen window,
+ * and encodes it into an optimized lightweight audio stream.
  */
 export async function trimAndCompressAudioFile(
-  file: File,
+  fileOrBlob: File | Blob,
   startTimeSec: number = 0,
   maxDurationSec: number = 101
 ): Promise<TrimResult> {
@@ -143,17 +153,21 @@ export async function trimAndCompressAudioFile(
   const audioContext = new AudioCtx();
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await fileOrBlob.arrayBuffer();
     const decodedAudio = await audioContext.decodeAudioData(arrayBuffer);
 
     const originalDuration = decodedAudio.duration;
     const actualStartTime = Math.max(0, Math.min(startTimeSec, Math.max(0, originalDuration - 0.5)));
     const sliceDuration = Math.min(maxDurationSec, Math.max(0.5, originalDuration - actualStartTime));
 
-    // Target sample rate: 32000 Hz or 44100 Hz for optimal MP3 encoding
-    const targetSampleRate = decodedAudio.sampleRate <= 32000 ? 32000 : 44100;
+    // Target sample rate matching decoded sample rate (typically 44100 or 48000)
+    let targetSampleRate = decodedAudio.sampleRate || 44100;
+    if (!SUPPORTED_MP3_SAMPLE_RATES.has(targetSampleRate)) {
+      targetSampleRate = 44100;
+    }
+
     const targetLength = Math.max(1, Math.floor(sliceDuration * targetSampleRate));
-    // Use mono (1 channel) for mobile web invitations: sounds pristine while halving size!
+    // Use mono (1 channel) for mobile web: cuts file size in half with zero loss in vocal clarity
     const numChannels = 1;
 
     const offlineCtx = new OfflineAudioContext(numChannels, targetLength, targetSampleRate);
@@ -170,9 +184,9 @@ export async function trimAndCompressAudioFile(
 
     // Encode to compressed MP3 (with WAV fallback if needed)
     let audioBlob: Blob;
-    let format = 'audio/mp3';
+    let format = 'audio/mpeg';
     try {
-      audioBlob = audioBufferToMp3(renderedBuffer, 64);
+      audioBlob = audioBufferToMp3(renderedBuffer, 96);
     } catch (mp3Err) {
       console.warn('LAME MP3 encoding fallback to WAV:', mp3Err);
       audioBlob = audioBufferToWav(renderedBuffer);
@@ -199,21 +213,21 @@ export async function trimAndCompressAudioFile(
     };
   } finally {
     if (audioContext.state !== 'closed') {
-      await audioContext.close();
+      await audioContext.close().catch(() => {});
     }
   }
 }
 
 /**
- * Calculates audio duration and metadata from a File
+ * Calculates audio duration and metadata from a File or Blob
  */
-export async function getAudioFileDuration(file: File): Promise<number> {
+export async function getAudioFileDuration(fileOrBlob: File | Blob): Promise<number> {
   const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
   if (!AudioCtx) return 101;
 
   const audioContext = new AudioCtx();
   try {
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await fileOrBlob.arrayBuffer();
     const decodedAudio = await audioContext.decodeAudioData(arrayBuffer);
     return Math.round(decodedAudio.duration);
   } catch (err) {
@@ -221,7 +235,7 @@ export async function getAudioFileDuration(file: File): Promise<number> {
     return 101;
   } finally {
     if (audioContext.state !== 'closed') {
-      await audioContext.close();
+      await audioContext.close().catch(() => {});
     }
   }
 }

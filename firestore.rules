@@ -279,7 +279,12 @@ service cloud.firestore {
 
     match /music_library/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write, delete: if isSignedIn() || isAdmin();
+    }
+
+    match /cloud_audio_files/{id} {
+      allow read: if true;
+      allow write, delete: if isSignedIn() || isAdmin();
     }
 
     match /custom_templates/{id} {

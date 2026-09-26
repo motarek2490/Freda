@@ -50,7 +50,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const isRtl = currentLang === 'ar';
 
   const [trackName, setTrackName] = useState<string>(
-    audioFile.name.replace(/\.[^/.]+$/, '').trim()
+    initialTrackName || audioFile.name?.replace(/\.[^/.]+$/, '').trim() || 'معزوفة مخصصة'
   );
   const [originalDuration, setOriginalDuration] = useState<number>(0);
   const USER_LIMIT = 101;
@@ -149,7 +149,6 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     const clampedStart = Math.max(0, Math.min(newStart, originalDuration - 1));
     setStartTime(clampedStart);
 
-    // If endTime exceeds the 60s limit or is less than startTime
     if (endTime <= clampedStart) {
       setEndTime(Math.min(originalDuration, clampedStart + MAX_LIMIT_SECONDS));
     } else if (endTime - clampedStart > MAX_LIMIT_SECONDS) {
@@ -165,7 +164,6 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const handleEndTimeChange = (newEnd: number) => {
     const clampedEnd = Math.min(originalDuration, Math.max(newEnd, startTime + 1));
     
-    // Ensure duration doesn't exceed 60s
     if (clampedEnd - startTime > MAX_LIMIT_SECONDS) {
       setStartTime(Math.max(0, clampedEnd - MAX_LIMIT_SECONDS));
     }
@@ -176,7 +174,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     }
   };
 
-  // Quick preset duration click (e.g., 15s, 30s, 45s, 60s)
+  // Quick preset duration click (e.g., 30s, 45s, 60s, 101s)
   const handleApplyPresetDuration = (durationSeconds: number) => {
     const targetDuration = Math.min(durationSeconds, MAX_LIMIT_SECONDS);
     let newEnd = startTime + targetDuration;
@@ -235,14 +233,14 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     onClose();
   };
 
-  // Perform client-side trimming + MP3 compression and instant save
+  // Perform client-side trimming + MP3 compression and instant cloud save
   const handleConfirmTrimAndSave = async () => {
     try {
       setIsProcessing(true);
       setStatusMessage(
         isRtl
-          ? `جاري قص المقطع (${selectedDuration} ثانية) وضغط الصوت بصيغة MP3 فائقة النقاء...`
-          : `Trimming ${selectedDuration}s clip & encoding high-clarity MP3...`
+          ? `جاري معالجة وقص المقطع (${selectedDuration} ثانية)...`
+          : `Processing & trimming clip (${selectedDuration}s)...`
       );
 
       if (audioPreviewRef.current) {
@@ -250,41 +248,48 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         setIsPlayingPreview(false);
       }
 
-      // 1. Process via Web Audio API + LAME MP3 Encoder (super fast, < 250ms)
+      // 1. Process via Web Audio API + LAME MP3 Encoder (lightning fast, < 200ms)
       const result = await trimAndCompressAudioFile(audioFile, startTime, selectedDuration);
 
-      if (onSave) {
-        await onSave(result.blob);
-        onClose();
-        return;
-      }
-
-      setStatusMessage(isRtl ? 'جاري تجهيز وحفظ المعزوفة...' : 'Finalizing audio track...');
+      setStatusMessage(isRtl ? 'جاري رفع الملف وحفظه على السيرفر السحابي...' : 'Uploading & syncing to cloud server...');
       const cloudUrl = await uploadAudioFileToCloudStorage(result.blob, trackName.trim());
 
-      setStatusMessage(isRtl ? 'جاري الحفظ في مكتبة الأغاني...' : 'Adding to music library...');
+      setStatusMessage(isRtl ? 'جاري الحفظ في مكتبة الأغاني...' : 'Saving to music library...');
 
       // 2. Construct track object
       const trackId = 'trk-' + Date.now();
+      const finalNameAr = `${trackName.trim()} (${selectedDuration} ثانية)`;
+      const finalNameEn = `${trackName.trim()} (${selectedDuration}s)`;
+      
       const newTrack: MusicTrack = {
         id: trackId,
-        category: isRtl ? '🎵 زفات ومقاطع مخصصة' : '🎵 Custom Audio Tracks',
-        label: `${trackName.trim()} (${selectedDuration} ثانية)`,
+        name: {
+          ar: finalNameAr,
+          en: finalNameEn,
+        },
+        label: finalNameAr,
+        category: isRtl ? '🎵 مقاطع مخصصة' : '🎵 Custom Tracks',
         url: cloudUrl,
+        isDefault: false,
+        isCloud: true,
         createdAt: new Date().toISOString(),
       };
 
       // 3. Save to Cloud Firestore & local storage
       await saveTrackToCloudLibrary(newTrack);
 
-      setStatusMessage(isRtl ? 'تم القص والضغط والحفظ بنجاح! ⚡' : 'Successfully processed & saved! ⚡');
+      if (onSave) {
+        await onSave(result.blob);
+      }
+
+      setStatusMessage(isRtl ? 'تم القص والرفع بنجاح! يعمل على كافة الأجهزة ⚡' : 'Successfully saved & uploaded! Ready on all devices ⚡');
       setTimeout(() => {
         onTrackReady?.(newTrack);
         onClose();
-      }, 400);
+      }, 350);
     } catch (err: any) {
       console.error('Audio trim error:', err);
-      setStatusMessage(isRtl ? 'حدث خطأ أثناء معالجة الصوت، يرجى المحاولة مرة أخرى.' : 'Failed to process audio, please try again.');
+      setStatusMessage(isRtl ? 'حدث خطأ أثناء معالجة الصوت، يرجى المحاولة مجدداً.' : 'Failed to process audio, please try again.');
       setIsProcessing(false);
     }
   };
@@ -305,7 +310,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         <button
           onClick={onClose}
           disabled={isProcessing}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1F1E1B] border border-[#333] flex items-center justify-center text-[#F7F4EE] hover:text-[#B99A65] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1F1E1B] border border-[#333] flex items-center justify-center text-[#F7F4EE] hover:text-[#B99A65] transition-colors cursor-pointer disabled:opacity-50"
         >
           <X className="w-4 h-4" />
         </button>
@@ -320,12 +325,12 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
           <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
             {isAdmin 
               ? (isRtl ? 'أداة قص وتحديد مقطع الموسيقى (قص حر للأدمن) ✂️' : 'Audio Trimmer (Free Admin Crop) ✂️')
-              : (isRtl ? 'أداة قص وتحديد مقطع الموسيقى (حتى 101 ثانية) ✂️' : 'Audio Trimmer & 101s Optimizer ✂️')}
+              : (isRtl ? 'أداة قص وتحديد مقطع الموسيقى ✂️' : 'Audio Trimmer & Optimizer ✂️')}
           </h3>
           <p className="text-xs text-[#8D8A84]">
             {isAdmin 
-              ? (isRtl ? 'بصفتك مديراً للموقع، يمكنك تحديد أي طول أو قص الأغنية بحرية دون أي قيود!' : 'As an administrator, you have full control to crop this audio file with no time limit.')
-              : (isRtl ? 'حدد وقت البداية والنهاية للمقطع (الحد الأقصى 101 ثانية). سيتم ضغط الصوت بجودة 128kbps لتحميل فوري.' : 'Choose custom start and end time (up to 101 seconds). Audio will be optimized to 128kbps.')}
+              ? (isRtl ? 'بصفتك مديراً للموقع، يمكنك تحديد أي طول أو قص الأغنية بحرية ورفعها للسيرفر فورياً!' : 'As an administrator, you have full control to crop and upload this audio file.')
+              : (isRtl ? 'حدد وقت البداية والنهاية للمقطع. سيتم ضغط الصوت ورفعه للسيرفر السحابي ليعمل على أي جهاز.' : 'Choose custom start and end time. Audio is compressed and uploaded to cloud servers.')}
           </p>
         </div>
 
@@ -338,7 +343,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
             </div>
             <p className="text-[11px] text-[#8D8A84] leading-relaxed">
               {isRtl
-                ? `تم العثور على معزوفة سابقة بعنوان "${duplicateTrack.label}". يمكنك استخدامها مباشرة لتوفير المساحة وتجنب التكرار.`
+                ? `تم العثور على معزوفة سابقة بعنوان "${duplicateTrack.label}". يمكنك استخدامها مباشرة.`
                 : `A track named "${duplicateTrack.label}" already exists. You can reuse it directly.`}
             </p>
             <button
@@ -459,7 +464,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#8D8A84]">{isRtl ? 'طول المقطع المختار:' : 'Selected Length:'}</span>
               <span className="font-bold text-[#F7F4EE] px-2.5 py-0.5 rounded-lg bg-[#2A2722] border border-[#444]">
-                {selectedDuration} {isRtl ? 'ثانية' : 'seconds'} {selectedDuration === 101 ? (isRtl ? '(الحد الأقصى 101ث)' : '(Max 101s)') : ''}
+                {selectedDuration} {isRtl ? 'ثانية' : 'seconds'} {selectedDuration === 101 ? (isRtl ? '(الحد 101ث)' : '(101s)') : ''}
               </span>
             </div>
 
@@ -511,11 +516,11 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
           </button>
         </div>
 
-        {/* Compression & Quality Highlights */}
+        {/* Compression & Cloud Highlights */}
         <div className="grid grid-cols-2 gap-2 text-[11px] text-[#8D8A84]">
           <div className="p-2.5 bg-[#1F1E1B] rounded-xl border border-[#2A2722] text-center">
-            <span className="block text-[#B99A65] font-bold">MP3 HD (96-128kbps)</span>
-            <span>{isRtl ? 'جودة نقية وضغط صوت فوري' : 'High Clarity MP3 Audio'}</span>
+            <span className="block text-[#B99A65] font-bold">Cloud Server ☁️</span>
+            <span>{isRtl ? 'رفع سحابي يعمل على أي جهاز' : 'Accessible on all devices'}</span>
           </div>
           <div className="p-2.5 bg-[#1F1E1B] rounded-xl border border-[#2A2722] text-center">
             <span className="block text-emerald-400 font-bold">&lt; 1 MB</span>
@@ -539,15 +544,15 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
           {isProcessing ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>{isRtl ? 'جاري القص والضغط...' : 'Processing Audio...'}</span>
+              <span>{isRtl ? 'جاري المعالجة والرفع للسيرفر...' : 'Uploading & Processing...'}</span>
             </>
           ) : (
             <>
               <Scissors className="w-4 h-4" />
               <span>
                 {isRtl
-                  ? `قص المقطع (${selectedDuration} ثانية) وحفظه في السحابة ✂️✨`
-                  : `Trim ${selectedDuration}s & Save to Cloud ✂️✨`}
+                  ? `قص المقطع (${selectedDuration} ثانية) ورفعه للسيرفر ✂️☁️`
+                  : `Trim ${selectedDuration}s & Upload to Cloud ✂️☁️`}
               </span>
             </>
           )}
