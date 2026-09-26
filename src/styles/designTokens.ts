@@ -1,5 +1,5 @@
 /**
- * Design Tokens System for FRIDA / Vowly
+ * Design Tokens System for FRIDA (فريدا)
  * Centralized, tokenized design foundation for upcoming phased design refreshes.
  *
  * NOTE: These tokens are defined as pure data structures and utilities without modifying

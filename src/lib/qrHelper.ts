@@ -3,22 +3,38 @@ import QRCode from 'qrcode';
 export async function generateQrCodeDataUrl(text: string): Promise<string> {
   if (!text) return '';
   try {
-    // Robust ESM/CJS interop fallback
     const qrObj = (QRCode as any)?.default || QRCode;
     const toDataURLFn = qrObj?.toDataURL || (QRCode as any)?.toDataURL;
-    
+
     if (typeof toDataURLFn === 'function') {
       return await toDataURLFn(text, {
-        width: 250,
+        width: 280,
+        margin: 1,
+        color: { dark: '#171717', light: '#FFFFFF' },
+        errorCorrectionLevel: 'M',
+      });
+    }
+
+    // Local in-memory SVG fallback (100% offline, zero network requests)
+    const toStringFn = qrObj?.toString || (QRCode as any)?.toString;
+    if (typeof toStringFn === 'function') {
+      const svg = await toStringFn(text, {
+        type: 'svg',
         margin: 1,
         color: { dark: '#171717', light: '#FFFFFF' },
       });
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     }
-    
-    // Primary Fallback: Use public secure API if local library fails to load
-    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(text)}&color=171717&bgcolor=ffffff&qzone=1`;
+
+    return '';
   } catch (err) {
-    console.warn('QR code generation failed, falling back to secure API:', err);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(text)}&color=171717&bgcolor=ffffff&qzone=1`;
+    console.warn('Local QR generation error:', err);
+    try {
+      const qrObj = (QRCode as any)?.default || QRCode;
+      const svg = await qrObj.toString(text, { type: 'svg', margin: 1 });
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    } catch {
+      return '';
+    }
   }
 }

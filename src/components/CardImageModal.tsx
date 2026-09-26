@@ -1002,12 +1002,6 @@ export const CardImageModal: React.FC<CardImageModalProps> = ({
                   src={qrDataUrl}
                   alt="QR Code"
                   className="w-20 h-20 object-contain"
-                  onError={(e) => {
-                    const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(shareUrl)}&color=171717&bgcolor=ffffff&qzone=1`;
-                    if ((e.currentTarget as HTMLImageElement).src !== fallbackUrl) {
-                      (e.currentTarget as HTMLImageElement).src = fallbackUrl;
-                    }
-                  }}
                 />
               ) : (
                 <div className="w-20 h-20 bg-gray-200 animate-pulse rounded" />

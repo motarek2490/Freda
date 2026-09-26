@@ -1417,7 +1417,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'البنك الأهلي السعودي (SNB)',
         accountNumber: 'SA03 8000 0000 6080 1010 1111',
         accountHolder: 'طارق فهد آل منصور',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Tariq-Groom-Gift',
+        qrCodeUrl: 'Tariq-Groom-Gift',
       },
       enableGuestbook: true,
       wishesList: [
@@ -1489,7 +1489,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'Intesa Sanpaolo / IBAN Euro Account',
         accountNumber: 'IT60 X054 2811 1010 0000 0123 456',
         accountHolder: 'Clara Montclair & Oliver Sterling',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GardenWedding-Gift',
+        qrCodeUrl: 'GardenWedding-Gift',
       },
       enableGuestbook: true,
       wishesList: [
@@ -1561,7 +1561,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'Chase Premier / Zelle Transfer',
         accountNumber: 'mateo.sofia.wedding@gmail.com',
         accountHolder: 'Mateo Morales & Sofia Castillo',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=BohoWedding-MateoSofia',
+        qrCodeUrl: 'BohoWedding-MateoSofia',
       },
       enableGuestbook: true,
       wishesList: [
@@ -1633,7 +1633,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'Barclays Bank UK / Sort Code 20-45-78',
         accountNumber: '83920194',
         accountHolder: 'Alexander Hayes & Madeleine Vance',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=StoryWedding-AlexMaddie',
+        qrCodeUrl: 'StoryWedding-AlexMaddie',
       },
       enableGuestbook: true,
       wishesList: [
@@ -1703,7 +1703,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'Emirates NBD / Luggage Cargo Registry',
         accountNumber: 'AE09 0330 0000 1234 5678 901',
         accountHolder: 'Ryan Reynolds & Maya Lin',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=FlightPassWedding-RyanMaya',
+        qrCodeUrl: 'FlightPassWedding-RyanMaya',
       },
       enableGuestbook: true,
       wishesList: [
@@ -1779,7 +1779,7 @@ export const TEMPLATES: Template[] = [
         bankName: 'Saudi National Bank (SNB)',
         accountNumber: 'SA03 8000 0000 6080 1010 1111',
         accountHolder: 'Tariq Fahad Al-Mansoor',
-        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Tariq-Groom-Gift',
+        qrCodeUrl: 'Tariq-Groom-Gift',
       },
       enableGuestbook: true,
       wishesList: [

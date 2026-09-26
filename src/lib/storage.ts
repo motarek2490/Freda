@@ -228,21 +228,38 @@ export function getStoredRSVPs(invitationId?: string): RSVPResponse[] {
   return allRsvps;
 }
 
-export function saveRSVP(rsvp: Omit<RSVPResponse, 'id' | 'createdAt'>): RSVPResponse {
+export function saveRSVP(
+  rsvp: Partial<RSVPResponse> & { invitationId: string; guestName: string; status: 'attending' | 'declined' | 'maybe'; guestCount: number }
+): RSVPResponse {
   const all = getStoredRSVPs();
-  const newRsvp: RSVPResponse = {
-    ...rsvp,
-    id: 'rsvp-' + Date.now(),
-    createdAt: new Date().toISOString(),
-  };
-  const updated = [newRsvp, ...all];
+  const existingIndex = rsvp.id ? all.findIndex((r) => r.id === rsvp.id) : -1;
+
+  let savedRsvp: RSVPResponse;
+  let updated: RSVPResponse[];
+
+  if (existingIndex >= 0) {
+    savedRsvp = {
+      ...all[existingIndex],
+      ...rsvp,
+    };
+    updated = [...all];
+    updated[existingIndex] = savedRsvp;
+  } else {
+    savedRsvp = {
+      ...rsvp,
+      id: rsvp.id || 'rsvp-' + Date.now(),
+      createdAt: rsvp.createdAt || new Date().toISOString(),
+    };
+    updated = [savedRsvp, ...all];
+  }
+
   try {
     localStorage.setItem(RSVPS_KEY, JSON.stringify(updated));
   } catch {}
 
-  saveRSVPCloud(rsvp.invitationId, newRsvp).catch((e) => {
+  saveRSVPCloud(rsvp.invitationId, savedRsvp).catch((e) => {
     console.warn('Cloud RSVP save error:', e);
   });
 
-  return newRsvp;
+  return savedRsvp;
 }

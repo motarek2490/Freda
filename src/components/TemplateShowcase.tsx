@@ -33,11 +33,11 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
 
-  // 4 Curated Spotlight Pieces (Mandated in Prompt Section 11)
+  // 4 Curated Spotlight Pieces
   const spotlightPieces = [
     {
       id: 'editorial-noir',
-      templateId: 'editorial-noir',
+      templateId: 'frida-burgundy-minimalist-001',
       titleDisplay: 'NOIR',
       taglineAr: 'لليلة تستحق غلافها الخاص.',
       taglineEn: 'For the night that deserves its own cover.',
@@ -48,7 +48,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     },
     {
       id: 'celestial-eclipse',
-      templateId: 'celestial-eclipse',
+      templateId: 'frida-midnight-confetti-001',
       titleDisplay: 'ECLIPSE',
       taglineAr: 'ليلة كُتبت في النجوم.',
       taglineEn: 'A night written in the stars.',
@@ -59,7 +59,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     },
     {
       id: 'enchanted-botanical',
-      templateId: 'enchanted-botanical',
+      templateId: 'frida-floral-botanical-001',
       titleDisplay: 'BOTANICA',
       taglineAr: 'حيث يلتقي الحب بالطبيعة.',
       taglineEn: 'Where love meets nature.',
@@ -70,7 +70,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     },
     {
       id: 'opal-dream',
-      templateId: 'opal-dream',
+      templateId: 'frida-arabic-luxury-001',
       titleDisplay: 'OPAL',
       taglineAr: 'ضوء ناعم. وذكريات لا تنتهي.',
       taglineEn: 'Soft light. Endless memories.',

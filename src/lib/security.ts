@@ -10,32 +10,48 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 export const PRIMARY_ADMIN_EMAIL = 'mohammedtarek2490@gmail.com';
 
 /**
  * Verifies whether a Firebase User has verified admin privileges.
- * Strictly verifies custom token claim: `claims.admin === true` or primary bootstrapped admin email.
+ * Strictly verifies:
+ * 1. Firebase Auth Custom Token Claim: `claims.admin === true`
+ * 2. Primary verified administrator email (mohammedtarek2490@gmail.com)
+ * 3. Existence of admin document in /admins/{uid} collection
+ * Zero-trust: No frontend storage bypasses permitted.
  */
 export async function verifyIsAdminUser(user: User | null): Promise<boolean> {
-  if (typeof window !== 'undefined' && sessionStorage.getItem('frida_admin_bypass') === 'true') {
-    return true;
-  }
-
   if (!user) return false;
 
-  if (user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+  // 1. Primary bootstrapped admin email
+  if (user.email && user.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
     return true;
   }
 
+  // 2. Custom Token Claim { admin: true }
   try {
     const tokenResult = await user.getIdTokenResult(true);
-    return tokenResult.claims?.admin === true;
+    if (tokenResult.claims?.admin === true) {
+      return true;
+    }
   } catch (err) {
-    console.warn('Error verifying admin token claims:', err);
-    return false;
+    console.warn('Error checking admin token claims:', err);
   }
+
+  // 3. Document in /admins/{uid}
+  try {
+    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+    if (adminSnap.exists()) {
+      return true;
+    }
+  } catch {
+    // If not admin, rules deny read of /admins/{id} which is expected
+  }
+
+  return false;
 }
 
 /**

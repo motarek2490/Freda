@@ -51,7 +51,7 @@
 ## 📂 هيكل المشروع (مختصر)
 
 ```
-Vowly-main/
+frida/
 ├── src/
 │   ├── components/
 │   │   ├── InvitationLayouts/     # كل تصميم دعوة = ملف مستقل
@@ -91,7 +91,7 @@ Vowly-main/
 ```bash
 # 1. استنساخ المشروع
 git clone <رابط-المستودع>
-cd Vowly-main
+cd frida
 
 # 2. تثبيت الحزم
 npm install

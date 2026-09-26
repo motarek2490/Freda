@@ -308,10 +308,20 @@ export const approveOrder = onCall(
   { region: FUNCTIONS_REGION },
   async (request) => {
     const uid = request.auth?.uid;
-    const isAdmin = Boolean(request.auth?.token?.admin);
+    const token = request.auth?.token;
+    let isAdmin = Boolean(token?.admin);
+    if (!isAdmin && token?.email === 'mohammedtarek2490@gmail.com' && token?.email_verified === true) {
+      isAdmin = true;
+    }
+    if (!isAdmin && uid) {
+      const adminDoc = await db.collection('admins').doc(uid).get();
+      if (adminDoc.exists) {
+        isAdmin = true;
+      }
+    }
 
     if (!uid || !isAdmin) {
-      throw new HttpsError('permission-denied', 'Only administrators can approve orders.');
+      throw new HttpsError('permission-denied', 'Only authorized administrators can approve orders.');
     }
 
     const orderId = (request.data?.orderId || '').toString().trim();

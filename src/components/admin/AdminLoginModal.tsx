@@ -25,21 +25,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [copiedHost, setCopiedHost] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [showPasscodeForm, setShowPasscodeForm] = useState(false);
-
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanPass = passcode.trim();
-    if (cleanPass === '2026' || cleanPass === 'admin2026' || cleanPass === 'farida2026') {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('frida_admin_bypass', 'true');
-      }
-      onSuccess();
-    } else {
-      setAuthError(isRtl ? 'كود الدخول السري (PIN) غير صحيح!' : 'Incorrect Admin PIN!');
-    }
-  };
 
   const handleGoogleLogin = async (e?: React.MouseEvent) => {
     if (e) {
@@ -100,97 +85,43 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           </h3>
           <p className="text-xs text-[#8D8A84] max-w-xs mx-auto">
             {isRtl
-              ? 'تسجيل الدخول الإداري مقتصر فقط على حسابات المشرفين المعتمدة عبر Google مع Custom Admin Claim.'
+              ? 'تسجيل الدخول الإداري مقتصر فقط على حسابات المشرفين المعتمدة عبر Google مع صلاحيات الإدارة المسجلة.'
               : 'Admin access requires an authorized Google account with verified Admin Custom Claims.'}
           </p>
         </div>
 
-        {/* Google Login or Passcode Fallback */}
+        {/* Google Login Only */}
         <div className="space-y-4">
-          {!showPasscodeForm ? (
-            <>
-              <button
-                type="button"
-                disabled={googleLoading}
-                onClick={handleGoogleLogin}
-                className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-[#242424] to-[#2A2A2A] hover:border-[#B99A65] border border-[#444] text-[#F7F4EE] font-bold text-sm flex items-center justify-center gap-3 transition-all cursor-pointer shadow-lg disabled:opacity-50"
-              >
-                {googleLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-[#B99A65]" />
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.26 21.36 7.33 24 12 24z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.97 0 12s.46 3.84 1.26 5.42l4.02-3.15z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                    />
-                  </svg>
-                )}
-                <span>{isRtl ? 'المتابعة والتسجيل عبر حساب Google' : 'Continue with Google Account'}</span>
-              </button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthError('');
-                    setShowPasscodeForm(true);
-                  }}
-                  className="text-xs text-[#B99A65] hover:text-[#d6bd91] underline transition-colors cursor-pointer"
-                >
-                  {isRtl ? 'أو الدخول باستخدام كود PIN الإداري السري 🔑' : 'Or enter Admin Security PIN 🔑'}
-                </button>
-              </div>
-            </>
-          ) : (
-            <form onSubmit={handlePasscodeSubmit} className="space-y-4">
-              <div className="space-y-1.5 text-start">
-                <label className="text-xs font-bold text-[#F7F4EE]">
-                  {isRtl ? 'كود PIN الإداري السري للتحقق:' : 'Admin Security PIN:'}
-                </label>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="••••"
-                  className="w-full bg-[#1F1E1B] border border-[#333] rounded-xl px-4 py-3 text-center text-[#F7F4EE] placeholder-[#666] font-mono tracking-widest text-lg focus:outline-none focus:border-[#B99A65] transition-colors"
+          <button
+            type="button"
+            disabled={googleLoading}
+            onClick={handleGoogleLogin}
+            className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-[#242424] to-[#2A2A2A] hover:border-[#B99A65] border border-[#444] text-[#F7F4EE] font-bold text-sm flex items-center justify-center gap-3 transition-all cursor-pointer shadow-lg disabled:opacity-50"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-[#B99A65]" />
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
                 />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthError('');
-                    setShowPasscodeForm(false);
-                    setPasscode('');
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl border border-[#333] hover:bg-white/5 text-[#8D8A84] hover:text-[#F7F4EE] font-bold text-xs transition-colors cursor-pointer"
-                >
-                  {isRtl ? 'رجوع' : 'Back'}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#B99A65] to-[#d6bd91] text-[#171717] font-extrabold text-xs uppercase transition-all hover:shadow-[0_0_15px_rgba(185,154,101,0.4)] cursor-pointer"
-                >
-                  {isRtl ? 'تأكيد الدخول 👑' : 'Verify PIN 👑'}
-                </button>
-              </div>
-            </form>
-          )}
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.26 21.36 7.33 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.97 0 12s.46 3.84 1.26 5.42l4.02-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+            )}
+            <span>{isRtl ? 'المتابعة والتسجيل عبر حساب Google' : 'Continue with Google Account'}</span>
+          </button>
 
           {/* Error Message */}
           {authError && (
@@ -200,7 +131,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 <p className="leading-relaxed flex-1">{authError}</p>
               </div>
 
-              {!showPasscodeForm && (authError.includes('Authorized Domains') || authError.includes('غير مضاف')) && (
+              {(authError.includes('Authorized Domains') || authError.includes('غير مضاف')) && (
                 <div className="pt-2 border-t border-amber-500/30 flex items-center justify-between gap-2">
                   <span className="font-mono text-[11px] bg-black/40 px-2 py-1 rounded border border-amber-500/30 text-amber-300 truncate max-w-[200px]">
                     {typeof window !== 'undefined' ? window.location.hostname : ''}
@@ -226,7 +157,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             <CheckCircle2 className="w-3.5 h-3.5 text-[#B99A65]" />
             <span>
               {isRtl
-                ? 'محمي بقواعد Firebase Security Rules والتحقق من الهوية على الخادم'
+                ? 'محمي بقواعد Firebase Security Rules والتحقق المشفر من هوية المسؤول'
                 : 'Protected by Firebase Custom Admin Claims & Security Rules'}
             </span>
           </p>
@@ -235,3 +166,4 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     </div>
   );
 };
+

@@ -18,6 +18,7 @@ import {
   getAllAvailableTracks,
   subscribeCloudMusicLibrary,
 } from '../../data/presetMusic';
+import { compressImageFile, blobToDataURL } from '../../lib/imageUploader';
 
 interface UseInvitationFormProps {
   initialTemplate?: Template | null;
@@ -216,7 +217,7 @@ export function useInvitationForm({
     }
   };
 
-  const handleSingleFileUpload = (
+  const handleSingleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     field: keyof EventDetails
   ) => {
@@ -224,36 +225,55 @@ export function useInvitationForm({
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        handleDetailChange(field, event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Automatically compress client-side to optimal high-res web dimensions
+      const compressedBlob = await compressImageFile(file, 1600, 0.82);
+      const dataUrl = await blobToDataURL(compressedBlob);
+      handleDetailChange(field, dataUrl);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          handleDetailChange(field, event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleMultipleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMultipleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const fileList = Array.from(files);
-    const readers = fileList.map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          resolve(event.target?.result as string);
-        };
-        reader.readAsDataURL(file);
+    try {
+      const promises = fileList.map(async (file) => {
+        const compressedBlob = await compressImageFile(file, 1600, 0.82);
+        return await blobToDataURL(compressedBlob);
       });
-    });
-
-    Promise.all(readers).then((newUrls) => {
+      const newUrls = await Promise.all(promises);
       setEventDetails((prev) => ({
         ...prev,
         galleryImages: [...(prev.galleryImages || []), ...newUrls],
       }));
-    });
+    } catch {
+      const readers = fileList.map((file) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            resolve(event.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(readers).then((newUrls) => {
+        setEventDetails((prev) => ({
+          ...prev,
+          galleryImages: [...(prev.galleryImages || []), ...newUrls],
+        }));
+      });
+    }
   };
 
   const handleAddGalleryImage = () => {

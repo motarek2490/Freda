@@ -122,6 +122,11 @@ export interface EventDetails {
   enableGuestbook?: boolean;
   wishesList?: GuestWish[];
 
+  // Post-Event Wedding Memory Archive
+  enableMemories?: boolean;
+  memoriesList?: { id: string; url: string; caption?: string; date?: string }[];
+  postEventNote?: string;
+
   enableRSVP?: boolean;
   allowPlusOne?: boolean;
 }
@@ -279,6 +284,10 @@ export interface RSVPResponse {
   guestCount: number;
   plusOneName?: string;
   dietaryNotes?: string;
+  tableNumber?: string;
+  checkedIn?: boolean;
+  checkedInAt?: string;
+  personalLink?: string;
   createdAt: string;
 }
 

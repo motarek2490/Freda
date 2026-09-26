@@ -52,13 +52,14 @@ const ClientQrCode: React.FC<{ urlOrData: string; alt?: string; className?: stri
   const [dataUrl, setDataUrl] = useState<string>('');
 
   useEffect(() => {
+    if (!urlOrData) return;
     let text = urlOrData;
-    if (urlOrData.includes('api.qrserver.com')) {
+    if (urlOrData.includes('data=')) {
       try {
         const urlObj = new URL(urlOrData);
         text = urlObj.searchParams.get('data') || urlOrData;
       } catch {
-        // Ignore parsing errors and fallback to original urlOrData
+        // Fallback to raw text
       }
     }
     generateQrCodeDataUrl(text).then(setDataUrl);
@@ -159,9 +160,10 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
 
   // Guest Personalization from URL
-  const guestNameParam = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('guest')
-    : null;
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const guestNameParam = searchParams?.get('guest') || null;
+  const tableParam = searchParams?.get('table') || null;
+  const seatsParam = searchParams?.get('seats') || null;
 
   // RSVP Form Modal State
   const [showRsvpModal, setShowRsvpModal] = useState(false);
@@ -169,7 +171,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const [rsvpEmail, setRsvpEmail] = useState('');
   const [rsvpPhone, setRsvpPhone] = useState('');
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | 'maybe'>('attending');
-  const [rsvpGuestCount, setRsvpGuestCount] = useState(1);
+  const [rsvpGuestCount, setRsvpGuestCount] = useState(seatsParam ? Math.max(1, parseInt(seatsParam, 10)) : 1);
   const [rsvpPlusOneName, setRsvpPlusOneName] = useState('');
   const [rsvpDietaryNotes, setRsvpDietaryNotes] = useState('');
   const [rsvpSuccess, setRsvpSuccess] = useState(false);
@@ -672,6 +674,31 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
 
       {/* Main Digital Invitation Suite Content */}
       <div className="max-w-3xl mx-auto px-4 py-20 relative z-10 space-y-16">
+        {guestNameParam && (
+          <div className="max-w-xl mx-auto px-5 py-4 bg-gradient-to-r from-[#1F1E1B]/95 via-[#292621]/95 to-[#1F1E1B]/95 border border-[#B99A65]/70 rounded-2xl text-center shadow-[0_4px_30px_rgba(185,154,101,0.25)] backdrop-blur-md animate-in fade-in slide-in-from-top-4 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#B99A65] to-transparent" />
+            <span className="text-[11px] font-bold text-[#B99A65] uppercase tracking-wider block mb-1">
+              {isRtl ? '👑 دعوة ملكية خاصة موجهة إلى:' : '👑 Royal Invitation Specially For:'}
+            </span>
+            <h3 className="font-playfair text-2xl font-bold text-[#F7F4EE] tracking-wide">
+              {guestNameParam}
+            </h3>
+            {(tableParam || seatsParam) && (
+              <div className="flex items-center justify-center gap-3 text-xs text-[#E9E1D5] mt-2 pt-2 border-t border-[#B99A65]/30">
+                {tableParam && (
+                  <span className="bg-[#B99A65]/20 text-[#B99A65] font-semibold px-3 py-0.5 rounded-full border border-[#B99A65]/40">
+                    {isRtl ? `طاولة رقم: ${tableParam}` : `Table: ${tableParam}`}
+                  </span>
+                )}
+                {seatsParam && (
+                  <span className="bg-[#B99A65]/20 text-[#B99A65] font-semibold px-3 py-0.5 rounded-full border border-[#B99A65]/40">
+                    {isRtl ? `عدد المقاعد: ${seatsParam}` : `Reserved Seats: ${seatsParam}`}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {renderTemplateLayout()}
       </div>
 

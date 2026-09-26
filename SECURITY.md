@@ -1,4 +1,4 @@
-# FRIDA / Vowly - Security Architecture & Deployment Guide
+# FRIDA (فريدا) - Security Architecture & Deployment Guide
 
 ## 1. Firebase Firestore Security Rules Deployment
 

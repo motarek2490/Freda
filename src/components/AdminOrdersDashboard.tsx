@@ -71,12 +71,11 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const hasBypass = typeof window !== 'undefined' && sessionStorage.getItem('frida_admin_bypass') === 'true';
       if (user) {
         const isAdmin = await verifyIsAdminUser(user);
-        setIsAuthenticated(isAdmin || hasBypass);
+        setIsAuthenticated(isAdmin);
       } else {
-        setIsAuthenticated(hasBypass);
+        setIsAuthenticated(false);
       }
       setIsCheckingAuth(false);
     });
@@ -159,9 +158,6 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
 
   const handleLogout = async () => {
     await adminLogout();
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('frida_admin_bypass');
-    }
     setIsAuthenticated(false);
   };
 

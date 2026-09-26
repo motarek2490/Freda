@@ -29,7 +29,7 @@ export const MomentBeforeIDoSection: React.FC<MomentBeforeIDoSectionProps> = ({
   // Clearly marked demo invitation data
   const demoInvitation: InvitationData = {
     id: 'demo-mohamed-farida',
-    templateId: 'royal-gold',
+    templateId: 'frida-royal-001',
     layoutType: 'royal',
     title: isRtl ? 'حفل زفاف محمد وفريدة' : 'The Wedding of Mohamed & Farida',
     language: currentLang,
