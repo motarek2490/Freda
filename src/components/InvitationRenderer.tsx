@@ -45,7 +45,7 @@ import { PendingApprovalScreen } from './PendingApprovalScreen';
 import { ExpiredInvitationScreen } from './ExpiredInvitationScreen';
 import { ThemeEnvelopeScreen } from './ThemeEnvelopeScreen';
 import { TemplateLayoutProps } from './InvitationLayouts';
-import { renderDynamicLayout, LayoutLoadingFallback } from './InvitationLayouts/lazyLayouts';
+import { renderDynamicLayout, LayoutLoadingFallback, LayoutErrorBoundary } from './InvitationLayouts/lazyLayouts';
 import { generateQrCodeDataUrl } from '../lib/qrHelper';
 
 const ClientQrCode: React.FC<{ urlOrData: string; alt?: string; className?: string }> = ({ urlOrData, alt = 'QR Code', className }) => {
@@ -550,9 +550,11 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
         : 'royal');
 
     return (
-      <React.Suspense fallback={<LayoutLoadingFallback />}>
-        {renderDynamicLayout(rawLayout, layoutProps)}
-      </React.Suspense>
+      <LayoutErrorBoundary fallbackProps={layoutProps}>
+        <React.Suspense fallback={<LayoutLoadingFallback />}>
+          {renderDynamicLayout(rawLayout, layoutProps)}
+        </React.Suspense>
+      </LayoutErrorBoundary>
     );
   };
 

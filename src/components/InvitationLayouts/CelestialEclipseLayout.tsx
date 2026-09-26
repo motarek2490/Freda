@@ -647,3 +647,5 @@ export const CelestialEclipseLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default CelestialEclipseLayout;

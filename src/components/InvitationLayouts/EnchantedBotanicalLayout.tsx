@@ -640,3 +640,5 @@ export const EnchantedBotanicalLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default EnchantedBotanicalLayout;

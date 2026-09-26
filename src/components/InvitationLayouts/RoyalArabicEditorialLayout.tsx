@@ -619,3 +619,5 @@ export const RoyalArabicEditorialLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default RoyalArabicEditorialLayout;

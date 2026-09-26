@@ -352,3 +352,5 @@ export const RoyalLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default RoyalLayout;

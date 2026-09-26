@@ -651,3 +651,5 @@ export const OpalDreamLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default OpalDreamLayout;

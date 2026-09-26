@@ -1,93 +1,69 @@
 import React, { lazy } from 'react';
 import { TemplateLayoutProps } from './types';
+import { RoyalLayout } from './RoyalLayout';
 
-export const LazyRoyalLayout = lazy(() =>
-  import('./RoyalLayout').then((m) => ({ default: m.RoyalLayout }))
-);
-export const LazyMinimalistLayout = lazy(() =>
-  import('./MinimalistLayout').then((m) => ({ default: m.MinimalistLayout }))
-);
-export const LazyCinematicLayout = lazy(() =>
-  import('./CinematicLayout').then((m) => ({ default: m.CinematicLayout }))
-);
-export const LazyArabicLuxuryLayout = lazy(() =>
-  import('./ArabicLuxuryLayout').then((m) => ({ default: m.ArabicLuxuryLayout }))
-);
-export const LazyFloralBotanicalLayout = lazy(() =>
-  import('./FloralBotanicalLayout').then((m) => ({ default: m.FloralBotanicalLayout }))
-);
-export const LazyBohoTerracottaLayout = lazy(() =>
-  import('./BohoTerracottaLayout').then((m) => ({ default: m.BohoTerracottaLayout }))
-);
-export const LazyInteractiveStoryLayout = lazy(() =>
-  import('./InteractiveStoryLayout').then((m) => ({ default: m.InteractiveStoryLayout }))
-);
-export const LazyPlayfulCelebrationLayout = lazy(() =>
-  import('./PlayfulCelebrationLayout').then((m) => ({ default: m.PlayfulCelebrationLayout }))
-);
-export const LazyBurgundyMinimalistLayout = lazy(() =>
-  import('./BurgundyMinimalistLayout').then((m) => ({ default: m.BurgundyMinimalistLayout }))
-);
-export const LazyCrystalGlowLayout = lazy(() =>
-  import('./CrystalGlowLayout').then((m) => ({ default: m.CrystalGlowLayout }))
-);
-export const LazyCherryBloomLayout = lazy(() =>
-  import('./CherryBloomLayout').then((m) => ({ default: m.CherryBloomLayout }))
-);
-export const LazyGoldenBaroqueLayout = lazy(() =>
-  import('./GoldenBaroqueLayout').then((m) => ({ default: m.GoldenBaroqueLayout }))
-);
-export const LazyFreshCitrusLayout = lazy(() =>
-  import('./FreshCitrusLayout').then((m) => ({ default: m.FreshCitrusLayout }))
-);
-export const LazyMidnightConfettiLayout = lazy(() =>
-  import('./MidnightConfettiLayout').then((m) => ({ default: m.MidnightConfettiLayout }))
-);
-export const LazyEmeraldGardenLayout = lazy(() =>
-  import('./EmeraldGardenLayout').then((m) => ({ default: m.EmeraldGardenLayout }))
-);
-export const LazyOceanPearlLayout = lazy(() =>
-  import('./OceanPearlLayout').then((m) => ({ default: m.OceanPearlLayout }))
-);
-export const LazyAutumnRusticLayout = lazy(() =>
-  import('./AutumnRusticLayout').then((m) => ({ default: m.AutumnRusticLayout }))
-);
-export const LazyStarlitNightLayout = lazy(() =>
-  import('./StarlitNightLayout').then((m) => ({ default: m.StarlitNightLayout }))
-);
-export const LazyVintageLaceLayout = lazy(() =>
-  import('./VintageLaceLayout').then((m) => ({ default: m.VintageLaceLayout }))
-);
-export const LazyRoseVelvetLayout = lazy(() =>
-  import('./RoseVelvetLayout').then((m) => ({ default: m.RoseVelvetLayout }))
-);
-export const LazyLavenderFieldsLayout = lazy(() =>
-  import('./LavenderFieldsLayout').then((m) => ({ default: m.LavenderFieldsLayout }))
-);
-export const LazySunflowerMeadowLayout = lazy(() =>
-  import('./SunflowerMeadowLayout').then((m) => ({ default: m.SunflowerMeadowLayout }))
-);
-export const LazyJasmineNightLayout = lazy(() =>
-  import('./JasmineNightLayout').then((m) => ({ default: m.JasmineNightLayout }))
-);
-export const LazyWisteriaDreamLayout = lazy(() =>
-  import('./WisteriaDreamLayout').then((m) => ({ default: m.WisteriaDreamLayout }))
-);
-export const LazyCelestialEclipseLayout = lazy(() =>
-  import('./CelestialEclipseLayout').then((m) => ({ default: m.CelestialEclipseLayout }))
-);
-export const LazyEditorialNoirLayout = lazy(() =>
-  import('./EditorialNoirLayout').then((m) => ({ default: m.EditorialNoirLayout }))
-);
-export const LazyEnchantedBotanicalLayout = lazy(() =>
-  import('./EnchantedBotanicalLayout').then((m) => ({ default: m.EnchantedBotanicalLayout }))
-);
-export const LazyOpalDreamLayout = lazy(() =>
-  import('./OpalDreamLayout').then((m) => ({ default: m.OpalDreamLayout }))
-);
-export const LazyRoyalArabicEditorialLayout = lazy(() =>
-  import('./RoyalArabicEditorialLayout').then((m) => ({ default: m.RoyalArabicEditorialLayout }))
-);
+/**
+ * Resilient dynamic layout importer with automatic retry and graceful fallback.
+ * Prevents "Failed to fetch dynamically imported module" from crashing the invitation view.
+ */
+function safeLazy<T extends Record<string, any>>(
+  importer: () => Promise<T>,
+  componentName: string
+): React.LazyExoticComponent<React.FC<TemplateLayoutProps>> {
+  return lazy(async () => {
+    try {
+      const mod = await importer();
+      return { default: mod.default || mod[componentName] };
+    } catch (firstErr) {
+      console.warn(`[FRIDA Layout] Initial load failed for ${componentName}, retrying in 300ms...`, firstErr);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const mod = await importer();
+        return { default: mod.default || mod[componentName] };
+      } catch (secondErr) {
+        console.error(`[FRIDA Layout] Second load attempt failed for ${componentName}. Falling back to RoyalLayout:`, secondErr);
+        try {
+          const fallback = await import('./RoyalLayout');
+          return { default: fallback.default || fallback.RoyalLayout };
+        } catch (fallbackErr) {
+          console.error('[FRIDA Layout] Critical: Fallback to RoyalLayout also failed:', fallbackErr);
+          // Return synchronous RoyalLayout component
+          return { default: RoyalLayout };
+        }
+      }
+    }
+  });
+}
+
+export const LazyRoyalLayout = safeLazy(() => import('./RoyalLayout'), 'RoyalLayout');
+export const LazyMinimalistLayout = safeLazy(() => import('./MinimalistLayout'), 'MinimalistLayout');
+export const LazyCinematicLayout = safeLazy(() => import('./CinematicLayout'), 'CinematicLayout');
+export const LazyArabicLuxuryLayout = safeLazy(() => import('./ArabicLuxuryLayout'), 'ArabicLuxuryLayout');
+export const LazyFloralBotanicalLayout = safeLazy(() => import('./FloralBotanicalLayout'), 'FloralBotanicalLayout');
+export const LazyBohoTerracottaLayout = safeLazy(() => import('./BohoTerracottaLayout'), 'BohoTerracottaLayout');
+export const LazyInteractiveStoryLayout = safeLazy(() => import('./InteractiveStoryLayout'), 'InteractiveStoryLayout');
+export const LazyPlayfulCelebrationLayout = safeLazy(() => import('./PlayfulCelebrationLayout'), 'PlayfulCelebrationLayout');
+export const LazyBurgundyMinimalistLayout = safeLazy(() => import('./BurgundyMinimalistLayout'), 'BurgundyMinimalistLayout');
+export const LazyCrystalGlowLayout = safeLazy(() => import('./CrystalGlowLayout'), 'CrystalGlowLayout');
+export const LazyCherryBloomLayout = safeLazy(() => import('./CherryBloomLayout'), 'CherryBloomLayout');
+export const LazyGoldenBaroqueLayout = safeLazy(() => import('./GoldenBaroqueLayout'), 'GoldenBaroqueLayout');
+export const LazyFreshCitrusLayout = safeLazy(() => import('./FreshCitrusLayout'), 'FreshCitrusLayout');
+export const LazyMidnightConfettiLayout = safeLazy(() => import('./MidnightConfettiLayout'), 'MidnightConfettiLayout');
+export const LazyEmeraldGardenLayout = safeLazy(() => import('./EmeraldGardenLayout'), 'EmeraldGardenLayout');
+export const LazyOceanPearlLayout = safeLazy(() => import('./OceanPearlLayout'), 'OceanPearlLayout');
+export const LazyAutumnRusticLayout = safeLazy(() => import('./AutumnRusticLayout'), 'AutumnRusticLayout');
+export const LazyStarlitNightLayout = safeLazy(() => import('./StarlitNightLayout'), 'StarlitNightLayout');
+export const LazyVintageLaceLayout = safeLazy(() => import('./VintageLaceLayout'), 'VintageLaceLayout');
+export const LazyRoseVelvetLayout = safeLazy(() => import('./RoseVelvetLayout'), 'RoseVelvetLayout');
+export const LazyLavenderFieldsLayout = safeLazy(() => import('./LavenderFieldsLayout'), 'LavenderFieldsLayout');
+export const LazySunflowerMeadowLayout = safeLazy(() => import('./SunflowerMeadowLayout'), 'SunflowerMeadowLayout');
+export const LazyJasmineNightLayout = safeLazy(() => import('./JasmineNightLayout'), 'JasmineNightLayout');
+export const LazyWisteriaDreamLayout = safeLazy(() => import('./WisteriaDreamLayout'), 'WisteriaDreamLayout');
+export const LazyCelestialEclipseLayout = safeLazy(() => import('./CelestialEclipseLayout'), 'CelestialEclipseLayout');
+export const LazyEditorialNoirLayout = safeLazy(() => import('./EditorialNoirLayout'), 'EditorialNoirLayout');
+export const LazyEnchantedBotanicalLayout = safeLazy(() => import('./EnchantedBotanicalLayout'), 'EnchantedBotanicalLayout');
+export const LazyOpalDreamLayout = safeLazy(() => import('./OpalDreamLayout'), 'OpalDreamLayout');
+export const LazyRoyalArabicEditorialLayout = safeLazy(() => import('./RoyalArabicEditorialLayout'), 'RoyalArabicEditorialLayout');
 
 export const LayoutLoadingFallback: React.FC = () => (
   <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-[#0E0E0E] text-[#C9A86A]">
@@ -97,6 +73,34 @@ export const LayoutLoadingFallback: React.FC = () => (
     </div>
   </div>
 );
+
+/**
+ * Layout Error Boundary to prevent template rendering crashes
+ */
+export class LayoutErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallbackProps: TemplateLayoutProps },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallbackProps: TemplateLayoutProps }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[FRIDA] Error in template layout execution:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <RoyalLayout {...this.props.fallbackProps} />;
+    }
+    return this.props.children;
+  }
+}
 
 export const renderDynamicLayout = (layoutType: string, props: TemplateLayoutProps) => {
   switch (layoutType) {

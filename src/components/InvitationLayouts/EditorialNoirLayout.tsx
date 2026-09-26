@@ -1,16 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
-  Calendar,
-  Clock,
   MapPin,
   Heart,
   Gift,
-  ExternalLink,
   Maximize2,
   Send,
-  UserCheck,
-  CheckCircle2,
 } from 'lucide-react';
 import { TemplateLayoutProps } from './types';
 
@@ -617,3 +612,5 @@ export const EditorialNoirLayout: React.FC<TemplateLayoutProps> = ({
     </div>
   );
 };
+
+export default EditorialNoirLayout;
