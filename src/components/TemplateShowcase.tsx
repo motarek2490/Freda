@@ -36,58 +36,61 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
   // 4 Curated Spotlight Pieces
   const spotlightPieces = [
     {
-      id: 'editorial-noir',
-      templateId: 'frida-burgundy-minimalist-001',
-      titleDisplay: 'NOIR',
-      taglineAr: 'لليلة تستحق غلافها الخاص.',
-      taglineEn: 'For the night that deserves its own cover.',
-      categoryAr: 'أعراس ملكية — عصرية',
-      categoryEn: 'Black Tie Gala & Weddings',
-      descAr: 'تصميم إديتوريال أحادي اللون يستلهم وقار أغلفة المجلات العالمية بأناقة استثنائية.',
-      descEn: 'Monochrome high-fashion aesthetic with stark typography and dramatic whitespace.',
+      id: 'royal-hero',
+      templateId: 'f1e729be-a6d6-43ad-8e63-f1c8d62157a6',
+      titleDisplay: 'ROYAL',
+      taglineAr: 'فخامة ملكية لبداية فصل العمر الأبدي.',
+      taglineEn: 'Regal proclamation for an unforgettable evening.',
+      categoryAr: 'أعراس وقصور ملكية',
+      categoryEn: 'Royal Palace & Gala',
+      descAr: 'التصميم الأكثر طلباً وفخامة بأسلوب القصور مع إطار ذهبي مزخرف وختم شمعي ثلاثي الأبعاد.',
+      descEn: 'Signature royal aesthetic with ornate golden filigree, wax seal, and interactive audio.',
     },
     {
-      id: 'celestial-eclipse',
-      templateId: 'frida-midnight-confetti-001',
-      titleDisplay: 'ECLIPSE',
-      taglineAr: 'ليلة كُتبت في النجوم.',
-      taglineEn: 'A night written in the stars.',
-      categoryAr: 'سهرة مسائية ساحرة',
-      categoryEn: 'Starlit Evening Celebration',
-      descAr: 'سواد الفضاء العميق مع غبار الذهب الكوني وتأثيرات أجرام سماوية تخلد ذكرى لقائكم.',
-      descEn: 'Deep cosmic midnight with stardust gold foils and celestial alignments.',
+      id: 'elegant-engagement',
+      templateId: 'bc70c686-eb91-4f6d-a33e-39be9b927ee1',
+      titleDisplay: 'ELEGANT',
+      taglineAr: 'خطوبة راقية بتفاصيل لا تُنسى.',
+      taglineEn: 'Sophisticated engagement with timeless charm.',
+      categoryAr: 'خطوبة وملكة راقية',
+      categoryEn: 'High-End Engagement',
+      descAr: 'تصميم خطوبة أنيق وناعم بألوان راقية وتفاصيل فخمة تليق بلحظات الفرح الاستثنائية.',
+      descEn: 'Refined engagement suite with soft luxury tones, typography, and live RSVP.',
     },
     {
-      id: 'enchanted-botanical',
-      templateId: 'frida-floral-botanical-001',
-      titleDisplay: 'BOTANICA',
-      taglineAr: 'حيث يلتقي الحب بالطبيعة.',
-      taglineEn: 'Where love meets nature.',
-      categoryAr: 'أفراح الحدائق والبوهو',
-      categoryEn: 'Garden & Botanical Romance',
-      descAr: 'أغصان زيتون وزهور عاجية دافئة محاطة بأوراق الذهب الناعمة لأجواء عفوية وحميمية.',
-      descEn: 'Delicate olive branches, ivory blossoms, and warm organic textures for pure romance.',
+      id: 'minimal-noir',
+      templateId: '70f410be-da60-44d3-9637-52fe53ec96ea',
+      titleDisplay: 'MINIMAL',
+      taglineAr: 'البساطة هي قمة الفخامة والجمال.',
+      taglineEn: 'Simplicity is the ultimate sophistication.',
+      categoryAr: 'زفاف كلاسيكي عصري',
+      categoryEn: 'Modern Minimalist',
+      descAr: 'أناقة الخطوط النقية والمساحات الهادئة مع لمسات لونية عميقة لعشاق الذوق الرفيع.',
+      descEn: 'Clean proportions, stark typography, and deep rich contrast for tasteful ceremonies.',
     },
     {
-      id: 'opal-dream',
-      templateId: 'frida-arabic-luxury-001',
-      titleDisplay: 'OPAL',
-      taglineAr: 'ضوء ناعم. وذكريات لا تنتهي.',
-      taglineEn: 'Soft light. Endless memories.',
-      categoryAr: 'خطوبة وزفاف راقٍ',
-      categoryEn: 'Luminous Pastel Suite',
-      descAr: 'تدرجات حجر الأوبال الكريم مع بريق لؤلؤي هادئ يمنح ضيوفكم شعوراً بالحلم والبهجة.',
-      descEn: 'Iridescent pearl reflections and gentle light diffusion for unforgettable grace.',
+      id: 'sahara-nights',
+      templateId: 'e84feb17-f6d8-491c-a762-5a63892f4587',
+      titleDisplay: 'SAHARA',
+      taglineAr: 'دفء ليالي الصحراء تحت ضوء النجوم.',
+      taglineEn: 'Warm desert twilight beneath the starlight.',
+      categoryAr: 'حفلات بوهو وطبيعية',
+      categoryEn: 'Boho & Desert Sunset',
+      descAr: 'سحر النغمات الترابية والذهبية مع لمسات بوهيمية دافئة تخلد ذكرى لقائكم في ليلة بديعة.',
+      descEn: 'Terracotta gradients, ambient strings, and open-air bohemian romantic spirit.',
     },
   ];
 
   const categoriesList: { id: Category; labelAr: string; labelEn: string }[] = [
-    { id: 'all', labelAr: 'كل المجموعات', labelEn: 'All Suites' },
+    { id: 'all', labelAr: 'كل التصاميم', labelEn: 'All Suites' },
     { id: 'weddings', labelAr: 'الأعراس والزفاف', labelEn: 'Weddings' },
     { id: 'engagements', labelAr: 'الخطوبة والملكة', labelEn: 'Engagements' },
-    { id: 'birthdays', labelAr: 'أعياد الميلاد', labelEn: 'Milestones' },
-    { id: 'anniversaries', labelAr: 'ذكرى الزواج', labelEn: 'Anniversaries' },
-    { id: 'corporate', labelAr: 'المناسبات الرسمية', labelEn: 'Corporate Galas' },
+    { id: 'birthdays', labelAr: 'أعياد الميلاد', labelEn: 'Birthdays' },
+    { id: 'baby_showers', labelAr: 'استقبال المواليد', labelEn: 'Baby Showers' },
+    { id: 'royal', labelAr: 'ملكي فاخر', labelEn: 'Royal' },
+    { id: 'floral', labelAr: 'زهور وباستيل', labelEn: 'Floral' },
+    { id: 'minimal', labelAr: 'مينيمال كلاسيكي', labelEn: 'Minimal' },
+    { id: 'boho', labelAr: 'بوهو وصحراوي', labelEn: 'Boho' },
   ];
 
   // Filter all 41 templates
@@ -123,7 +126,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
           <div className="inline-flex items-center gap-2 text-xs font-mono tracking-[0.3em] uppercase text-[#C9A86A]">
             <span>HAUTE COUTURE SUITES</span>
             <span aria-hidden="true">·</span>
-            <span>41 PIECES</span>
+            <span>11 PIECES</span>
           </div>
 
           <h2

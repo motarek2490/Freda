@@ -6,6 +6,7 @@
 
 import { getAnalytics, isSupported, logEvent, Analytics } from 'firebase/analytics';
 import { app } from './firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { initMetaPixel, trackMetaPixelEvent } from './metaPixel';
 
 export const CONSENT_STORAGE_KEY = 'frida_analytics_consent';
@@ -42,21 +43,32 @@ export async function initAnalyticsIfConsented(): Promise<void> {
     return;
   }
 
-  // 1. Initialize Firebase Analytics (GA4) if supported
+  // 1. Initialize Firebase Analytics (GA4) only if measurementId is provided & supported
   if (!isGAInitialized) {
     try {
-      const supported = await isSupported();
-      if (supported) {
-        analyticsInstance = getAnalytics(app);
-        isGAInitialized = true;
+      const measurementId = (firebaseConfig as any)?.measurementId;
+      if (measurementId && typeof measurementId === 'string' && measurementId.trim().length > 0) {
+        const supported = await isSupported().catch(() => false);
+        if (supported) {
+          try {
+            analyticsInstance = getAnalytics(app);
+            isGAInitialized = true;
+          } catch {
+            // Silently ignore if blocked by browser / network
+          }
+        }
       }
-    } catch (e) {
-      console.warn('Firebase Analytics not supported in this environment:', e);
+    } catch {
+      // Silently ignore analytics initialization errors
     }
   }
 
   // 2. Initialize Meta Pixel lazily
-  initMetaPixel();
+  try {
+    initMetaPixel();
+  } catch {
+    // Silently ignore
+  }
 }
 
 /**
@@ -71,7 +83,7 @@ export function setAnalyticsConsent(status: 'granted' | 'denied'): void {
   }
 
   if (status === 'granted') {
-    initAnalyticsIfConsented();
+    initAnalyticsIfConsented().catch(() => {});
   }
 }
 
@@ -90,24 +102,32 @@ export function trackViewTemplate(templateId: string, templateName: string, cate
 
   // GA4 Event
   if (analyticsInstance) {
-    logEvent(analyticsInstance, 'view_item', {
-      item_id: cleanId,
-      item_name: cleanName,
-      item_category: category || 'templates',
-    });
-    logEvent(analyticsInstance, 'view_template', {
-      template_id: cleanId,
-      category: category || 'templates',
-    });
+    try {
+      logEvent(analyticsInstance, 'view_item', {
+        item_id: cleanId,
+        item_name: cleanName,
+        item_category: category || 'templates',
+      });
+      logEvent(analyticsInstance, 'view_template', {
+        template_id: cleanId,
+        category: category || 'templates',
+      });
+    } catch {
+      // Ignore
+    }
   }
 
   // Meta Pixel Event
-  trackMetaPixelEvent('ViewContent', {
-    content_ids: [cleanId],
-    content_name: cleanName,
-    content_type: 'product',
-    content_category: category || 'templates',
-  });
+  try {
+    trackMetaPixelEvent('ViewContent', {
+      content_ids: [cleanId],
+      content_name: cleanName,
+      content_type: 'product',
+      content_category: category || 'templates',
+    });
+  } catch {
+    // Ignore
+  }
 }
 
 /**
@@ -121,19 +141,27 @@ export function trackBeginCheckout(planTier: string, priceEGP: number): void {
 
   // GA4 Event
   if (analyticsInstance) {
-    logEvent(analyticsInstance, 'begin_checkout', {
-      value: numValue,
-      currency: 'EGP',
-      plan_tier: cleanTier,
-    });
+    try {
+      logEvent(analyticsInstance, 'begin_checkout', {
+        value: numValue,
+        currency: 'EGP',
+        plan_tier: cleanTier,
+      });
+    } catch {
+      // Ignore
+    }
   }
 
   // Meta Pixel Event
-  trackMetaPixelEvent('InitiateCheckout', {
-    value: numValue,
-    currency: 'EGP',
-    content_category: cleanTier,
-  });
+  try {
+    trackMetaPixelEvent('InitiateCheckout', {
+      value: numValue,
+      currency: 'EGP',
+      content_category: cleanTier,
+    });
+  } catch {
+    // Ignore
+  }
 }
 
 /**
@@ -148,22 +176,30 @@ export function trackPurchase(orderId: string, planTier: string, priceEGP: numbe
 
   // GA4 Event
   if (analyticsInstance) {
-    logEvent(analyticsInstance, 'purchase', {
-      transaction_id: cleanOrderId,
-      value: numValue,
-      currency: 'EGP',
-      plan_tier: cleanTier,
-    });
+    try {
+      logEvent(analyticsInstance, 'purchase', {
+        transaction_id: cleanOrderId,
+        value: numValue,
+        currency: 'EGP',
+        plan_tier: cleanTier,
+      });
+    } catch {
+      // Ignore
+    }
   }
 
   // Meta Pixel Event
-  trackMetaPixelEvent('Purchase', {
-    value: numValue,
-    currency: 'EGP',
-    content_type: 'product',
-    content_name: cleanTier,
-    order_id: cleanOrderId,
-  });
+  try {
+    trackMetaPixelEvent('Purchase', {
+      value: numValue,
+      currency: 'EGP',
+      content_type: 'product',
+      content_name: cleanTier,
+      order_id: cleanOrderId,
+    });
+  } catch {
+    // Ignore
+  }
 }
 
 /**
@@ -174,15 +210,23 @@ export function trackSignUp(method = 'google'): void {
 
   // GA4 Event
   if (analyticsInstance) {
-    logEvent(analyticsInstance, 'sign_up', {
-      method,
-    });
+    try {
+      logEvent(analyticsInstance, 'sign_up', {
+        method,
+      });
+    } catch {
+      // Ignore
+    }
   }
 
   // Meta Pixel Event
-  trackMetaPixelEvent('CompleteRegistration', {
-    status: true,
-  });
+  try {
+    trackMetaPixelEvent('CompleteRegistration', {
+      status: true,
+    });
+  } catch {
+    // Ignore
+  }
 }
 
 /**
@@ -196,17 +240,25 @@ export function trackRSVPSubmitted(invitationId: string, status: string, guestCo
 
   // GA4 Event
   if (analyticsInstance) {
-    logEvent(analyticsInstance, 'rsvp_submitted', {
-      invitation_id: cleanInvId,
-      rsvp_status: cleanStatus,
-      guest_count: guestCount,
-    });
+    try {
+      logEvent(analyticsInstance, 'rsvp_submitted', {
+        invitation_id: cleanInvId,
+        rsvp_status: cleanStatus,
+        guest_count: guestCount,
+      });
+    } catch {
+      // Ignore
+    }
   }
 
   // Meta Pixel Event
-  trackMetaPixelEvent('Lead', {
-    content_name: 'RSVP Submission',
-    content_category: cleanStatus,
-  });
-  trackMetaPixelEvent('RSVPSubmitted', { invitation_id: cleanInvId, status: cleanStatus }, true);
+  try {
+    trackMetaPixelEvent('Lead', {
+      content_name: 'RSVP Submission',
+      content_category: cleanStatus,
+    });
+    trackMetaPixelEvent('RSVPSubmitted', { invitation_id: cleanInvId, status: cleanStatus }, true);
+  } catch {
+    // Ignore
+  }
 }
