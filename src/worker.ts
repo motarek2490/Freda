@@ -189,7 +189,7 @@ async function handleR2AssetRequest(request: Request, env: Env): Promise<Respons
     headers.set('ETag', etag);
     headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     headers.set('Accept-Ranges', 'bytes');
-    headers.set('Access-Control-Allow-Origin': '*',
+    headers.set('Access-Control-Allow-Origin', '*');
 
     // If partial content was served
     if ('range' in object && object.range) {
@@ -223,7 +223,7 @@ async function handleR2AssetRequest(request: Request, env: Env): Promise<Respons
   headers.set('ETag', etag);
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
   headers.set('Accept-Ranges', 'bytes');
-  headers.set('Access-Control-Allow-Origin': '*',
+  headers.set('Access-Control-Allow-Origin', '*');
 
   return new Response(object.body, {
     status: 200,
