@@ -47,6 +47,7 @@ import { useTranslation } from '../data/translations';
 import { generateQrCodeDataUrl } from '../lib/qrHelper';
 import { compressImageFile, blobToDataURL } from '../lib/imageUploader';
 import { auth } from '../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { LiveCheckInModal } from './LiveWeddingMode/LiveCheckInModal';
 
 interface HostGuestPortalProps {
