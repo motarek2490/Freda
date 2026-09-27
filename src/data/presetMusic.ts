@@ -36,6 +36,8 @@ let cachedCloudTracks: MusicTrack[] = [];
 let lastCacheTimestamp = 0;
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL to save Firestore reads
 
+let isStorageReachable: boolean | null = null;
+
 /**
  * Uploads both a Preview clip and the Full Audio to Firebase Storage,
  * returning structured download URLs without saving raw audio binaries in Firestore.
@@ -56,44 +58,57 @@ export async function uploadSongPackageToStorage(
   await saveAudioToIDB(`${trackId}_full`, fullBlob);
   await saveAudioToIDB(`${trackId}_preview`, previewBlob);
 
-  // 1. Try Firebase Storage with a strict 3.5s timeout (never hangs)
-  try {
-    let user = auth.currentUser;
-    if (!user) {
-      user = await ensureAnonymousAuth();
+  // 1. Quick attempt to Firebase Storage with strict 1.2s timeout (never hangs)
+  if (isStorageReachable !== false && storage) {
+    try {
+      let user = auth.currentUser;
+      if (!user) {
+        user = await ensureAnonymousAuth();
+      }
+
+      const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
+      const fullRef = storageRef(storage, fullPath);
+      const fullSnap = await Promise.race([
+        uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+      const audioUrl = await Promise.race([
+        getDownloadURL(fullSnap.ref),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+
+      const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
+      const prevRef = storageRef(storage, prevPath);
+      const prevSnap = await Promise.race([
+        uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+      const previewUrl = await Promise.race([
+        getDownloadURL(prevSnap.ref),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+
+      if (audioUrl && previewUrl) {
+        isStorageReachable = true;
+        return {
+          audioUrl,
+          previewUrl,
+        };
+      }
+    } catch {
+      isStorageReachable = false;
     }
-
-    const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
-    const fullRef = storageRef(storage, fullPath);
-    const fullSnap = await Promise.race([
-      uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase Storage full upload timeout')), 3500)
-      ),
-    ]);
-    const audioUrl = await getDownloadURL(fullSnap.ref);
-
-    const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
-    const prevRef = storageRef(storage, prevPath);
-    const prevSnap = await Promise.race([
-      uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase Storage preview upload timeout')), 3500)
-      ),
-    ]);
-    const previewUrl = await getDownloadURL(prevSnap.ref);
-
-    if (audioUrl && previewUrl) {
-      return {
-        audioUrl,
-        previewUrl,
-      };
-    }
-  } catch (err) {
-    console.warn('Firebase Storage upload failed or unavailable, fallback to resilient audio data package:', err);
   }
 
-  // 2. Resilient fallback: Convert previewBlob to Data URL (~150-250KB, works everywhere)
+  // 2. Resilient instant fallback: Convert previewBlob to Data URL (~150-250KB, works everywhere)
   const previewDataUrl = await blobToDataUrl(previewBlob);
   let audioDataUrl = '';
   if (fullBlob.size < 2.5 * 1024 * 1024) {
@@ -125,28 +140,44 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
 
   await saveAudioToIDB(`${trackId}_audio`, blob);
 
-  try {
-    let user = auth.currentUser;
-    if (!user) {
-      user = await ensureAnonymousAuth();
-    }
-
-    const path = `audio/full/${timestamp}_${cleanName}.mp3`;
-    const sRef = storageRef(storage, path);
-    const snap = await Promise.race([
-      uploadBytes(sRef, blob, { contentType: 'audio/mpeg' }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase Storage timeout')), 3500)
-      ),
-    ]);
-    return await getDownloadURL(snap.ref);
-  } catch (err) {
-    console.warn('Firebase Storage upload failed or timed out, using fallback resilient audio URL:', err);
-    if (blob.size < 2.5 * 1024 * 1024) {
-      return await blobToDataUrl(blob);
-    }
-    return typeof URL !== 'undefined' ? URL.createObjectURL(blob) : '';
+  let localUrl = '';
+  if (blob.size < 2.5 * 1024 * 1024) {
+    localUrl = await blobToDataUrl(blob);
+  } else if (typeof URL !== 'undefined') {
+    localUrl = URL.createObjectURL(blob);
   }
+
+  if (isStorageReachable !== false && storage) {
+    try {
+      let user = auth.currentUser;
+      if (!user) {
+        user = await ensureAnonymousAuth();
+      }
+
+      const path = `audio/full/${timestamp}_${cleanName}.mp3`;
+      const sRef = storageRef(storage, path);
+      const snap = await Promise.race([
+        uploadBytes(sRef, blob, { contentType: 'audio/mpeg' }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+      const downloadUrl = await Promise.race([
+        getDownloadURL(snap.ref),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 1200)
+        ),
+      ]);
+      if (downloadUrl) {
+        isStorageReachable = true;
+        return downloadUrl;
+      }
+    } catch {
+      isStorageReachable = false;
+    }
+  }
+
+  return localUrl;
 }
 
 // Vite Dynamic Import for local bundled fallback assets
@@ -287,26 +318,24 @@ export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise
     );
     deleteCustomUploadedTrack(trackIdOrUrl);
 
-    // Clean up Firebase Storage assets
-    const deleteIfStorageUrl = async (url?: string) => {
+    // Fire-and-forget background cleanup for Firebase Storage (never blocks or delays deletion)
+    const deleteIfStorageUrl = (url?: string) => {
       if (!url) return;
-      try {
-        if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
-          const sRef = storageRef(storage, url);
-          await deleteObject(sRef);
-        }
-      } catch (err) {
-        console.warn('Error deleting audio file from Firebase Storage:', err);
+      if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
+        Promise.race([
+          deleteObject(storageRef(storage, url)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800))
+        ]).catch(() => {});
       }
     };
 
     if (existing) {
-      await deleteIfStorageUrl(existing.previewUrl);
+      deleteIfStorageUrl(existing.previewUrl);
       if (existing.audioUrl && existing.audioUrl !== existing.previewUrl) {
-        await deleteIfStorageUrl(existing.audioUrl);
+        deleteIfStorageUrl(existing.audioUrl);
       }
       if (existing.url && existing.url !== existing.audioUrl && existing.url !== existing.previewUrl) {
-        await deleteIfStorageUrl(existing.url);
+        deleteIfStorageUrl(existing.url);
       }
     }
 

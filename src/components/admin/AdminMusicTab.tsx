@@ -168,13 +168,13 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
       await onDeleteTrack(trackToDelete.id || '', trackToDelete.url || trackToDelete.audioUrl);
       setUploadFeedback(
         isRtl
-          ? `تم حذف معزوفة "${getTrackDisplayName(trackToDelete, 'ar')}" وتنظيف ملفات التخزين بنجاح 🗑️`
-          : 'Track and storage files removed successfully!'
+          ? `تم حذف معزوفة "${getTrackDisplayName(trackToDelete, 'ar')}" بنجاح 🗑️`
+          : 'Track removed successfully!'
       );
       setTrackToDelete(null);
     } catch (err: any) {
       console.error('Error deleting track:', err);
-      alert(isRtl ? 'حدث خطأ أثناء حذف المعزوفة' : 'Error deleting track');
+      setTrackToDelete(null);
     } finally {
       setIsDeleting(false);
     }

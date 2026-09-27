@@ -248,32 +248,44 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
 
   // Music Actions
   const handleSaveTrack = async (track: MusicTrack) => {
-    await saveTrackToCloudLibrary(track);
+    try {
+      await saveTrackToCloudLibrary(track);
+    } catch (err) {
+      console.warn('Error saving track to cloud library:', err);
+    }
     setAdminTracks((prev) => [track, ...prev.filter((t) => t.id !== track.id && t.url !== track.url)]);
   };
 
   const handleDeleteTrack = async (trackId: string, trackUrl?: string) => {
-    // 1. Delete from Cloud Firestore / local cache
-    if (trackId || trackUrl) {
-      await deleteTrackFromCloudLibrary(trackId || trackUrl || '');
-    }
-
-    // 2. Hide or blacklist in adminSettings so preset/system tracks are permanently removed
-    if (adminSettings) {
-      const currentHidden = adminSettings.hiddenTrackIds || [];
-      const toHide = [trackId, trackUrl].filter(Boolean) as string[];
-      const newHidden = Array.from(new Set([...currentHidden, ...toHide]));
-      const updated: AdminSettings = {
-        ...adminSettings,
-        hiddenTrackIds: newHidden,
-      };
-      await saveAdminSettingsCloud(updated);
-      setAdminSettings(updated);
-      if (onSettingsUpdated) onSettingsUpdated(updated);
-    }
-
-    // 3. Immediately reflect in UI state
+    // 1. Immediately reflect in UI state so the user sees instant feedback
     setAdminTracks((prev) => prev.filter((t) => t.id !== trackId && (!trackUrl || t.url !== trackUrl)));
+
+    // 2. Delete from Cloud Firestore / local cache / IndexedDB
+    try {
+      if (trackId || trackUrl) {
+        await deleteTrackFromCloudLibrary(trackId || trackUrl || '');
+      }
+    } catch (err) {
+      console.warn('Error in deleteTrackFromCloudLibrary:', err);
+    }
+
+    // 3. Hide or blacklist in adminSettings so preset/system tracks are permanently removed
+    if (adminSettings) {
+      try {
+        const currentHidden = adminSettings.hiddenTrackIds || [];
+        const toHide = [trackId, trackUrl].filter(Boolean) as string[];
+        const newHidden = Array.from(new Set([...currentHidden, ...toHide]));
+        const updated: AdminSettings = {
+          ...adminSettings,
+          hiddenTrackIds: newHidden,
+        };
+        await saveAdminSettingsCloud(updated);
+        setAdminSettings(updated);
+        if (onSettingsUpdated) onSettingsUpdated(updated);
+      } catch (settingsErr) {
+        console.warn('Error updating adminSettings for deleted track:', settingsErr);
+      }
+    }
   };
 
   const handleSetDefaultDemoTrack = async (url: string, name: string) => {
