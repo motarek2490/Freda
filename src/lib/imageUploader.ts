@@ -1,16 +1,27 @@
 /**
- * Cloudflare R2 & WebP Mobile-Friendly Image Compression & Upload Utility for FRIDA
+ * Firebase Storage & WebP Mobile-Friendly Image Compression & Upload Utility for FRIDA
  * Automatically compresses large phone camera photos (PNG/JPG up to 25MB)
- * to crystal-clear WebP / JPEG images and uploads directly to Cloudflare R2
- * (`images/invitations/` or `images/covers/`) for edge CDN delivery.
+ * to crystal-clear WebP / JPEG images and uploads directly to Firebase Storage.
  */
 
-import { uploadAssetToR2, R2AssetFolder } from './r2Storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage, auth, ensureAnonymousAuth } from './firebase';
+
+export type StorageFolder =
+  | 'images/invitations'
+  | 'images/covers'
+  | 'images/gallery'
+  | 'images/templates'
+  | 'images/backgrounds'
+  | 'uploads';
+
+// Backwards-compatible alias
+export type R2AssetFolder = StorageFolder;
 
 export interface ImageUploadResult {
   url: string;
   key?: string;
-  source: 'r2' | 'firebase' | 'local_compressed';
+  source: 'firebase' | 'local_compressed';
   sizeBytes: number;
 }
 
@@ -23,7 +34,7 @@ export async function compressImageFile(
   maxDimension: number = 1920,
   quality: number = 0.85
 ): Promise<Blob> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const processImage = (img: HTMLImageElement | ImageBitmap) => {
       const { width, height } = img;
       let targetWidth = width;
@@ -113,30 +124,43 @@ export function blobToDataURL(blob: Blob): Promise<string> {
 /**
  * High-level function to process and upload an image from mobile/desktop:
  * 1. Compresses client-side in under ~150ms to WebP
- * 2. Uploads directly to Cloudflare R2 bucket
- * 3. Falls back gracefully to Firebase Storage or compressed lightweight data URL
+ * 2. Uploads directly to Firebase Storage (`users/{uid}/...`)
+ * 3. Falls back gracefully to lightweight data URL if offline
  */
 export async function processAndUploadImage(
   file: File,
   tag: string = 'invitation_photo',
-  folder: R2AssetFolder = 'images/invitations'
+  folder: StorageFolder = 'images/invitations'
 ): Promise<ImageUploadResult> {
   // 1. Compress image to phone-optimized WebP
   const compressedBlob = await compressImageFile(file, 1920, 0.84);
 
-  // 2. Upload to Cloudflare R2
+  // 2. Upload to Firebase Storage
   try {
-    const r2Result = await uploadAssetToR2(compressedBlob, folder, `${tag}.webp`);
-    if (r2Result && r2Result.url) {
+    let user = auth.currentUser;
+    if (!user) {
+      user = await ensureAnonymousAuth();
+    }
+    const uid = user?.uid || 'anonymous';
+    const cleanTag = tag.replace(/[^a-zA-Z0-9\u0600-\u06FF._-]/g, '_');
+    const path = `users/${uid}/${folder}/${Date.now()}_${cleanTag}.webp`;
+
+    const sRef = storageRef(storage, path);
+    const snap = await uploadBytes(sRef, compressedBlob, {
+      contentType: 'image/webp',
+    });
+    const downloadUrl = await getDownloadURL(snap.ref);
+
+    if (downloadUrl) {
       return {
-        url: r2Result.url,
-        key: r2Result.key,
-        source: r2Result.storage,
-        sizeBytes: r2Result.sizeBytes,
+        url: downloadUrl,
+        key: path,
+        source: 'firebase',
+        sizeBytes: compressedBlob.size,
       };
     }
   } catch (err) {
-    console.warn('R2 and Cloud storage upload warning, falling back to local compressed data URL:', err);
+    console.warn('Firebase storage upload failed, falling back to local compressed data URL:', err);
   }
 
   // 3. Fallback: lightweight compressed data URL

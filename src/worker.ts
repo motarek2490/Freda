@@ -1,53 +1,23 @@
 /**
  * Cloudflare Worker for FRIDA / فريدا
- * - Edge SSR HTMLRewriter for dynamic OpenGraph & Twitter tags on /i/:slug
- * - Cloudflare R2 Asset Delivery (/r2/*) with HTTP Range requests (206 Partial Content) & Audio Streaming
- * - Cloudflare R2 Upload & Management API (/api/r2/upload, /api/r2/delete)
+ * - Edge SSR HTMLRewriter for dynamic OpenGraph & Twitter tags on /i/:slug and /portal/:slug
  * - Named Firestore DB resolution via /slugs/{slug} -> /invitations/{id}
  * - Clean redirects from legacy ?invitation= & ?portal= query params
  * - Enterprise Security Headers & Strict Content-Security-Policy (CSP)
- * - High-performance browser & CDN caching
+ * - Static SPA asset serving via Cloudflare ASSETS binding
  */
-
-interface R2Bucket {
-  get(key: string, options?: { range?: Headers | string | { offset?: number; length?: number } }): Promise<R2ObjectBody | null>;
-  head(key: string): Promise<R2Object | null>;
-  put(key: string, value: ReadableStream | ArrayBuffer | string | Blob, options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }): Promise<R2Object>;
-  delete(keys: string | string[]): Promise<void>;
-}
-
-interface R2Object {
-  key: string;
-  size: number;
-  etag: string;
-  httpEtag: string;
-  uploaded: Date;
-  httpMetadata?: {
-    contentType?: string;
-    cacheControl?: string;
-  };
-}
-
-interface R2ObjectBody extends R2Object {
-  body: ReadableStream;
-  arrayBuffer(): Promise<ArrayBuffer>;
-  text(): Promise<string>;
-  json<T>(): Promise<T>;
-}
 
 interface Env {
   ASSETS: {
     fetch: typeof fetch;
   };
-  FRIDA_ASSETS?: R2Bucket;
   SITE_URL?: string;
   BRAND_NAME?: string;
   BRAND_NAME_AR?: string;
-  R2_UPLOAD_SECRET?: string;
 }
 
 const FIREBASE_PROJECT_ID = 'gen-lang-client-0740490915';
-const FIRESTORE_DATABASE_ID = '(default)';
+const FIRESTORE_DATABASE_ID = 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
 const DEFAULT_SITE_URL = 'https://farid.invitationes.workers.dev';
 
 interface InvitationMeta {
@@ -55,29 +25,6 @@ interface InvitationMeta {
   description: string;
   coverImage: string;
   url: string;
-}
-
-const MIME_TYPES: Record<string, string> = {
-  mp3: 'audio/mpeg',
-  wav: 'audio/wav',
-  ogg: 'audio/ogg',
-  m4a: 'audio/mp4',
-  aac: 'audio/aac',
-  webp: 'image/webp',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  svg: 'image/svg+xml',
-  gif: 'image/gif',
-  json: 'application/json',
-  woff2: 'font/woff2',
-  woff: 'font/woff',
-  ttf: 'font/ttf',
-};
-
-function getMimeType(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase() || '';
-  return MIME_TYPES[ext] || 'application/octet-stream';
 }
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -120,258 +67,16 @@ function addSecurityHeaders(res: Response, isStaticAsset: boolean): Response {
 }
 
 /**
- * Handles R2 Asset Serving with Streaming, Range Requests (206 Partial Content),
- * and Caching (ETag & Cache-Control).
- */
-async function handleR2AssetRequest(request: Request, env: Env): Promise<Response> {
-  if (!env.FRIDA_ASSETS) {
-    return new Response('R2 bucket binding (FRIDA_ASSETS) not configured', { status: 503 });
-  }
-
-  const url = new URL(request.url);
-  // Extract key removing leading /r2/
-  let key = decodeURIComponent(url.pathname.replace(/^\/r2\//, ''));
-
-  // Normalize path and prevent directory traversal
-  key = key.replace(/\\/g, '/').replace(/\/\.\.\//g, '/').replace(/^\/+/, '');
-  if (!key || key.includes('..')) {
-    return new Response('Invalid asset path', { status: 400 });
-  }
-
-  const rangeHeader = request.headers.get('range');
-  const ifNoneMatch = request.headers.get('if-none-match');
-
-  // Check metadata first
-  const objectMeta = await env.FRIDA_ASSETS.head(key);
-  if (!objectMeta) {
-    return new Response('Asset not found in R2 storage', { status: 404 });
-  }
-
-  const etag = objectMeta.httpEtag || `"${objectMeta.etag}"`;
-  const mimeType = objectMeta.httpMetadata?.contentType || getMimeType(key);
-
-  // Conditional GET (304 Not Modified)
-  if (ifNoneMatch && ifNoneMatch === etag) {
-    return new Response(null, {
-      status: 304,
-      headers: {
-        ETag: etag,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Accept-Ranges': 'bytes',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  }
-
-  if (request.method === 'HEAD') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Content-Type': mimeType,
-        'Content-Length': objectMeta.size.toString(),
-        ETag: etag,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Accept-Ranges': 'bytes',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  }
-
-  // Handle Range Requests for seekable Audio streaming
-  if (rangeHeader) {
-    const object = await env.FRIDA_ASSETS.get(key, { range: request.headers });
-    if (!object) {
-      return new Response('Asset not found', { status: 404 });
-    }
-
-    const headers = new Headers();
-    headers.set('Content-Type', mimeType);
-    headers.set('ETag', etag);
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-    headers.set('Accept-Ranges', 'bytes');
-    headers.set('Access-Control-Allow-Origin', '*');
-
-    // If partial content was served
-    if ('range' in object && object.range) {
-      const { offset, length } = object.range as { offset: number; length: number };
-      const end = offset + length - 1;
-      headers.set('Content-Range', `bytes ${offset}-${end}/${objectMeta.size}`);
-      headers.set('Content-Length', length.toString());
-
-      return new Response(object.body, {
-        status: 206,
-        headers,
-      });
-    }
-
-    headers.set('Content-Length', object.size.toString());
-    return new Response(object.body, {
-      status: 200,
-      headers,
-    });
-  }
-
-  // Standard full asset stream
-  const object = await env.FRIDA_ASSETS.get(key);
-  if (!object) {
-    return new Response('Asset not found', { status: 404 });
-  }
-
-  const headers = new Headers();
-  headers.set('Content-Type', mimeType);
-  headers.set('Content-Length', object.size.toString());
-  headers.set('ETag', etag);
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-  headers.set('Accept-Ranges', 'bytes');
-  headers.set('Access-Control-Allow-Origin', '*');
-
-  return new Response(object.body, {
-    status: 200,
-    headers,
-  });
-}
-
-/**
- * Handles R2 Asset Upload API (/api/r2/upload)
- */
-async function handleR2UploadApi(request: Request, env: Env): Promise<Response> {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
-  }
-
-  if (!env.FRIDA_ASSETS) {
-    return new Response(
-      JSON.stringify({ error: 'R2 bucket (FRIDA_ASSETS) not bound in environment' }),
-      { status: 503, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    );
-  }
-
-  try {
-    const contentType = request.headers.get('content-type') || '';
-    let targetPath = request.headers.get('x-file-path') || '';
-    let fileBlob: Blob | ArrayBuffer | null = null;
-    let fileContentType = request.headers.get('x-content-type') || 'application/octet-stream';
-
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      const file = formData.get('file') as File | null;
-      const pathParam = formData.get('path') as string | null;
-
-      if (!file) {
-        return new Response(JSON.stringify({ error: 'Missing file in form data' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-
-      fileBlob = file;
-      fileContentType = file.type || getMimeType(file.name);
-      targetPath = pathParam || `uploads/${Date.now()}_${file.name}`;
-    } else {
-      // Direct stream / binary
-      fileBlob = await request.arrayBuffer();
-      if (!targetPath) {
-        targetPath = `uploads/${Date.now()}_asset`;
-      }
-    }
-
-    // Sanitize path
-    targetPath = targetPath.replace(/\\/g, '/').replace(/\/\.\.\//g, '/').replace(/^\/+/, '');
-    if (!targetPath || targetPath.includes('..')) {
-      return new Response(JSON.stringify({ error: 'Invalid path' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      });
-    }
-
-    const r2Obj = await env.FRIDA_ASSETS.put(targetPath, fileBlob, {
-      httpMetadata: {
-        contentType: fileContentType,
-        cacheControl: 'public, max-age=31536000, immutable',
-      },
-    });
-
-    const publicUrl = `/r2/${targetPath}`;
-    return new Response(
-      JSON.stringify({
-        success: true,
-        key: targetPath,
-        url: publicUrl,
-        size: r2Obj.size,
-        etag: r2Obj.etag,
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      }
-    );
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err?.message || 'Failed to upload to R2' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    );
-  }
-}
-
-/**
- * Handles R2 Asset Delete API (/api/r2/delete)
- */
-async function handleR2DeleteApi(request: Request, env: Env): Promise<Response> {
-  if (request.method !== 'POST' && request.method !== 'DELETE') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
-  }
-
-  if (!env.FRIDA_ASSETS) {
-    return new Response(
-      JSON.stringify({ error: 'R2 bucket (FRIDA_ASSETS) not bound' }),
-      { status: 503, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    );
-  }
-
-  try {
-    const body = (await request.json().catch(() => ({}))) as { key?: string; keys?: string[] };
-    const key = body.key;
-    const keys = body.keys || (key ? [key] : []);
-
-    if (keys.length === 0) {
-      return new Response(JSON.stringify({ error: 'No keys provided to delete' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      });
-    }
-
-    // Clean keys
-    const cleanKeys = keys
-      .map((k) => k.replace(/^\/r2\//, '').replace(/^\/+/, ''))
-      .filter((k) => !k.includes('..'));
-
-    await env.FRIDA_ASSETS.delete(cleanKeys);
-
-    return new Response(JSON.stringify({ success: true, deletedKeys: cleanKeys }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err?.message || 'Failed to delete from R2' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    );
-  }
-}
-
-/**
  * Resolves metadata using Firestore REST with named database ID:
  * 1. Checks /slugs/{slug} document
  * 2. Fetches /invitations/{invitationId}
  * 3. Fallback: direct /invitations/{slug}
  */
-async function fetchInvitationMeta(slugOrId: string, siteUrl: string): Promise<InvitationMeta | null> {
+async function fetchInvitationMeta(
+  slugOrId: string,
+  siteUrl: string,
+  isPortal: boolean = false
+): Promise<InvitationMeta | null> {
   const cleanSlug = slugOrId.toLowerCase().trim();
   const baseUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents`;
 
@@ -407,6 +112,17 @@ async function fetchInvitationMeta(slugOrId: string, siteUrl: string): Promise<I
           fields.coverImage?.stringValue ||
           `${siteUrl}/og-default.jpg`;
 
+        if (isPortal) {
+          return {
+            title: `بوابة إدارة الضيوف | ${eventTitle} — فريدا`,
+            description: hostNames
+              ? `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) لدعوة ${eventTitle} الخاصة بعائلة ${hostNames}.`
+              : `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) الخاصة بدعوة ${eventTitle}.`,
+            coverImage,
+            url: `${siteUrl}/portal/${encodeURIComponent(cleanSlug)}`,
+          };
+        }
+
         const desc = hostNames
           ? `تتشرف عائلة ${hostNames} بدعوتكم لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` يوم ${eventDate}` : ''}.`
           : `دعوة خاصة لحضور ${eventTitle}. انقر لمشاهدة تفاصيل الدعوة وتأكيد الحضور (RSVP).`;
@@ -431,36 +147,7 @@ export default {
     const url = new URL(request.url);
     const siteUrl = env.SITE_URL || DEFAULT_SITE_URL;
 
-    // Handle CORS preflight for APIs
-    if (request.method === 'OPTIONS' && (url.pathname.startsWith('/api/') || url.pathname.startsWith('/r2/'))) {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, HEAD, POST, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Range, X-File-Path, X-Content-Type, Authorization',
-          'Access-Control-Max-Age': '86400',
-        },
-      });
-    }
-
-    // 1. R2 Direct Storage Asset Route (/r2/*)
-    if (url.pathname.startsWith('/r2/')) {
-      const r2Response = await handleR2AssetRequest(request, env);
-      return addSecurityHeaders(r2Response, true);
-    }
-
-    // 2. R2 Upload API Route (/api/r2/upload)
-    if (url.pathname === '/api/r2/upload') {
-      return handleR2UploadApi(request, env);
-    }
-
-    // 3. R2 Delete API Route (/api/r2/delete)
-    if (url.pathname === '/api/r2/delete') {
-      return handleR2DeleteApi(request, env);
-    }
-
-    // 4. Legacy Query Redirects (301 Permanent)
+    // 1. Legacy Query Redirects (301 Permanent)
     const legacyInv = url.searchParams.get('invitation');
     if (legacyInv && (url.pathname === '/' || url.pathname === '')) {
       return Response.redirect(`${siteUrl}/i/${encodeURIComponent(legacyInv)}`, 301);
@@ -476,10 +163,13 @@ export default {
       url.pathname.startsWith('/music/') ||
       url.pathname.match(/\.(png|jpg|jpeg|webp|svg|ico|woff2|woff|ttf|mp3|webmanifest)$/i) !== null;
 
-    // 5. OpenGraph / Twitter Edge SSR for /i/:slug
+    // 2. OpenGraph / Twitter Edge SSR for /i/:slug and /portal/:slug
     const invMatch = url.pathname.match(/^\/i\/([^\/]+)$/);
-    if (invMatch) {
-      const slug = decodeURIComponent(invMatch[1]);
+    const portalMatch = url.pathname.match(/^\/portal\/([^\/]+)$/);
+
+    if (invMatch || portalMatch) {
+      const isPortal = !invMatch && !!portalMatch;
+      const slug = decodeURIComponent((invMatch || portalMatch)![1]);
       const indexReq = new Request(new URL('/', request.url), request);
       const assetResponse = await env.ASSETS.fetch(indexReq);
 
@@ -487,7 +177,7 @@ export default {
         return addSecurityHeaders(assetResponse, false);
       }
 
-      const meta = await fetchInvitationMeta(slug, siteUrl);
+      const meta = await fetchInvitationMeta(slug, siteUrl, isPortal);
       if (!meta) {
         return addSecurityHeaders(assetResponse, false);
       }
@@ -543,7 +233,7 @@ export default {
       return addSecurityHeaders(transformed, false);
     }
 
-    // 6. Static asset or standard SPA page fetch
+    // 3. Static asset or standard SPA page fetch
     let response = await env.ASSETS.fetch(request);
     if (!response.ok && !isStaticAsset) {
       const indexReq = new Request(new URL('/', request.url), request);

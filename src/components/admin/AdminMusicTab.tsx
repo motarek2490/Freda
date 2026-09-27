@@ -139,7 +139,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
         };
 
         await onSaveTrack(newTrack);
-        setUploadFeedback(isRtl ? 'تم رفع المعزوفة وحفظها في Cloudflare R2 بنجاح! 🎵☁️' : 'Track saved to Cloudflare R2!');
+        setUploadFeedback(isRtl ? 'تم رفع المعزوفة وحفظها في التخزين السحابي بنجاح! 🎵☁️' : 'Track saved to cloud storage!');
       } else {
         setUploadFeedback(isRtl ? 'تعذر الرفع، يرجى المحاولة مرة أخرى.' : 'Upload failed.');
       }
@@ -225,12 +225,12 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
           <div>
             <h4 className="font-playfair text-base font-bold text-[#F7F4EE] flex items-center gap-2">
               <Upload className="w-4 h-4 text-[#B99A65]" />
-              <span>{isRtl ? 'إدارة ورفع الملفات الصوتية (Cloudflare R2 + Firestore)' : 'Audio Library & Cloudflare R2 Management'}</span>
+              <span>{isRtl ? 'إدارة ورفع الملفات الصوتية (Firebase Storage + Firestore)' : 'Audio Library & Cloud Storage Management'}</span>
             </h4>
             <p className="text-xs text-[#8D8A84] mt-0.5 leading-relaxed">
               {isRtl
-                ? 'يتم تخزين الملفات الصوتية على Cloudflare R2 مع مقطع معاينة سريع (Preview)، وحفظ البيانات الوصفية في Firestore.'
-                : 'Audio assets are stored in Cloudflare R2 edge storage with lightweight previews.'}
+                ? 'يتم تخزين الملفات الصوتية على التخزين السحابي مع مقطع معاينة سريع (Preview)، وحفظ البيانات الوصفية في Firestore.'
+                : 'Audio assets are stored in cloud storage with lightweight previews.'}
             </p>
           </div>
 
@@ -248,7 +248,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B99A65] to-[#d6bd91] hover:from-[#cbb07e] hover:to-[#e2ca9f] text-[#171717] font-extrabold text-xs flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <Scissors className="w-4 h-4 text-[#171717]" />
-              <span>{isRtl ? 'قص ورفع باحترافية (Cloudflare R2) ✂️' : 'Upload & Trim to R2 ✂️'}</span>
+              <span>{isRtl ? 'قص ورفع باحترافية ✂️' : 'Upload & Trim Audio ✂️'}</span>
             </button>
 
             {/* Option 2: Upload direct without trim */}
@@ -267,7 +267,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-[#B99A65]" />
-                  <span>{isRtl ? 'جارِ الرفع السحابي...' : 'Uploading to R2...'}</span>
+                  <span>{isRtl ? 'جارِ الرفع السحابي...' : 'Uploading to cloud storage...'}</span>
                 </>
               ) : (
                 <>
@@ -372,7 +372,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                     <div className="flex items-center gap-1.5">
                       {track.previewUrl && track.audioUrl && track.previewUrl !== track.audioUrl && (
                         <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 text-[9px] font-bold">
-                          R2 Dual
+                          Dual Audio
                         </span>
                       )}
 
@@ -545,8 +545,8 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
             await onSaveTrack(newTrack);
             setUploadFeedback(
               isRtl
-                ? `تم تجهيز ورفع المعزوفة بنجاح إلى Cloudflare R2! ✂️🎵`
-                : 'Track packaged and stored in Cloudflare R2!'
+                ? `تم تجهيز ورفع المعزوفة بنجاح إلى التخزين السحابي! ✂️🎵`
+                : 'Track packaged and stored in cloud storage!'
             );
             setTrimmerAudioBlob(null);
           }}

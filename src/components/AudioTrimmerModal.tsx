@@ -21,7 +21,7 @@ import {
   generateDualAudioPackage,
   getAudioFileDuration,
 } from '../lib/audioTrimmer';
-import { saveTrackToCloudLibrary, getCloudMusicLibrary, uploadSongPackageToR2 } from '../data/presetMusic';
+import { saveTrackToCloudLibrary, getCloudMusicLibrary, uploadSongPackageToStorage } from '../data/presetMusic';
 
 interface AudioTrimmerModalProps {
   audioFile?: File | null;
@@ -229,7 +229,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     onClose();
   };
 
-  // Perform client-side dual packaging + Cloudflare R2 Upload + Firestore Metadata Save
+  // Perform client-side dual packaging + Cloud Storage Upload + Firestore Metadata Save
   const handleConfirmTrimAndSave = async () => {
     try {
       setIsProcessing(true);
@@ -249,12 +249,12 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
 
       setStatusMessage(
         isRtl
-          ? 'جاري رفع الملفات إلى مساحة التخزين السحابي (Cloudflare R2)...'
-          : 'Uploading assets to Cloudflare R2 storage...'
+          ? 'جاري رفع الملفات إلى مساحة التخزين السحابي...'
+          : 'Uploading assets to cloud storage...'
       );
 
-      // 2. Upload to Cloudflare R2 storage (audio/full and audio/previews)
-      const { audioUrl, previewUrl } = await uploadSongPackageToR2(
+      // 2. Upload to Cloud storage (audio/full and audio/previews)
+      const { audioUrl, previewUrl } = await uploadSongPackageToStorage(
         dualPackage.fullBlob,
         dualPackage.previewBlob,
         trackName.trim()
@@ -294,7 +294,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         await onSave(dualPackage.fullBlob);
       }
 
-      setStatusMessage(isRtl ? 'تم الرفع والتخزين السحابي بنجاح! ⚡☁️' : 'Successfully stored in Cloudflare R2! ⚡☁️');
+      setStatusMessage(isRtl ? 'تم الرفع والتخزين السحابي بنجاح! ⚡☁️' : 'Successfully stored in cloud storage! ⚡☁️');
       setTimeout(() => {
         onTrackReady?.(newTrack);
         onClose();
@@ -332,13 +332,13 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         <div className="space-y-1">
           <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
             {isAdmin 
-              ? (isRtl ? 'أداة قص وتجهيز الموسيقى السحابية (Cloudflare R2) ✂️' : 'Audio Trimmer & Cloud Storage (R2) ✂️')
+              ? (isRtl ? 'أداة قص وتجهيز الموسيقى السحابية ✂️' : 'Audio Trimmer & Cloud Storage ✂️')
               : (isRtl ? 'أداة قص وتحديد مقطع الموسيقى ✂️' : 'Audio Trimmer & Optimizer ✂️')}
           </h3>
           <p className="text-xs text-[#8D8A84]">
             {isAdmin 
-              ? (isRtl ? 'يتم توليد مقطع معاينة سريع (Preview 20s) وتخزين الملف الكامل تلقائياً على Cloudflare R2.' : 'Generates a 20s instant preview + full audio stored on Cloudflare R2.')
-              : (isRtl ? 'حدد وقت البداية والنهاية للمقطع. يتم ضغطه ورفعه للسحابة ليعمل فورياً على كافة الأجهزة.' : 'Choose custom start and end time. Compressed and streamed from edge CDN.')}
+              ? (isRtl ? 'يتم توليد مقطع معاينة سريع (Preview 20s) وتخزين الملف الكامل تلقائياً على التخزين السحابي.' : 'Generates a 20s instant preview + full audio stored on cloud storage.')
+              : (isRtl ? 'حدد وقت البداية والنهاية للمقطع. يتم ضغطه ورفعه للسحابة ليعمل فورياً على كافة الأجهزة.' : 'Choose custom start and end time. Compressed and streamed from cloud storage.')}
           </p>
         </div>
 
@@ -540,8 +540,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         {/* Architecture Highlights */}
         <div className="grid grid-cols-2 gap-2 text-[11px] text-[#8D8A84]">
           <div className="p-2.5 bg-[#1F1E1B] rounded-xl border border-[#2A2722] text-center">
-            <span className="block text-[#B99A65] font-bold">Cloudflare R2 ☁️</span>
-            <span>{isRtl ? 'تخزين سحابي اقتصادي فائق السرعة' : 'Scalable edge CDN storage'}</span>
+            <span className="block text-[#B99A65] font-bold">Cloud Storage ☁️</span>
+            <span>{isRtl ? 'تخزين سحابي فائق السرعة' : 'Fast cloud storage'}</span>
           </div>
           <div className="p-2.5 bg-[#1F1E1B] rounded-xl border border-[#2A2722] text-center">
             <span className="block text-emerald-400 font-bold">Preview 20s + Full</span>
@@ -563,7 +563,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
           {isProcessing ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>{isRtl ? 'جاري المعالجة والرفع لـ R2...' : 'Uploading to Cloudflare R2...'}</span>
+              <span>{isRtl ? 'جاري المعالجة والرفع السحابي...' : 'Uploading to cloud storage...'}</span>
             </>
           ) : (
             <>
@@ -571,7 +571,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
               <span>
                 {isRtl
                   ? `قص المقطع (${selectedDuration} ثانية) وحفظه سحابياً ✂️☁️`
-                  : `Save Dual Audio Package to R2 ✂️☁️`}
+                  : `Save Dual Audio Package ✂️☁️`}
               </span>
             </>
           )}

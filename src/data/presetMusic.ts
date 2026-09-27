@@ -1,9 +1,9 @@
 /**
  * ===================================================================================
- * 🎵 ملف إدارة قائمة ومكتبة الموسيقى (Scalable Cloudflare R2 + Firestore Audio System)
+ * 🎵 ملف إدارة قائمة ومكتبة الموسيقى (Firebase Storage + Firestore Audio System)
  * ===================================================================================
  * - Pure Metadata in Firestore (Zero binary storage in database)
- * - Cloudflare R2 Storage (audio/previews/ and audio/full/)
+ * - Firebase Storage (audio/previews/ and audio/full/)
  * - Dual Audio Package: Preview Audio (15-20s for fast browsing) + Full Audio
  * - In-Memory & Session Caching (Minimizes Firestore Reads)
  * - Pagination & Category Filtering
@@ -16,16 +16,15 @@ import {
   doc,
   setDoc,
   deleteDoc,
-  query,
-  where,
-  limit,
-  orderBy,
-  startAfter,
-  DocumentSnapshot,
   onSnapshot,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { uploadAssetToR2, deleteAssetFromR2 } from '../lib/r2Storage';
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage';
+import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
 
@@ -37,47 +36,59 @@ let lastCacheTimestamp = 0;
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL to save Firestore reads
 
 /**
- * Uploads both a Preview clip and the Full Audio to Cloudflare R2,
- * returning structured R2 URLs without saving raw audio binaries in Firestore.
+ * Uploads both a Preview clip and the Full Audio to Firebase Storage,
+ * returning structured download URLs without saving raw audio binaries in Firestore.
  */
-export async function uploadSongPackageToR2(
+export async function uploadSongPackageToStorage(
   fullBlob: Blob,
   previewBlob: Blob,
   title: string
 ): Promise<{ previewUrl: string; audioUrl: string }> {
+  let user = auth.currentUser;
+  if (!user) {
+    user = await ensureAnonymousAuth();
+  }
   const cleanTitle = title
     .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
     .substring(0, 40);
+  const timestamp = Date.now();
 
   // 1. Upload Full Audio to audio/full/
-  const fullResult = await uploadAssetToR2(
-    fullBlob,
-    'audio/full',
-    `${cleanTitle}_full.mp3`
-  );
+  const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
+  const fullRef = storageRef(storage, fullPath);
+  const fullSnap = await uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' });
+  const audioUrl = await getDownloadURL(fullSnap.ref);
 
   // 2. Upload Preview Audio to audio/previews/
-  const previewResult = await uploadAssetToR2(
-    previewBlob,
-    'audio/previews',
-    `${cleanTitle}_preview.mp3`
-  );
+  const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
+  const prevRef = storageRef(storage, prevPath);
+  const prevSnap = await uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' });
+  const previewUrl = await getDownloadURL(prevSnap.ref);
 
   return {
-    audioUrl: fullResult.url,
-    previewUrl: previewResult.url,
+    audioUrl,
+    previewUrl,
   };
 }
 
+// Backwards compatibility alias
+export const uploadSongPackageToR2 = uploadSongPackageToStorage;
+
 /**
- * Legacy compatibility wrapper: uploads single audio blob to R2
+ * Legacy compatibility wrapper: uploads single audio blob to Firebase Storage
  */
 export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): Promise<string> {
+  let user = auth.currentUser;
+  if (!user) {
+    user = await ensureAnonymousAuth();
+  }
   const cleanName = (label || 'audio_track')
     .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
     .substring(0, 50);
-  const result = await uploadAssetToR2(blob, 'audio/full', `${cleanName}.mp3`);
-  return result.url;
+  const path = `audio/full/${Date.now()}_${cleanName}.mp3`;
+  const sRef = storageRef(storage, path);
+  const snap = await uploadBytes(sRef, blob, { contentType: 'audio/mpeg' });
+  return await getDownloadURL(snap.ref);
 }
 
 // Vite Dynamic Import for local bundled fallback assets
@@ -200,21 +211,38 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
 }
 
 /**
- * Deletes a song from Firestore and cleans up its R2 asset files if present.
+ * Deletes a song from Firestore and cleans up its Firebase Storage assets if present.
  */
 export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise<boolean> {
   try {
-    const existing = cachedCloudTracks.find((t) => t.id === trackIdOrUrl || t.url === trackIdOrUrl || t.audioUrl === trackIdOrUrl);
-    cachedCloudTracks = cachedCloudTracks.filter((t) => t.id !== trackIdOrUrl && t.url !== trackIdOrUrl && t.audioUrl !== trackIdOrUrl);
+    const existing = cachedCloudTracks.find(
+      (t) => t.id === trackIdOrUrl || t.url === trackIdOrUrl || t.audioUrl === trackIdOrUrl
+    );
+    cachedCloudTracks = cachedCloudTracks.filter(
+      (t) => t.id !== trackIdOrUrl && t.url !== trackIdOrUrl && t.audioUrl !== trackIdOrUrl
+    );
     deleteCustomUploadedTrack(trackIdOrUrl);
 
-    // Clean up R2 assets
-    if (existing) {
-      if (existing.previewUrl?.startsWith('/r2/')) {
-        deleteAssetFromR2(existing.previewUrl).catch(() => {});
+    // Clean up Firebase Storage assets
+    const deleteIfStorageUrl = async (url?: string) => {
+      if (!url) return;
+      try {
+        if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
+          const sRef = storageRef(storage, url);
+          await deleteObject(sRef);
+        }
+      } catch (err) {
+        console.warn('Error deleting audio file from Firebase Storage:', err);
       }
-      if (existing.audioUrl?.startsWith('/r2/')) {
-        deleteAssetFromR2(existing.audioUrl).catch(() => {});
+    };
+
+    if (existing) {
+      await deleteIfStorageUrl(existing.previewUrl);
+      if (existing.audioUrl && existing.audioUrl !== existing.previewUrl) {
+        await deleteIfStorageUrl(existing.audioUrl);
+      }
+      if (existing.url && existing.url !== existing.audioUrl && existing.url !== existing.previewUrl) {
+        await deleteIfStorageUrl(existing.url);
       }
     }
 
@@ -336,7 +364,7 @@ export async function getCloudMusicLibrary(forceRefresh = false): Promise<MusicT
 }
 
 /**
- * Returns all available tracks across Cloud R2, local presets, and cached catalog.
+ * Returns all available tracks across Cloud storage, local presets, and cached catalog.
  */
 export function getAllAvailableTracks(hiddenIds: string[] = []): MusicTrack[] {
   const localCustom = getStoredCustomTracks();

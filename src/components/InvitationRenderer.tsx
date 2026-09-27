@@ -31,6 +31,8 @@ import {
   ChevronDown,
   Image as ImageIcon,
   RotateCcw,
+  Music,
+  Disc3,
 } from 'lucide-react';
 import { InvitationData, Language, RSVPResponse, GuestWish, TemplateLayoutType, PaymentAccountType } from '../types';
 import { saveRSVP } from '../lib/storage';
@@ -41,6 +43,7 @@ import { trackRSVPSubmitted } from '../lib/analytics';
 import { TEMPLATES } from '../data/templates';
 import { ShareModal } from './ShareModal';
 import { CardImageModal } from './CardImageModal';
+import { DemoMusicPickerModal } from './DemoMusicPickerModal';
 import { PendingApprovalScreen } from './PendingApprovalScreen';
 import { ExpiredInvitationScreen } from './ExpiredInvitationScreen';
 import { ThemeEnvelopeScreen } from './ThemeEnvelopeScreen';
@@ -132,6 +135,49 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const [envelopeOpened, setEnvelopeOpened] = useState(false);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+
+  // Floating Demo Music Selector States
+  const [showMusicPickerModal, setShowMusicPickerModal] = useState(false);
+  const [activeMusicUrl, setActiveMusicUrl] = useState<string>(
+    invitation.eventDetails.musicTrackUrl || '/music/royal-wedding-waltz.mp3'
+  );
+  const [activeMusicName, setActiveMusicName] = useState<string>(
+    invitation.eventDetails.musicTrackName || (isRtl ? 'معزوفة زفاف فريدا الملكية' : 'FRIDA Royal Waltz')
+  );
+  const [musicToastMessage, setMusicToastMessage] = useState<string | null>(null);
+
+  // Synchronize invitation eventDetails with selected music
+  invitation.eventDetails.musicTrackUrl = activeMusicUrl;
+  invitation.eventDetails.musicTrackName = activeMusicName;
+
+  // Determine if this is a demo or preview invitation
+  const isDemoInvitation =
+    !isStandaloneView ||
+    invitation.id.startsWith('preview-') ||
+    invitation.id.startsWith('demo-') ||
+    Boolean(invitation.slug?.startsWith('preview-')) ||
+    Boolean(invitation.slug?.startsWith('demo-')) ||
+    invitation.hostAccessCode === 'HOST-DEMO' ||
+    invitation.hostAccessCode === 'HOST-PREVIEW';
+
+  // Auto-dismiss music toast
+  useEffect(() => {
+    if (!musicToastMessage) return;
+    const timer = setTimeout(() => {
+      setMusicToastMessage(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [musicToastMessage]);
+
+  const handleSelectDemoTrack = (newTrackUrl: string, newTrackName: string) => {
+    setActiveMusicUrl(newTrackUrl);
+    setActiveMusicName(newTrackName);
+    setEnvelopeOpened(true);
+    setIsPlayingMusic(true);
+    setMusicToastMessage(
+      isRtl ? `تم تفعيل المعزوفة: ${newTrackName} 🎶` : `Soundtrack Activated: ${newTrackName} 🎶`
+    );
+  };
 
   // Auto-Scroll Motion State (Starts automatically by default)
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
@@ -234,7 +280,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
 
   // Audio setup - resolves cloud/local/remote audio tracks reliably
   useEffect(() => {
-    const rawTrackUrl = invitation.eventDetails.musicTrackUrl;
+    const rawTrackUrl = activeMusicUrl;
     if (!rawTrackUrl) {
       setAudioRef(null);
       return;
@@ -246,7 +292,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     resolveAudioTrackUrl(rawTrackUrl).then((playableUrl) => {
       if (isCancelled || !playableUrl) return;
       audioInstance = new Audio(playableUrl);
-      audioInstance.preload = 'none';
+      audioInstance.preload = 'auto';
       audioInstance.loop = true;
       setAudioRef(audioInstance);
 
@@ -265,7 +311,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
         audioInstance.pause();
       }
     };
-  }, [invitation.eventDetails.musicTrackUrl, envelopeOpened]);
+  }, [activeMusicUrl, envelopeOpened]);
 
   // Ensure the page always starts at the very top (scrollTop = 0) upon opening
   useEffect(() => {
@@ -638,6 +684,18 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
                   <span>{isRtl ? 'تشغيل الموسيقى' : 'Play Music'}</span>
                 </>
               )}
+            </button>
+          )}
+
+          {/* Cute Demo Music Selector Quick Button in Top Bar (Icon only) */}
+          {isDemoInvitation && (
+            <button
+              onClick={() => setShowMusicPickerModal(true)}
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#1E1B16] to-[#2E271D] hover:from-[#B99A65]/30 hover:to-[#D4AF37]/40 backdrop-blur-md border border-[#D4AF37]/60 hover:border-[#D4AF37] text-[#E6C687] hover:text-[#FFFFFF] flex items-center justify-center transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+              title={isRtl ? 'اختيار وتجربة معزوفة أخرى 🎵' : 'Select another soundtrack 🎵'}
+              aria-label={isRtl ? 'اختيار الموسيقى' : 'Select Music'}
+            >
+              <Disc3 className="w-4 h-4 text-[#D4AF37] animate-[spin_6s_linear_infinite]" />
             </button>
           )}
 
@@ -1040,6 +1098,67 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
           onClose={() => setShowCardModal(false)}
         />
       )}
+
+      {/* Floating Demo Music Selector Cute Button (FAB - Icon Only, No Text) */}
+      {isDemoInvitation && (
+        <div className="fixed bottom-6 start-6 z-50 pointer-events-auto">
+          <motion.button
+            whileHover={{ scale: 1.12, rotate: 6 }}
+            whileTap={{ scale: 0.9 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 20 }}
+            onClick={() => setShowMusicPickerModal(true)}
+            className="relative w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center cursor-pointer group shadow-[0_8px_30px_rgba(0,0,0,0.65),0_0_22px_rgba(212,175,55,0.4)] hover:shadow-[0_12px_45px_rgba(212,175,55,0.7)] transition-all duration-300 border-2 border-[#D4AF37]/80 hover:border-[#FFF1C5] bg-gradient-to-tr from-[#1E1B16] via-[#2D2417] to-[#1A1713]"
+            title={isRtl ? 'اختر معزوفة لتجربتها على هذه الدعوة 🎵' : 'Pick a soundtrack for this invitation 🎵'}
+            aria-label={isRtl ? 'اختيار معزوفة الدعوة' : 'Select invitation soundtrack'}
+          >
+            {/* Cute ambient glow aura */}
+            <span className="absolute inset-0 rounded-full bg-[#D4AF37] opacity-20 animate-ping pointer-events-none" />
+
+            {/* Glossy top-left highlight for cute 3D bubble reflection */}
+            <span className="absolute top-1.5 left-2.5 w-4 h-2 rounded-full bg-white/30 blur-[1px] -rotate-45 pointer-events-none" />
+
+            {/* Cute Music & Vinyl Icon */}
+            <div className="relative flex items-center justify-center text-[#E6C687] group-hover:text-[#FFF5DC] transition-colors">
+              <Disc3 className="w-7 h-7 sm:w-8 sm:h-8 animate-[spin_8s_linear_infinite] drop-shadow-[0_2px_8px_rgba(212,175,55,0.5)]" />
+              <Music className="w-3.5 h-3.5 absolute -top-1.5 -right-1.5 text-[#F3E5AB] fill-current animate-bounce drop-shadow" />
+            </div>
+
+            {/* Cute sparkle badge */}
+            <span className="absolute -top-1 -left-1 text-[11px] leading-none animate-pulse select-none pointer-events-none">
+              ✨
+            </span>
+          </motion.button>
+        </div>
+      )}
+
+      {/* Toast Notification when changing soundtrack */}
+      <AnimatePresence>
+        {musicToastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.92 }}
+            className="fixed bottom-24 start-6 z-50 max-w-sm px-4 py-2.5 rounded-2xl bg-[#1A1815]/95 backdrop-blur-xl border border-[#B99A65] text-[#F7F4EE] text-xs font-semibold shadow-[0_15px_40px_rgba(0,0,0,0.9)] flex items-center gap-2.5 pointer-events-none"
+          >
+            <div className="w-6 h-6 rounded-full bg-[#B99A65]/20 text-[#B99A65] flex items-center justify-center shrink-0">
+              <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+            </div>
+            <span className="truncate">{musicToastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Demo Music Picker Modal */}
+      <DemoMusicPickerModal
+        isOpen={showMusicPickerModal}
+        onClose={() => setShowMusicPickerModal(false)}
+        currentLang={lang}
+        activeTrackUrl={activeMusicUrl}
+        activeTrackName={activeMusicName}
+        onSelectTrack={handleSelectDemoTrack}
+      />
 
     </div>
   );
