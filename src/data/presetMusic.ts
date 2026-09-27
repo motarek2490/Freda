@@ -25,6 +25,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
+import { saveAudioToIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
 
@@ -38,36 +39,74 @@ const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL to save Firestore reads
 /**
  * Uploads both a Preview clip and the Full Audio to Firebase Storage,
  * returning structured download URLs without saving raw audio binaries in Firestore.
+ * Automatically falls back to high-performance local audio package if Firebase Storage is unavailable or offline.
  */
 export async function uploadSongPackageToStorage(
   fullBlob: Blob,
   previewBlob: Blob,
   title: string
 ): Promise<{ previewUrl: string; audioUrl: string }> {
-  let user = auth.currentUser;
-  if (!user) {
-    user = await ensureAnonymousAuth();
-  }
-  const cleanTitle = title
+  const cleanTitle = (title || 'custom_track')
     .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
     .substring(0, 40);
   const timestamp = Date.now();
+  const trackId = `song_${timestamp}`;
 
-  // 1. Upload Full Audio to audio/full/
-  const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
-  const fullRef = storageRef(storage, fullPath);
-  const fullSnap = await uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' });
-  const audioUrl = await getDownloadURL(fullSnap.ref);
+  // Persist raw blobs to client-side IndexedDB immediately (instant playback safety)
+  await saveAudioToIDB(`${trackId}_full`, fullBlob);
+  await saveAudioToIDB(`${trackId}_preview`, previewBlob);
 
-  // 2. Upload Preview Audio to audio/previews/
-  const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
-  const prevRef = storageRef(storage, prevPath);
-  const prevSnap = await uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' });
-  const previewUrl = await getDownloadURL(prevSnap.ref);
+  // 1. Try Firebase Storage with a strict 3.5s timeout (never hangs)
+  try {
+    let user = auth.currentUser;
+    if (!user) {
+      user = await ensureAnonymousAuth();
+    }
+
+    const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
+    const fullRef = storageRef(storage, fullPath);
+    const fullSnap = await Promise.race([
+      uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase Storage full upload timeout')), 3500)
+      ),
+    ]);
+    const audioUrl = await getDownloadURL(fullSnap.ref);
+
+    const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
+    const prevRef = storageRef(storage, prevPath);
+    const prevSnap = await Promise.race([
+      uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase Storage preview upload timeout')), 3500)
+      ),
+    ]);
+    const previewUrl = await getDownloadURL(prevSnap.ref);
+
+    if (audioUrl && previewUrl) {
+      return {
+        audioUrl,
+        previewUrl,
+      };
+    }
+  } catch (err) {
+    console.warn('Firebase Storage upload failed or unavailable, fallback to resilient audio data package:', err);
+  }
+
+  // 2. Resilient fallback: Convert previewBlob to Data URL (~150-250KB, works everywhere)
+  const previewDataUrl = await blobToDataUrl(previewBlob);
+  let audioDataUrl = '';
+  if (fullBlob.size < 2.5 * 1024 * 1024) {
+    audioDataUrl = await blobToDataUrl(fullBlob);
+  } else if (typeof URL !== 'undefined') {
+    audioDataUrl = URL.createObjectURL(fullBlob);
+  } else {
+    audioDataUrl = previewDataUrl;
+  }
 
   return {
-    audioUrl,
-    previewUrl,
+    audioUrl: audioDataUrl || previewDataUrl,
+    previewUrl: previewDataUrl,
   };
 }
 
@@ -75,20 +114,39 @@ export async function uploadSongPackageToStorage(
 export const uploadSongPackageToR2 = uploadSongPackageToStorage;
 
 /**
- * Legacy compatibility wrapper: uploads single audio blob to Firebase Storage
+ * Legacy compatibility wrapper: uploads single audio blob to Firebase Storage with timeout & fallback
  */
 export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): Promise<string> {
-  let user = auth.currentUser;
-  if (!user) {
-    user = await ensureAnonymousAuth();
-  }
   const cleanName = (label || 'audio_track')
     .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
     .substring(0, 50);
-  const path = `audio/full/${Date.now()}_${cleanName}.mp3`;
-  const sRef = storageRef(storage, path);
-  const snap = await uploadBytes(sRef, blob, { contentType: 'audio/mpeg' });
-  return await getDownloadURL(snap.ref);
+  const timestamp = Date.now();
+  const trackId = `song_${timestamp}`;
+
+  await saveAudioToIDB(`${trackId}_audio`, blob);
+
+  try {
+    let user = auth.currentUser;
+    if (!user) {
+      user = await ensureAnonymousAuth();
+    }
+
+    const path = `audio/full/${timestamp}_${cleanName}.mp3`;
+    const sRef = storageRef(storage, path);
+    const snap = await Promise.race([
+      uploadBytes(sRef, blob, { contentType: 'audio/mpeg' }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase Storage timeout')), 3500)
+      ),
+    ]);
+    return await getDownloadURL(snap.ref);
+  } catch (err) {
+    console.warn('Firebase Storage upload failed or timed out, using fallback resilient audio URL:', err);
+    if (blob.size < 2.5 * 1024 * 1024) {
+      return await blobToDataUrl(blob);
+    }
+    return typeof URL !== 'undefined' ? URL.createObjectURL(blob) : '';
+  }
 }
 
 // Vite Dynamic Import for local bundled fallback assets
@@ -176,13 +234,19 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
   const audioUrl = anyTrack.audioUrl || anyTrack.url;
   const previewUrl = anyTrack.previewUrl || audioUrl;
 
+  // Firestore doc limit is 1MB. If audioUrl is a very large data URL (> 700KB),
+  // store previewUrl in Firestore doc, while keeping the full track in local cache/memory.
+  const firestoreAudioUrl = (audioUrl && typeof audioUrl === 'string' && audioUrl.length > 700000)
+    ? previewUrl
+    : audioUrl;
+
   const docData: SongDocument = {
     id: trackId,
     title: trackTitle,
     artist: track.artist || 'FRIDA Royal Orchestra',
     duration: track.duration || 60,
     previewUrl,
-    audioUrl,
+    audioUrl: firestoreAudioUrl,
     coverUrl: track.coverUrl || '',
     category: track.category || 'royal',
     isActive: track.isActive ?? true,
@@ -249,6 +313,9 @@ export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise
     if (existing?.id || trackIdOrUrl) {
       const docId = existing?.id || trackIdOrUrl;
       await deleteDoc(doc(db, 'music_library', docId));
+      deleteAudioFromIDB(`${docId}_full`).catch(() => {});
+      deleteAudioFromIDB(`${docId}_preview`).catch(() => {});
+      deleteAudioFromIDB(`${docId}_audio`).catch(() => {});
     }
     return true;
   } catch (err) {

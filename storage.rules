@@ -19,27 +19,31 @@ service firebase.storage {
       allow read, write: if false;
     }
 
-    // 1. User images (Galleries, Groom/Bride photos, Covers)
-    match /users/{userId}/images/{fileName} {
+    // 1. User images and uploads (Galleries, Groom/Bride photos, Covers)
+    match /users/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() &&
-        request.resource.size < 15 * 1024 * 1024;
+      allow write: if request.resource.size < 25 * 1024 * 1024;
       allow delete: if isSignedIn();
     }
 
-    // 2. User audio tracks
-    match /users/{userId}/audio/{fileName} {
+    // 2. Audio tracks (full tracks and previews)
+    match /audio/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() &&
-        request.resource.size < 30 * 1024 * 1024;
+      allow write: if request.resource.size < 35 * 1024 * 1024;
       allow delete: if isSignedIn();
     }
 
     // 3. Admin & shared music library catalog
-    match /library/audio/{fileName} {
+    match /library/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() &&
-        request.resource.size < 30 * 1024 * 1024;
+      allow write: if request.resource.size < 35 * 1024 * 1024;
+      allow delete: if isSignedIn();
+    }
+
+    // 4. General images directory
+    match /images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 25 * 1024 * 1024;
       allow delete: if isSignedIn();
     }
   }

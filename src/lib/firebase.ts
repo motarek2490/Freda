@@ -19,6 +19,12 @@ export const auth = getAuth(app);
 
 // Initialize Cloud Storage
 export const storage = getStorage(app);
+try {
+  storage.maxUploadRetryTime = 3000;
+  storage.maxOperationRetryTime = 3000;
+} catch (e) {
+  console.warn('Storage timeout setup:', e);
+}
 
 // Initialize Cloud Functions with regional deployment
 export const functions = getFunctions(app, FUNCTIONS_REGION);
@@ -68,19 +74,39 @@ export async function ensureAnonymousAuth(): Promise<User | null> {
   if (auth.currentUser) return auth.currentUser;
 
   return new Promise((resolve) => {
+    let resolved = false;
+    const safetyTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(auth.currentUser || null);
+      }
+    }, 2000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        unsubscribe();
-        resolve(user);
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(safetyTimer);
+          unsubscribe();
+          resolve(user);
+        }
       } else {
         try {
           const cred = await signInAnonymously(auth);
-          unsubscribe();
-          resolve(cred.user);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(safetyTimer);
+            unsubscribe();
+            resolve(cred.user);
+          }
         } catch (err) {
-          console.warn('Anonymous sign-in error:', err);
-          unsubscribe();
-          resolve(null);
+          console.warn('Anonymous sign-in error or provider disabled:', err);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(safetyTimer);
+            unsubscribe();
+            resolve(null);
+          }
         }
       }
     });

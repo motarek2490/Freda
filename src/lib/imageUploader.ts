@@ -146,9 +146,14 @@ export async function processAndUploadImage(
     const path = `users/${uid}/${folder}/${Date.now()}_${cleanTag}.webp`;
 
     const sRef = storageRef(storage, path);
-    const snap = await uploadBytes(sRef, compressedBlob, {
-      contentType: 'image/webp',
-    });
+    const snap = await Promise.race([
+      uploadBytes(sRef, compressedBlob, {
+        contentType: 'image/webp',
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase Storage image upload timeout')), 3000)
+      ),
+    ]);
     const downloadUrl = await getDownloadURL(snap.ref);
 
     if (downloadUrl) {
