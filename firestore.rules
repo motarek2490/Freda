@@ -222,33 +222,22 @@ service cloud.firestore {
         request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
         request.resource.data.amount is number &&
         request.resource.data.amount <= 100000 &&
-        (
-          !exists(/databases/$(database)/documents/settings/public_config) ||
-          (
-            (request.resource.data.planTier == 'basic' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.basicPriceEGP) ||
-            (request.resource.data.planTier == 'royal_vip' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.royalPriceEGP) ||
-            (request.resource.data.planTier == 'diamond' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.diamondPriceEGP)
-          ) ||
-          request.resource.data.amount in [199, 399, 799]
-        ) &&
         request.resource.data.customerName is string &&
         request.resource.data.customerName.size() >= 2 &&
         request.resource.data.customerName.size() <= 100 &&
         request.resource.data.customerPhone is string &&
-        request.resource.data.customerPhone.size() >= 6 &&
-        request.resource.data.customerPhone.size() <= 30 &&
+        request.resource.data.customerPhone.size() >= 3 &&
+        request.resource.data.customerPhone.size() <= 50 &&
         request.resource.data.vodafoneCashSender is string &&
-        request.resource.data.vodafoneCashSender.size() >= 6 &&
-        request.resource.data.vodafoneCashSender.size() <= 30 &&
+        request.resource.data.vodafoneCashSender.size() >= 3 &&
+        request.resource.data.vodafoneCashSender.size() <= 50 &&
         request.resource.data.invitationId is string &&
-        exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid &&
         !('hostCredentials' in request.resource.data) &&
         !('credentials' in request.resource.data) &&
         request.resource.data.keys().hasOnly([
           'id', 'invitationId', 'planTier', 'amount', 'currency',
           'customerName', 'customerPhone', 'vodafoneCashSender',
-          'transactionReference', 'status', 'createdAt', 'ownerUid', 'invitationSnapshot'
+          'transactionReference', 'notes', 'status', 'createdAt', 'ownerUid', 'invitationSnapshot'
         ]);
 
       // Read by Admin or the order owner

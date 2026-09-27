@@ -170,7 +170,7 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
       <audio
         ref={audioRef}
         src={resolvedAudioUrl}
-        preload="auto"
+        preload="none"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />

@@ -246,6 +246,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     resolveAudioTrackUrl(rawTrackUrl).then((playableUrl) => {
       if (isCancelled || !playableUrl) return;
       audioInstance = new Audio(playableUrl);
+      audioInstance.preload = 'none';
       audioInstance.loop = true;
       setAudioRef(audioInstance);
 

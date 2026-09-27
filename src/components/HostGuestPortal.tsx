@@ -47,7 +47,7 @@ import { useTranslation } from '../data/translations';
 import { generateQrCodeDataUrl } from '../lib/qrHelper';
 import { compressImageFile, blobToDataURL } from '../lib/imageUploader';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { LiveCheckInModal } from './LiveWeddingMode/LiveCheckInModal';
 
 interface HostGuestPortalProps {
   invitation: InvitationData;
@@ -140,7 +140,8 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
     setIsHostAuthenticated(false);
   };
 
-  // Active Tab: 'rsvps' | 'wishes' | 'vip_links' | 'memories'
+  // Live Check-In Modal State
+  const [showLiveCheckIn, setShowLiveCheckIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'rsvps' | 'wishes' | 'vip_links' | 'memories'>('rsvps');
 
   const [rsvps, setRsvps] = useState<RSVPResponse[]>(() => getStoredRSVPs(invitation.id));
@@ -548,6 +549,15 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLiveCheckIn(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B99A65] to-[#d6bd91] text-[#171717] font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg hover:opacity-95"
+            >
+              <QrCode className="w-4 h-4 text-[#171717]" />
+              <span>{isRtl ? 'فتح وضع استقبال القاعة ومسح الـ QR' : 'Open Live Check-In'}</span>
+            </button>
+
             <button
               onClick={handleExportCSV}
               className="px-4 py-2.5 rounded-xl bg-[#171717] border border-[#B99A65]/40 text-[#E9E1D5] hover:text-[#B99A65] text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:border-[#B99A65]"
@@ -1332,6 +1342,22 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Frida Live Wedding Check-In Modal */}
+      {showLiveCheckIn && (
+        <LiveCheckInModal
+          invitation={invitation}
+          rsvps={rsvps}
+          onCheckInGuest={(rsvpId) => {
+            const guest = rsvps.find((r) => r.id === rsvpId);
+            if (guest) {
+              handleToggleCheckIn(guest);
+            }
+          }}
+          onClose={() => setShowLiveCheckIn(false)}
+          isRtl={isRtl}
+        />
       )}
 
     </div>

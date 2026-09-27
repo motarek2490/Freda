@@ -80,11 +80,14 @@ export const FloralBotanicalLayout: React.FC<TemplateLayoutProps> = ({
               <div className="text-center space-y-2">
                 <div className="relative inline-block">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#FFFFFF] shadow-md mx-auto bg-[#E3EFE5]">
-                    {details.groomAvatarUrl ? (
-                      <img src={details.groomAvatarUrl} alt={details.groomName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl font-serif text-[#5B7553]">G</div>
-                    )}
+                    <img
+                      src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                      alt={details.groomName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                      }}
+                    />
                   </div>
                   <span className="absolute -bottom-1 -right-1 text-base">🌸</span>
                 </div>
@@ -93,17 +96,20 @@ export const FloralBotanicalLayout: React.FC<TemplateLayoutProps> = ({
               </div>
             )}
 
-            <div className="text-2xl text-[#8E5B6A] font-serif">&</div>
+            <div className="text-2xl text-[#8E5B6A] font-serif">&amp;</div>
 
             {details.brideName && (
               <div className="text-center space-y-2">
                 <div className="relative inline-block">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#FFFFFF] shadow-md mx-auto bg-[#F2E3E8]">
-                    {details.brideAvatarUrl ? (
-                      <img src={details.brideAvatarUrl} alt={details.brideName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl font-serif text-[#8E5B6A]">B</div>
-                    )}
+                    <img
+                      src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                      alt={details.brideName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                      }}
+                    />
                   </div>
                   <span className="absolute -bottom-1 -right-1 text-base">🌺</span>
                 </div>

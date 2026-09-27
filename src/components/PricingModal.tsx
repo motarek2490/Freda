@@ -186,7 +186,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     try {
       // 0. Ensure user has an active Firebase Auth session (anonymous or logged in)
-      const user = await ensureAnonymousAuth();
+      const user = await Promise.race([
+        ensureAnonymousAuth(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
 
       // 1. Prepare and save invitation to Cloud Firestore & local storage
       let targetInv: InvitationData;

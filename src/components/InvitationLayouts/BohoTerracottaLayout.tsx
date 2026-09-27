@@ -73,11 +73,16 @@ export const BohoTerracottaLayout: React.FC<TemplateLayoutProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-8 max-w-lg mx-auto">
             {details.groomName && (
               <div className="p-4 rounded-t-[60px] rounded-b-2xl bg-[#F4E9E1] border border-[#D9A083] text-center space-y-2">
-                {details.groomAvatarUrl && (
-                  <div className="w-24 h-28 mx-auto rounded-t-[50px] rounded-b-xl overflow-hidden shadow-inner border-2 border-white">
-                    <img src={details.groomAvatarUrl} alt={details.groomName} className="w-full h-full object-cover" />
-                  </div>
-                )}
+                <div className="w-24 h-28 mx-auto rounded-t-[50px] rounded-b-xl overflow-hidden shadow-inner border-2 border-white">
+                  <img
+                    src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                    alt={details.groomName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                    }}
+                  />
+                </div>
                 <span className="text-[9px] uppercase tracking-widest text-[#C26338] font-bold block">
                   {isRtl ? 'العريس' : 'The Groom'}
                 </span>
@@ -88,11 +93,16 @@ export const BohoTerracottaLayout: React.FC<TemplateLayoutProps> = ({
 
             {details.brideName && (
               <div className="p-4 rounded-t-[60px] rounded-b-2xl bg-[#F4E9E1] border border-[#D9A083] text-center space-y-2">
-                {details.brideAvatarUrl && (
-                  <div className="w-24 h-28 mx-auto rounded-t-[50px] rounded-b-xl overflow-hidden shadow-inner border-2 border-white">
-                    <img src={details.brideAvatarUrl} alt={details.brideName} className="w-full h-full object-cover" />
-                  </div>
-                )}
+                <div className="w-24 h-28 mx-auto rounded-t-[50px] rounded-b-xl overflow-hidden shadow-inner border-2 border-white">
+                  <img
+                    src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                    alt={details.brideName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                    }}
+                  />
+                </div>
                 <span className="text-[9px] uppercase tracking-widest text-[#C26338] font-bold block">
                   {isRtl ? 'العروس' : 'The Bride'}
                 </span>

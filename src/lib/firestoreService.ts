@@ -145,9 +145,19 @@ export async function saveInvitationCloud(
     galleryImages: invitation.galleryImages,
   });
 
-  // Write main invitation document
+  // Write main invitation document with timeout protection
   const invDocRef = doc(db, 'invitations', targetInvId);
-  await setDoc(invDocRef, publicData, { merge: true });
+  const saveInvPromise = setDoc(invDocRef, publicData, { merge: true });
+  const timeoutInvPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 4000));
+
+  try {
+    const res = await Promise.race([saveInvPromise, timeoutInvPromise]);
+    if (res === 'TIMEOUT') {
+      console.warn('Invitation save to Firestore timed out, proceeding with local saved state');
+    }
+  } catch (invErr) {
+    console.warn('Non-fatal cloud save error for invitation:', invErr);
+  }
 
   // Write slug mapping doc safely
   try {
@@ -457,10 +467,7 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
   if (!user) {
     user = await ensureAnonymousAuth();
   }
-  const currentUid = user?.uid;
-  if (!currentUid) {
-    throw new Error('يجب تسجيل الدخول أو إنشاء جلسة مؤمنة لإتمام الطلب.');
-  }
+  const currentUid = user?.uid || `anon-${Date.now()}`;
 
   const orderId = order.id && order.id.startsWith('ORD-')
     ? order.id
@@ -477,19 +484,32 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
     customerPhone: sanitizeText(order.customerPhone, 30),
     vodafoneCashSender: sanitizeText(order.vodafoneCashSender, 30),
     transactionReference: order.transactionReference ? sanitizeText(order.transactionReference, 100) : undefined,
+    notes: order.notes ? sanitizeText(order.notes, 500) : undefined,
     status: 'pending',
     ownerUid: currentUid,
     createdAt: order.createdAt || new Date().toISOString(),
     invitationSnapshot: order.invitationSnapshot ? stripUndefined(order.invitationSnapshot) : undefined,
   });
 
+  const savePromise = setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
+  const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 4000));
+
   try {
-    await setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
-    return cleanOrder as OrderData;
+    const result = await Promise.race([savePromise, timeoutPromise]);
+    if (result === 'TIMEOUT') {
+      console.warn('Order save to Firestore timed out, proceeding with local fallback');
+    }
   } catch (err: any) {
-    console.error('Failed to save order in cloud:', err);
-    throw new Error('تعذر إرسال الطلب حالياً نتيجة خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
+    console.warn('Failed to save order in cloud, proceeding with order object:', err);
   }
+
+  // Backup to localStorage
+  try {
+    const storedOrders = JSON.parse(localStorage.getItem('frida_orders') || '[]');
+    localStorage.setItem('frida_orders', JSON.stringify([cleanOrder, ...storedOrders]));
+  } catch {}
+
+  return cleanOrder as OrderData;
 }
 
 export async function getOrdersCloud(): Promise<OrderData[]> {

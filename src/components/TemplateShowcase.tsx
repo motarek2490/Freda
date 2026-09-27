@@ -36,6 +36,17 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
   // 4 Curated Spotlight Pieces
   const spotlightPieces = [
     {
+      id: 'elegant-cinematic',
+      templateId: '4237b9ea-0fba-4a61-bb58-51f5c8dc74a7',
+      titleDisplay: 'ELEGANT',
+      taglineAr: 'تصميم سينمائي فخم يبرز صور العروسين بتأثيرات ضوئية أنيقة وإحساس شاعري.',
+      taglineEn: 'Cinematic layout centered around stunning photography with dynamic lighting & smooth parallax.',
+      categoryAr: 'زفاف سينمائي فخم',
+      categoryEn: 'Cinematic Royal Gala',
+      descAr: 'قالب التجربة الرئيسي لعام 2026: توزيع ضوئي ديناميكي، بارالاكس سلس، وتفاصيل ذهبية فاخرة تحاكي السينما العالمية.',
+      descEn: 'The flagship experience template for 2026: dynamic lighting, smooth parallax, and elegant gold details.',
+    },
+    {
       id: 'royal-hero',
       templateId: 'f1e729be-a6d6-43ad-8e63-f1c8d62157a6',
       titleDisplay: 'ROYAL',

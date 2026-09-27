@@ -117,13 +117,14 @@ export const InteractiveStoryLayout: React.FC<TemplateLayoutProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-white/10">
                   {details.groomName && (
                     <div className="p-4 rounded-2xl bg-[#141416] border border-white/5 text-center space-y-2">
-                      {details.groomAvatarUrl && (
-                        <img
-                          src={details.groomAvatarUrl}
-                          alt={details.groomName}
-                          className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
-                        />
-                      )}
+                      <img
+                        src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                        alt={details.groomName}
+                        className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                        }}
+                      />
                       <span className="text-[10px] text-[#B99A65] uppercase font-bold">{isRtl ? 'العريس' : 'Groom'}</span>
                       <h3 className="font-bold text-base text-white">{details.groomName}</h3>
                       {details.groomParents && <p className="text-xs text-[#71717A]">{details.groomParents}</p>}
@@ -132,13 +133,14 @@ export const InteractiveStoryLayout: React.FC<TemplateLayoutProps> = ({
 
                   {details.brideName && (
                     <div className="p-4 rounded-2xl bg-[#141416] border border-white/5 text-center space-y-2">
-                      {details.brideAvatarUrl && (
-                        <img
-                          src={details.brideAvatarUrl}
-                          alt={details.brideName}
-                          className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
-                        />
-                      )}
+                      <img
+                        src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                        alt={details.brideName}
+                        className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                        }}
+                      />
                       <span className="text-[10px] text-[#B99A65] uppercase font-bold">{isRtl ? 'العروس' : 'Bride'}</span>
                       <h3 className="font-bold text-base text-white">{details.brideName}</h3>
                       {details.brideParents && <p className="text-xs text-[#71717A]">{details.brideParents}</p>}

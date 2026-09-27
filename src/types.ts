@@ -298,15 +298,38 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
+export interface SongDocument {
+  id: string;
+  title: string;
+  artist?: string;
+  duration?: number;
+  previewUrl: string;
+  audioUrl: string;
+  coverUrl?: string;
+  category: string;
+  isActive?: boolean;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface MusicTrack {
   id?: string;
+  title?: string;
   name?: string | { ar: string; en: string };
+  artist?: string;
+  duration?: number;
+  previewUrl?: string;
+  audioUrl?: string;
+  coverUrl?: string;
   category: string;
   label?: string;
   url: string;
+  isActive?: boolean;
   isCloud?: boolean;
   isDefault?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WebsiteReview {

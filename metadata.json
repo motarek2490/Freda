@@ -1,6 +1,6 @@
 {
-  "name": "Remix Vowly",
-  "description": "An elegant platform for creating immersive, cinematic digital invitations for life\u0027s most memorable and meaningful occasions.",
+  "name": "FRIDA | فريدا",
+  "description": "منصة فريدا للدعوات والتجارب الرقمية الملكية التفاعلية لحفلات الزفاف والمناسبات الخاصة.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

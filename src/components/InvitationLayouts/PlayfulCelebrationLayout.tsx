@@ -76,9 +76,14 @@ export const PlayfulCelebrationLayout: React.FC<TemplateLayoutProps> = ({
           <div className="flex flex-wrap items-center justify-center gap-6 my-6">
             {details.groomName && (
               <div className="p-4 rounded-2xl bg-white border border-[#FFAAA6] shadow-sm text-center min-w-[140px]">
-                {details.groomAvatarUrl && (
-                  <img src={details.groomAvatarUrl} alt={details.groomName} className="w-16 h-16 rounded-full mx-auto object-cover mb-2 border-2 border-[#FF6B6B]" />
-                )}
+                <img
+                  src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                  alt={details.groomName}
+                  className="w-16 h-16 rounded-full mx-auto object-cover mb-2 border-2 border-[#FF6B6B]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                  }}
+                />
                 <span className="text-[10px] text-[#FF6B6B] font-extrabold uppercase block">{isRtl ? 'العريس' : 'Groom'}</span>
                 <h3 className="font-extrabold text-sm text-[#2D3142]">{details.groomName}</h3>
               </div>
@@ -88,9 +93,14 @@ export const PlayfulCelebrationLayout: React.FC<TemplateLayoutProps> = ({
 
             {details.brideName && (
               <div className="p-4 rounded-2xl bg-white border border-[#FFAAA6] shadow-sm text-center min-w-[140px]">
-                {details.brideAvatarUrl && (
-                  <img src={details.brideAvatarUrl} alt={details.brideName} className="w-16 h-16 rounded-full mx-auto object-cover mb-2 border-2 border-[#FF6B6B]" />
-                )}
+                <img
+                  src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                  alt={details.brideName}
+                  className="w-16 h-16 rounded-full mx-auto object-cover mb-2 border-2 border-[#FF6B6B]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                  }}
+                />
                 <span className="text-[10px] text-[#FF6B6B] font-extrabold uppercase block">{isRtl ? 'العروس' : 'Bride'}</span>
                 <h3 className="font-extrabold text-sm text-[#2D3142]">{details.brideName}</h3>
               </div>

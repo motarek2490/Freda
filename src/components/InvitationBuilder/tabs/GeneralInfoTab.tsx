@@ -114,6 +114,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({
                   src={eventDetails.groomAvatarUrl}
                   alt="Groom"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                  }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#666]">
@@ -181,6 +184,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({
                   src={eventDetails.brideAvatarUrl}
                   alt="Bride"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                  }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#666]">

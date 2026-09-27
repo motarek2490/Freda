@@ -105,13 +105,14 @@ export const ArabicLuxuryLayout: React.FC<TemplateLayoutProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 pt-6 border-t border-[#C5A059]/30">
               {details.groomName && (
                 <div className="p-5 rounded-2xl bg-[#1A1612] border border-[#C5A059]/30 text-center space-y-2">
-                  {details.groomAvatarUrl && (
-                    <img
-                      src={details.groomAvatarUrl}
-                      alt={details.groomName}
-                      className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
-                    />
-                  )}
+                  <img
+                    src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                    alt={details.groomName}
+                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                    }}
+                  />
                   <span className="text-[10px] text-[#C5A059] uppercase tracking-widest font-bold block">
                     {isRtl ? 'العريس' : 'The Groom'}
                   </span>
@@ -124,13 +125,14 @@ export const ArabicLuxuryLayout: React.FC<TemplateLayoutProps> = ({
 
               {details.brideName && (
                 <div className="p-5 rounded-2xl bg-[#1A1612] border border-[#C5A059]/30 text-center space-y-2">
-                  {details.brideAvatarUrl && (
-                    <img
-                      src={details.brideAvatarUrl}
-                      alt={details.brideName}
-                      className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
-                    />
-                  )}
+                  <img
+                    src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                    alt={details.brideName}
+                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                    }}
+                  />
                   <span className="text-[10px] text-[#C5A059] uppercase tracking-widest font-bold block">
                     {isRtl ? 'العروس' : 'The Bride'}
                   </span>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Music,
   Play,
@@ -11,10 +11,22 @@ import {
   Scissors,
   AlertTriangle,
   X,
+  Search,
+  Filter,
+  Check,
+  Power,
+  Volume2,
+  Radio,
+  Clock,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { AdminSettings, Language, MusicTrack } from '../../types';
 import { resolveAudioTrackUrl } from '../../lib/audioStorage';
-import { uploadAudioFileToCloudStorage } from '../../data/presetMusic';
+import {
+  uploadAudioFileToCloudStorage,
+  toggleSongActiveStatus,
+} from '../../data/presetMusic';
 import { AudioTrimmerModal } from '../AudioTrimmerModal';
 
 interface AdminMusicTabProps {
@@ -41,6 +53,11 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
+  // Search & Filter & Pagination State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [pageSize, setPageSize] = useState(24);
+
   // Audio Trimmer State
   const [trimmerAudioBlob, setTrimmerAudioBlob] = useState<Blob | null>(null);
   const [trimmerTrackName, setTrimmerTrackName] = useState<string>('');
@@ -53,6 +70,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
   const directFileInputRef = useRef<HTMLInputElement>(null);
   const trimmerFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle Play/Pause with HTML5 streaming (no full memory download)
   const handlePlayPause = async (rawUrl: string) => {
     if (!rawUrl) return;
 
@@ -72,6 +90,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
 
       if (!audioRef.current) {
         audioRef.current = new Audio();
+        audioRef.current.preload = 'none';
         audioRef.current.onended = () => setPlayingTrackUrl(null);
         audioRef.current.onerror = () => {
           setPlayingTrackUrl(null);
@@ -103,21 +122,24 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
 
       if (cdnUrl) {
         const newTrack: MusicTrack = {
-          id: `track-${Date.now()}`,
-          name: {
-            ar: cleanName,
-            en: cleanName,
-          },
+          id: `song_${Date.now()}`,
+          title: cleanName,
+          name: { ar: cleanName, en: cleanName },
           label: cleanName,
+          artist: 'FRIDA Royal Orchestra',
           url: cdnUrl,
-          category: 'classical',
+          audioUrl: cdnUrl,
+          previewUrl: cdnUrl,
+          category: 'royal',
+          isActive: true,
           isDefault: false,
           isCloud: true,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
 
         await onSaveTrack(newTrack);
-        setUploadFeedback(isRtl ? 'تم رفع المعزوفة وحفظها في السحابة بنجاح! 🎵' : 'Track uploaded successfully!');
+        setUploadFeedback(isRtl ? 'تم رفع المعزوفة وحفظها في Cloudflare R2 بنجاح! 🎵☁️' : 'Track saved to Cloudflare R2!');
       } else {
         setUploadFeedback(isRtl ? 'تعذر الرفع، يرجى المحاولة مرة أخرى.' : 'Upload failed.');
       }
@@ -143,11 +165,11 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
 
     try {
       setIsDeleting(true);
-      await onDeleteTrack(trackToDelete.id || '', trackToDelete.url);
+      await onDeleteTrack(trackToDelete.id || '', trackToDelete.url || trackToDelete.audioUrl);
       setUploadFeedback(
         isRtl
-          ? `تم حذف معزوفة "${getTrackDisplayName(trackToDelete, 'ar')}" بنجاح 🗑️`
-          : 'Track removed from library successfully!'
+          ? `تم حذف معزوفة "${getTrackDisplayName(trackToDelete, 'ar')}" وتنظيف ملفات التخزين بنجاح 🗑️`
+          : 'Track and storage files removed successfully!'
       );
       setTrackToDelete(null);
     } catch (err: any) {
@@ -158,13 +180,42 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
     }
   };
 
+  const handleToggleActive = async (track: MusicTrack) => {
+    if (!track.id) return;
+    const nextState = !(track.isActive ?? true);
+    await toggleSongActiveStatus(track.id, nextState);
+    track.isActive = nextState;
+    setUploadFeedback(
+      isRtl
+        ? `تم ${nextState ? 'تفعيل' : 'تعطيل'} معزوفة "${getTrackDisplayName(track, 'ar')}"`
+        : `Track ${nextState ? 'activated' : 'deactivated'}`
+    );
+  };
+
   const getTrackDisplayName = (t: MusicTrack, lang: 'ar' | 'en') => {
+    if (t.title) return t.title;
     if (!t.name) return t.label || '';
     if (typeof t.name === 'object') {
       return lang === 'ar' ? t.name.ar : t.name.en;
     }
     return t.name;
   };
+
+  // Filtered & Paginated Tracks
+  const filteredTracks = useMemo(() => {
+    return adminTracks.filter((t) => {
+      const matchCategory = selectedCategory === 'all' || t.category === selectedCategory;
+      const nameAr = getTrackDisplayName(t, 'ar').toLowerCase();
+      const nameEn = getTrackDisplayName(t, 'en').toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q || nameAr.includes(q) || nameEn.includes(q) || (t.artist && t.artist.toLowerCase().includes(q));
+      return matchCategory && matchSearch;
+    });
+  }, [adminTracks, selectedCategory, searchQuery]);
+
+  const displayedTracks = useMemo(() => {
+    return filteredTracks.slice(0, pageSize);
+  }, [filteredTracks, pageSize]);
 
   return (
     <div className="space-y-8">
@@ -174,17 +225,17 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
           <div>
             <h4 className="font-playfair text-base font-bold text-[#F7F4EE] flex items-center gap-2">
               <Upload className="w-4 h-4 text-[#B99A65]" />
-              <span>{isRtl ? 'إدارة ورفع الملفات الصوتية للمكتبة' : 'Music Library & Upload Management'}</span>
+              <span>{isRtl ? 'إدارة ورفع الملفات الصوتية (Cloudflare R2 + Firestore)' : 'Audio Library & Cloudflare R2 Management'}</span>
             </h4>
             <p className="text-xs text-[#8D8A84] mt-0.5 leading-relaxed">
               {isRtl
-                ? 'يمكنك رفع وقص معزوفة باحترافية وتحديد مقطع بالثواني، أو رفع الملف كاملاً، وإدارة وحذف أي أغنية من المكتبة.'
-                : 'Upload & trim custom audio clips, or upload full tracks and manage library music.'}
+                ? 'يتم تخزين الملفات الصوتية على Cloudflare R2 مع مقطع معاينة سريع (Preview)، وحفظ البيانات الوصفية في Firestore.'
+                : 'Audio assets are stored in Cloudflare R2 edge storage with lightweight previews.'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Option 1: Upload with Trimmer */}
+            {/* Option 1: Upload with Trimmer & Dual Package */}
             <input
               type="file"
               ref={trimmerFileInputRef}
@@ -197,7 +248,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B99A65] to-[#d6bd91] hover:from-[#cbb07e] hover:to-[#e2ca9f] text-[#171717] font-extrabold text-xs flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <Scissors className="w-4 h-4 text-[#171717]" />
-              <span>{isRtl ? 'رفع مع قص وتحديد مقطع (قص حر للأدمن ✂️)' : 'Upload & Trim Audio ✂️'}</span>
+              <span>{isRtl ? 'قص ورفع باحترافية (Cloudflare R2) ✂️' : 'Upload & Trim to R2 ✂️'}</span>
             </button>
 
             {/* Option 2: Upload direct without trim */}
@@ -216,12 +267,12 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-[#B99A65]" />
-                  <span>{isRtl ? 'جارِ الرفع السحابي...' : 'Uploading...'}</span>
+                  <span>{isRtl ? 'جارِ الرفع السحابي...' : 'Uploading to R2...'}</span>
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 text-[#B99A65]" />
-                  <span>{isRtl ? 'رفع الملف كاملاً مباشرة 📤' : 'Upload Full File Directly'}</span>
+                  <span>{isRtl ? 'رفع الملف كاملاً مباشرة 📤' : 'Upload Full File'}</span>
                 </>
               )}
             </button>
@@ -244,31 +295,62 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
         )}
       </div>
 
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#1F1E1B] p-3 rounded-2xl border border-[#2A2722]">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-[#8D8A84] absolute right-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isRtl ? 'بحث في مكتبة الأغاني والمعزوفات...' : 'Search audio catalog...'}
+            className="w-full bg-[#171717] border border-[#333] rounded-xl pl-3 pr-9 py-2 text-xs text-[#F7F4EE] focus:outline-none focus:border-[#B99A65]"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="bg-[#171717] border border-[#333] rounded-xl px-3 py-2 text-xs text-[#F7F4EE] focus:outline-none focus:border-[#B99A65]"
+          >
+            <option value="all">{isRtl ? 'جميع التصنيفات' : 'All Categories'}</option>
+            <option value="royal">{isRtl ? 'ملكي فاخر' : 'Royal'}</option>
+            <option value="wedding">{isRtl ? 'زفاف' : 'Wedding'}</option>
+            <option value="engagement">{isRtl ? 'خطوبة' : 'Engagement'}</option>
+            <option value="classic">{isRtl ? 'كلاسيك' : 'Classic'}</option>
+            <option value="birthday">{isRtl ? 'احتفالات' : 'Celebration'}</option>
+          </select>
+        </div>
+      </div>
+
       {/* Available Music Library Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="font-playfair text-lg font-bold text-[#F7F4EE] flex items-center gap-2">
             <Music className="w-4 h-4 text-[#B99A65]" />
             <span>{isRtl ? 'المكتبة الصوتية المعتمدة للموقع' : 'Official Website Music Library'}</span>
-            <span className="text-xs text-[#8D8A84]">({adminTracks.length})</span>
+            <span className="text-xs text-[#8D8A84]">({filteredTracks.length})</span>
           </h4>
         </div>
 
-        {adminTracks.length === 0 ? (
+        {displayedTracks.length === 0 ? (
           <div className="p-8 text-center bg-[#1F1E1B] rounded-2xl border border-[#2E2C28] text-xs text-[#8D8A84]">
-            {isRtl ? 'لا توجد مقطوعات صوتية حالياً. يمكنك رفع مقطوعة جديدة من الأعلى.' : 'No audio tracks found. Upload one above.'}
+            {isRtl ? 'لا توجد مقطوعات صوتية تطابق البحث. يمكنك رفع مقطوعة جديدة من الأعلى.' : 'No audio tracks found matching criteria.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {adminTracks.map((track, idx) => {
+            {displayedTracks.map((track, idx) => {
               const trackNameAr = getTrackDisplayName(track, 'ar');
               const trackNameEn = getTrackDisplayName(track, 'en');
-
-              const isPlaying = playingTrackUrl === track.url;
-              const isLoading = loadingTrackUrl === track.url;
+              const mainUrl = track.previewUrl || track.audioUrl || track.url;
+              const isPlaying = playingTrackUrl === mainUrl;
+              const isLoading = loadingTrackUrl === mainUrl;
               const isDefaultDemo =
                 adminSettings?.defaultDemoTrackUrl === track.url ||
+                adminSettings?.defaultDemoTrackUrl === track.audioUrl ||
                 (adminSettings?.defaultDemoTrackName && adminSettings.defaultDemoTrackName === trackNameAr);
+              const isActive = track.isActive ?? true;
 
               return (
                 <div
@@ -276,41 +358,51 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                   className={`bg-[#1F1E1B] rounded-2xl p-4 border transition-all space-y-3 relative ${
                     isDefaultDemo
                       ? 'border-[#B99A65] shadow-[0_0_20px_rgba(185,154,101,0.2)]'
-                      : 'border-[#2E2C28] hover:border-[#444]'
+                      : isActive
+                      ? 'border-[#2E2C28] hover:border-[#444]'
+                      : 'border-[#2E2C28] opacity-60'
                   }`}
                 >
-                  {/* Header & Default Demo Badge */}
+                  {/* Header & Badges */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="px-2 py-0.5 rounded-lg bg-[#2E2C28] text-[#8D8A84] text-[10px] font-mono">
-                      {track.category || (isRtl ? 'موسيقى ملكية' : 'Royal')}
+                      {track.category || (isRtl ? 'ملكي' : 'Royal')}
                     </span>
 
-                    {isDefaultDemo && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#B99A65]/20 text-[#B99A65] border border-[#B99A65]/40 text-[10px] font-bold flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-[#B99A65]" />
-                        <span>{isRtl ? 'الديمو الافتراضي' : 'Default Demo'}</span>
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {track.previewUrl && track.audioUrl && track.previewUrl !== track.audioUrl && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 text-[9px] font-bold">
+                          R2 Dual
+                        </span>
+                      )}
+
+                      {isDefaultDemo && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#B99A65]/20 text-[#B99A65] border border-[#B99A65]/40 text-[10px] font-bold flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-[#B99A65]" />
+                          <span>{isRtl ? 'ديمو' : 'Demo'}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Track Name */}
+                  {/* Track Info */}
                   <div className="space-y-0.5">
                     <h5 className="font-bold text-xs text-[#F7F4EE] line-clamp-1">
                       {isRtl ? trackNameAr : trackNameEn}
                     </h5>
                     <p className="text-[10px] text-[#8D8A84] truncate font-mono">
-                      {track.url.substring(0, 45)}...
+                      {track.artist || 'FRIDA Royal Orchestra'} • {mainUrl.substring(0, 40)}...
                     </p>
                   </div>
 
-                  {/* Action Controls */}
+                  {/* Controls */}
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#2A2722]">
                     {/* Play / Pause */}
                     <button
-                      onClick={() => handlePlayPause(track.url)}
+                      onClick={() => handlePlayPause(mainUrl)}
                       disabled={isLoading}
                       className="p-2 rounded-xl bg-[#2A2722] hover:bg-[#333] text-[#B99A65] transition-colors cursor-pointer"
-                      title={isPlaying ? (isRtl ? 'إيقاف' : 'Pause') : (isRtl ? 'استماع' : 'Play')}
+                      title={isPlaying ? (isRtl ? 'إيقاف' : 'Pause') : (isRtl ? 'معاينة سريعة' : 'Play Preview')}
                     >
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -321,23 +413,36 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                       )}
                     </button>
 
-                    {/* Set as default demo track button */}
+                    {/* Toggle Active/Inactive */}
+                    <button
+                      onClick={() => handleToggleActive(track)}
+                      className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/40'
+                          : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                      }`}
+                      title={isActive ? (isRtl ? 'معزوفة مفعّلة (انقر للتعطيل)' : 'Active') : (isRtl ? 'معزوفة معطلة (انقر للتفعيل)' : 'Inactive')}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Set Default Demo */}
                     {!isDefaultDemo && (
                       <button
-                        onClick={() => onSetDefaultDemoTrack(track.url, trackNameAr)}
+                        onClick={() => onSetDefaultDemoTrack(track.audioUrl || track.url, trackNameAr)}
                         className="px-2.5 py-1.5 rounded-xl bg-[#171717] hover:bg-[#B99A65]/20 border border-[#333] hover:border-[#B99A65] text-[#8D8A84] hover:text-[#B99A65] text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                         title={isRtl ? 'تعيين كمعزوفة افتراضية لجميع الديمو' : 'Set as default demo track'}
                       >
                         <Star className="w-3 h-3" />
-                        <span>{isRtl ? 'تعيين كديمو' : 'Set as Demo'}</span>
+                        <span>{isRtl ? 'ديمو' : 'Demo'}</span>
                       </button>
                     )}
 
-                    {/* Delete Track Button */}
+                    {/* Delete Track */}
                     <button
                       onClick={() => setTrackToDelete(track)}
                       className="px-2.5 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 hover:border-red-600 text-red-400 hover:text-red-200 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ml-auto"
-                      title={isRtl ? 'حذف هذه المعزوفة من الموقع' : 'Delete this track from library'}
+                      title={isRtl ? 'حذف هذه المعزوفة' : 'Delete'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{isRtl ? 'حذف' : 'Delete'}</span>
@@ -346,6 +451,18 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Load More Pagination */}
+        {filteredTracks.length > pageSize && (
+          <div className="text-center pt-4">
+            <button
+              onClick={() => setPageSize((prev) => prev + 24)}
+              className="px-5 py-2.5 rounded-xl bg-[#2A2722] hover:bg-[#333] border border-[#444] text-[#F7F4EE] text-xs font-bold transition-all cursor-pointer shadow-md"
+            >
+              {isRtl ? `عرض المزيد (+24) — متبقي ${filteredTracks.length - pageSize}` : 'Load More Songs'}
+            </button>
           </div>
         )}
       </div>
@@ -369,15 +486,15 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                     <strong className="text-[#F7F4EE]">
                       "{getTrackDisplayName(trackToDelete, 'ar')}"
                     </strong>{' '}
-                    نهائياً من مكتبة الموسيقى؟ لن تظهر للمستخدمين مجدداً.
+                    وتنظيف ملفاتها من مساحة التخزين السحابي؟
                   </>
                 ) : (
                   <>
-                    Are you sure you want to permanently delete{' '}
+                    Are you sure you want to delete{' '}
                     <strong className="text-[#F7F4EE]">
                       "{getTrackDisplayName(trackToDelete, 'en')}"
                     </strong>{' '}
-                    from the music library?
+                    and purge its cloud storage assets?
                   </>
                 )}
               </p>
@@ -428,8 +545,8 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
             await onSaveTrack(newTrack);
             setUploadFeedback(
               isRtl
-                ? `تم قص المعزوفة وحفظها بنجاح في السحابة! ✂️🎵`
-                : 'Track trimmed and saved to cloud library!'
+                ? `تم تجهيز ورفع المعزوفة بنجاح إلى Cloudflare R2! ✂️🎵`
+                : 'Track packaged and stored in Cloudflare R2!'
             );
             setTrimmerAudioBlob(null);
           }}

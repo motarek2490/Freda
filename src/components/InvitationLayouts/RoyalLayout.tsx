@@ -82,13 +82,14 @@ export const RoyalLayout: React.FC<TemplateLayoutProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 max-w-2xl mx-auto">
             {details.groomName && (
               <div className="p-5 rounded-2xl bg-[#171717]/80 border border-[#B99A65]/30 text-center space-y-3">
-                {details.groomAvatarUrl && (
-                  <img
-                    src={details.groomAvatarUrl}
-                    alt={details.groomName}
-                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
-                  />
-                )}
+                <img
+                  src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
+                  alt={details.groomName}
+                  className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
+                  }}
+                />
                 <div>
                   <span className="text-[10px] text-[#B99A65] uppercase tracking-widest font-bold">
                     {isRtl ? 'العريس' : 'Groom'}
@@ -105,13 +106,14 @@ export const RoyalLayout: React.FC<TemplateLayoutProps> = ({
 
             {details.brideName && (
               <div className="p-5 rounded-2xl bg-[#171717]/80 border border-[#B99A65]/30 text-center space-y-3">
-                {details.brideAvatarUrl && (
-                  <img
-                    src={details.brideAvatarUrl}
-                    alt={details.brideName}
-                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
-                  />
-                )}
+                <img
+                  src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
+                  alt={details.brideName}
+                  className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#B99A65]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
+                  }}
+                />
                 <div>
                   <span className="text-[10px] text-[#B99A65] uppercase tracking-widest font-bold">
                     {isRtl ? 'العروس' : 'Bride'}

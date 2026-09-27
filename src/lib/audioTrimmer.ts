@@ -1,6 +1,7 @@
 /**
  * Audio Trimming & MP3/128kbps Quality Optimization Utility
  * Cuts audio to chosen window client-side using Web Audio API + LAME MP3 encoder
+ * Generates lightweight 20s previews (for catalog browsing) and full audio tracks (for invitation playback)
  */
 
 import { Mp3Encoder } from '@breezystack/lamejs';
@@ -12,6 +13,15 @@ export interface TrimResult {
   originalDuration: number;
   sizeKb: number;
   format: string;
+}
+
+export interface DualAudioPackage {
+  previewBlob: Blob;
+  previewDuration: number;
+  fullBlob: Blob;
+  fullDuration: number;
+  originalDuration: number;
+  sizeKb: number;
 }
 
 /**
@@ -160,29 +170,23 @@ export async function trimAndCompressAudioFile(
     const actualStartTime = Math.max(0, Math.min(startTimeSec, Math.max(0, originalDuration - 0.5)));
     const sliceDuration = Math.min(maxDurationSec, Math.max(0.5, originalDuration - actualStartTime));
 
-    // Target sample rate matching decoded sample rate (typically 44100 or 48000)
     let targetSampleRate = decodedAudio.sampleRate || 44100;
     if (!SUPPORTED_MP3_SAMPLE_RATES.has(targetSampleRate)) {
       targetSampleRate = 44100;
     }
 
     const targetLength = Math.max(1, Math.floor(sliceDuration * targetSampleRate));
-    // Use mono (1 channel) for mobile web: cuts file size in half with zero loss in vocal clarity
-    const numChannels = 1;
+    const numChannels = 1; // Mono for ultra-compact size
 
     const offlineCtx = new OfflineAudioContext(numChannels, targetLength, targetSampleRate);
 
-    // Create buffer source
     const source = offlineCtx.createBufferSource();
     source.buffer = decodedAudio;
-
-    // Connect and start at offset
     source.connect(offlineCtx.destination);
     source.start(0, actualStartTime, sliceDuration);
 
     const renderedBuffer = await offlineCtx.startRendering();
 
-    // Encode to compressed MP3 (with WAV fallback if needed)
     let audioBlob: Blob;
     let format = 'audio/mpeg';
     try {
@@ -193,7 +197,6 @@ export async function trimAndCompressAudioFile(
       format = 'audio/wav';
     }
 
-    // Convert to Data URL
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -210,6 +213,84 @@ export async function trimAndCompressAudioFile(
       originalDuration: Math.round(originalDuration * 10) / 10,
       sizeKb,
       format,
+    };
+  } finally {
+    if (audioContext.state !== 'closed') {
+      await audioContext.close().catch(() => {});
+    }
+  }
+}
+
+/**
+ * Generates both a 20-second lightweight Preview clip (for catalog browsing)
+ * and the Full Audio Track (for invitation playback) in a single fast pass.
+ */
+export async function generateDualAudioPackage(
+  fileOrBlob: File | Blob,
+  startTimeSec: number = 0,
+  maxDurationSec: number = 101,
+  previewDurationSec: number = 20
+): Promise<DualAudioPackage> {
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtx) {
+    throw new Error('Web Audio API is not supported in this browser.');
+  }
+
+  const audioContext = new AudioCtx();
+
+  try {
+    const arrayBuffer = await fileOrBlob.arrayBuffer();
+    const decodedAudio = await audioContext.decodeAudioData(arrayBuffer);
+    const originalDuration = decodedAudio.duration;
+
+    const actualStartTime = Math.max(0, Math.min(startTimeSec, Math.max(0, originalDuration - 0.5)));
+    const fullDuration = Math.min(maxDurationSec, Math.max(0.5, originalDuration - actualStartTime));
+    const previewDuration = Math.min(previewDurationSec, fullDuration);
+
+    let targetSampleRate = decodedAudio.sampleRate || 44100;
+    if (!SUPPORTED_MP3_SAMPLE_RATES.has(targetSampleRate)) {
+      targetSampleRate = 44100;
+    }
+
+    // 1. Render Full Audio
+    const fullLength = Math.max(1, Math.floor(fullDuration * targetSampleRate));
+    const fullOfflineCtx = new OfflineAudioContext(1, fullLength, targetSampleRate);
+    const fullSource = fullOfflineCtx.createBufferSource();
+    fullSource.buffer = decodedAudio;
+    fullSource.connect(fullOfflineCtx.destination);
+    fullSource.start(0, actualStartTime, fullDuration);
+    const fullBuffer = await fullOfflineCtx.startRendering();
+
+    let fullBlob: Blob;
+    try {
+      fullBlob = audioBufferToMp3(fullBuffer, 128);
+    } catch {
+      fullBlob = audioBufferToWav(fullBuffer);
+    }
+
+    // 2. Render Preview Audio (max 20s, lower bitrate 80kbps for instant mobile streaming)
+    const previewLength = Math.max(1, Math.floor(previewDuration * targetSampleRate));
+    const prevOfflineCtx = new OfflineAudioContext(1, previewLength, targetSampleRate);
+    const prevSource = prevOfflineCtx.createBufferSource();
+    prevSource.buffer = decodedAudio;
+    prevSource.connect(prevOfflineCtx.destination);
+    prevSource.start(0, actualStartTime, previewDuration);
+    const previewBuffer = await prevOfflineCtx.startRendering();
+
+    let previewBlob: Blob;
+    try {
+      previewBlob = audioBufferToMp3(previewBuffer, 80);
+    } catch {
+      previewBlob = audioBufferToWav(previewBuffer);
+    }
+
+    return {
+      previewBlob,
+      previewDuration: Math.round(previewDuration * 10) / 10,
+      fullBlob,
+      fullDuration: Math.round(fullDuration * 10) / 10,
+      originalDuration: Math.round(originalDuration * 10) / 10,
+      sizeKb: Math.round((fullBlob.size + previewBlob.size) / 1024),
     };
   } finally {
     if (audioContext.state !== 'closed') {
