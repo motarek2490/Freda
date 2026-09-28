@@ -288,20 +288,19 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       };
 
       // 4. Save metadata to Firestore collection `music_library`
-      await saveTrackToCloudLibrary(newTrack);
+      saveTrackToCloudLibrary(newTrack).catch((e) => console.warn('Save track metadata error:', e));
 
       if (onSave) {
-        await onSave(dualPackage.fullBlob);
+        onSave(dualPackage.fullBlob).catch(() => {});
       }
 
-      setStatusMessage(isRtl ? 'تم الرفع والتخزين السحابي بنجاح! ⚡☁️' : 'Successfully stored in cloud storage! ⚡☁️');
-      setTimeout(() => {
-        onTrackReady?.(newTrack);
-        onClose();
-      }, 350);
+      // Complete and notify parent instantly (0ms delay)
+      setIsProcessing(false);
+      onTrackReady?.(newTrack);
+      onClose();
     } catch (err: any) {
       console.error('Audio trim error:', err);
-      setStatusMessage(isRtl ? 'حدث خطأ أثناء الرفع، يرجى المحاولة مجدداً.' : 'Failed to process audio, please try again.');
+      setStatusMessage(isRtl ? 'حدث خطأ أثناء المعالجة، يرجى المحاولة مجدداً.' : 'Failed to process audio, please try again.');
       setIsProcessing(false);
     }
   };

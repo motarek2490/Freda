@@ -48,29 +48,27 @@ export function audioBufferToMp3(buffer: AudioBuffer, kbps: number = 96): Blob {
 
   const leftChannel = buffer.getChannelData(0);
   const rightChannel = numChannels > 1 ? buffer.getChannelData(1) : undefined;
-
-  // Convert Float32 [-1.0, 1.0] to Int16 [-32768, 32767]
-  const leftInt16 = new Int16Array(leftChannel.length);
-  for (let i = 0; i < leftChannel.length; i++) {
-    const s = Math.max(-1, Math.min(1, leftChannel[i]));
-    leftInt16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-
-  let rightInt16: Int16Array | undefined;
-  if (rightChannel) {
-    rightInt16 = new Int16Array(rightChannel.length);
-    for (let i = 0; i < rightChannel.length; i++) {
-      const s = Math.max(-1, Math.min(1, rightChannel[i]));
-      rightInt16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    }
-  }
-
-  // Encode in 1152-sample chunks (LAME standard block size)
+  const totalSamples = leftChannel.length;
   const blockSize = 1152;
-  for (let i = 0; i < leftInt16.length; i += blockSize) {
-    const leftChunk = leftInt16.subarray(i, i + blockSize);
-    const rightChunk = rightInt16 ? rightInt16.subarray(i, i + blockSize) : undefined;
-    const mp3buf = encoder.encodeBuffer(leftChunk, rightChunk);
+
+  const leftChunk = new Int16Array(blockSize);
+  const rightChunk = rightChannel ? new Int16Array(blockSize) : undefined;
+
+  for (let i = 0; i < totalSamples; i += blockSize) {
+    const chunkLen = Math.min(blockSize, totalSamples - i);
+    for (let j = 0; j < chunkLen; j++) {
+      const sL = Math.max(-1, Math.min(1, leftChannel[i + j]));
+      leftChunk[j] = sL < 0 ? sL * 0x8000 : sL * 0x7fff;
+      if (rightChannel && rightChunk) {
+        const sR = Math.max(-1, Math.min(1, rightChannel[i + j]));
+        rightChunk[j] = sR < 0 ? sR * 0x8000 : sR * 0x7fff;
+      }
+    }
+
+    const curLeft = chunkLen === blockSize ? leftChunk : leftChunk.subarray(0, chunkLen);
+    const curRight = rightChunk ? (chunkLen === blockSize ? rightChunk : rightChunk.subarray(0, chunkLen)) : undefined;
+
+    const mp3buf = encoder.encodeBuffer(curLeft, curRight);
     if (mp3buf && mp3buf.length > 0) {
       mp3Data.push(mp3buf);
     }
@@ -247,10 +245,7 @@ export async function generateDualAudioPackage(
     const fullDuration = Math.min(maxDurationSec, Math.max(0.5, originalDuration - actualStartTime));
     const previewDuration = Math.min(previewDurationSec, fullDuration);
 
-    let targetSampleRate = decodedAudio.sampleRate || 44100;
-    if (!SUPPORTED_MP3_SAMPLE_RATES.has(targetSampleRate)) {
-      targetSampleRate = 44100;
-    }
+    const targetSampleRate = 32000;
 
     // 1. Render Full Audio
     const fullLength = Math.max(1, Math.floor(fullDuration * targetSampleRate));

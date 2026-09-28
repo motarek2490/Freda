@@ -203,7 +203,11 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
 
   // Filtered & Paginated Tracks
   const filteredTracks = useMemo(() => {
+    const hiddenIds = adminSettings?.hiddenTrackIds || [];
     return adminTracks.filter((t) => {
+      if (t.id && hiddenIds.includes(t.id)) return false;
+      if (t.url && hiddenIds.includes(t.url)) return false;
+      if (t.audioUrl && hiddenIds.includes(t.audioUrl)) return false;
       const matchCategory = selectedCategory === 'all' || t.category === selectedCategory;
       const nameAr = getTrackDisplayName(t, 'ar').toLowerCase();
       const nameEn = getTrackDisplayName(t, 'en').toLowerCase();
@@ -211,7 +215,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
       const matchSearch = !q || nameAr.includes(q) || nameEn.includes(q) || (t.artist && t.artist.toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
-  }, [adminTracks, selectedCategory, searchQuery]);
+  }, [adminTracks, adminSettings, selectedCategory, searchQuery]);
 
   const displayedTracks = useMemo(() => {
     return filteredTracks.slice(0, pageSize);

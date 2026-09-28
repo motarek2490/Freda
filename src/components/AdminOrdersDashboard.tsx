@@ -16,6 +16,7 @@ import {
   getAdminSettingsCloud,
   subscribeAdminSettingsCloud,
   saveAdminSettingsCloud,
+  DEFAULT_ADMIN_SETTINGS,
   getInvitationsCloud,
   subscribeInvitationsCloud,
   updateInvitationStatusCloud,
@@ -116,6 +117,10 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
       if (res) {
         setAdminSettings(res);
         if (onSettingsUpdated) onSettingsUpdated(res);
+        const hiddenIds = res.hiddenTrackIds || [];
+        setAdminTracks((prev) =>
+          prev.filter((t) => !hiddenIds.includes(t.id || '') && !hiddenIds.includes(t.url || ''))
+        );
       }
     });
 
@@ -131,20 +136,22 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
 
     // 6. Music Library
     const unsubMusic = subscribeCloudMusicLibrary((cloudTracks) => {
-      const hiddenIds = adminSettings?.hiddenTrackIds || [];
-      const presets = getAllAvailableTracks(hiddenIds);
-      const map = new Map<string, MusicTrack>();
-      presets.forEach((t) => {
-        if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
-          map.set(t.id, t);
-        }
+      getAdminSettingsCloud().then((currSettings) => {
+        const hiddenIds = currSettings?.hiddenTrackIds || adminSettings?.hiddenTrackIds || [];
+        const presets = getAllAvailableTracks(hiddenIds);
+        const map = new Map<string, MusicTrack>();
+        presets.forEach((t) => {
+          if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
+            map.set(t.id, t);
+          }
+        });
+        cloudTracks.forEach((t) => {
+          if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
+            map.set(t.id, t);
+          }
+        });
+        setAdminTracks(Array.from(map.values()));
       });
-      cloudTracks.forEach((t) => {
-        if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
-          map.set(t.id, t);
-        }
-      });
-      setAdminTracks(Array.from(map.values()));
     });
 
     return () => {
@@ -270,21 +277,20 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     }
 
     // 3. Hide or blacklist in adminSettings so preset/system tracks are permanently removed
-    if (adminSettings) {
-      try {
-        const currentHidden = adminSettings.hiddenTrackIds || [];
-        const toHide = [trackId, trackUrl].filter(Boolean) as string[];
-        const newHidden = Array.from(new Set([...currentHidden, ...toHide]));
-        const updated: AdminSettings = {
-          ...adminSettings,
-          hiddenTrackIds: newHidden,
-        };
-        await saveAdminSettingsCloud(updated);
-        setAdminSettings(updated);
-        if (onSettingsUpdated) onSettingsUpdated(updated);
-      } catch (settingsErr) {
-        console.warn('Error updating adminSettings for deleted track:', settingsErr);
-      }
+    try {
+      const currentSettings = adminSettings || DEFAULT_ADMIN_SETTINGS;
+      const currentHidden = currentSettings.hiddenTrackIds || [];
+      const toHide = [trackId, trackUrl].filter(Boolean) as string[];
+      const newHidden = Array.from(new Set([...currentHidden, ...toHide]));
+      const updated: AdminSettings = {
+        ...currentSettings,
+        hiddenTrackIds: newHidden,
+      };
+      saveAdminSettingsCloud(updated).catch(() => {});
+      setAdminSettings(updated);
+      if (onSettingsUpdated) onSettingsUpdated(updated);
+    } catch (settingsErr) {
+      console.warn('Error updating adminSettings for deleted track:', settingsErr);
     }
   };
 
