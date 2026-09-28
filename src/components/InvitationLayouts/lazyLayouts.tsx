@@ -70,6 +70,7 @@ export const LazyEditorialNoirLayout = safeLazy(() => import('./EditorialNoirLay
 export const LazyEnchantedBotanicalLayout = safeLazy(() => import('./EnchantedBotanicalLayout'), 'EnchantedBotanicalLayout');
 export const LazyOpalDreamLayout = safeLazy(() => import('./OpalDreamLayout'), 'OpalDreamLayout');
 export const LazyRoyalArabicEditorialLayout = safeLazy(() => import('./RoyalArabicEditorialLayout'), 'RoyalArabicEditorialLayout');
+export const LazyButterflyRomanceLayout = safeLazy(() => import('./ButterflyRomanceLayout'), 'ButterflyRomanceLayout');
 
 export const LayoutLoadingFallback: React.FC = () => (
   <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-[#0E0E0E] text-[#C9A86A]">
@@ -120,6 +121,7 @@ export const renderDynamicLayout = (layoutType: string, props: TemplateLayoutPro
     case 'enchantedBotanical': return <LazyEnchantedBotanicalLayout {...props} />;
     case 'opalDream': return <LazyOpalDreamLayout {...props} />;
     case 'royalArabicEditorial': return <LazyRoyalArabicEditorialLayout {...props} />;
+    case 'butterflyRomance': return <LazyButterflyRomanceLayout {...props} />;
     case 'crystal': return <LazyCrystalGlowLayout {...props} />;
     case 'cherry': return <LazyCherryBloomLayout {...props} />;
     case 'baroque': return <LazyGoldenBaroqueLayout {...props} />;

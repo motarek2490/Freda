@@ -170,7 +170,8 @@ export type TemplateLayoutType =
   | 'editorialNoir'
   | 'enchantedBotanical'
   | 'opalDream'
-  | 'royalArabicEditorial';
+  | 'royalArabicEditorial'
+  | 'butterflyRomance';
 
 export interface Template {
   id: string;
@@ -179,6 +180,7 @@ export interface Template {
   category: Category;
   themeStyle: ThemeStyle;
   layoutType?: TemplateLayoutType;
+  openingStyle?: 'envelope-butterfly' | 'petal-scatter' | 'wax-seal' | 'curtain-reveal' | 'royal_door' | string;
   coverImage: string;
   previewImage?: string;
   galleryPreview: string[];
@@ -200,6 +202,7 @@ export interface InvitationData {
   language: Language;
   themeStyle: ThemeStyle;
   layoutType?: TemplateLayoutType;
+  openingStyle?: 'envelope-butterfly' | 'petal-scatter' | 'wax-seal' | 'curtain-reveal' | 'royal_door' | string;
   customColors: CustomThemeColors;
   customFont: string;
   eventDetails: EventDetails;

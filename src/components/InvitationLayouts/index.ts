@@ -28,3 +28,4 @@ export * from './EditorialNoirLayout';
 export * from './EnchantedBotanicalLayout';
 export * from './OpalDreamLayout';
 export * from './RoyalArabicEditorialLayout';
+export * from './ButterflyRomanceLayout';

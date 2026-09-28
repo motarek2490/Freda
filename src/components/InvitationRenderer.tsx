@@ -558,7 +558,9 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
 
     const rawLayout: TemplateLayoutType =
       invitation.layoutType ||
-      (invitation.templateId.includes('arabic')
+      (invitation.templateId.includes('butterfly')
+        ? 'butterflyRomance'
+        : invitation.templateId.includes('arabic')
         ? 'arabic'
         : invitation.templateId.includes('floral') || invitation.templateId.includes('botanical')
         ? 'floral'

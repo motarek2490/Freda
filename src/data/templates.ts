@@ -2,8 +2,79 @@ import { Template } from '../types';
 
 export const TEMPLATES: Template[] = [
   // =========================================================================
-  // 1. عائلة الزفاف والأعراس الكبرى (Royal & Luxury Weddings) - 13 قوالب
+  // 1. عائلة الزفاف والأعراس الكبرى (Royal & Luxury Weddings)
   // =========================================================================
+  {
+    id: 'tmpl-butterfly-romance-001',
+    layoutType: 'butterflyRomance',
+    openingStyle: 'envelope-butterfly',
+    title: {
+      en: 'Butterfly Romance (Soft Petal Veil)',
+      ar: 'فراشة العمر (رومانسية رقيقة) 🦋✨',
+    },
+    description: {
+      en: '4-way debossed floral envelope opening with a persistent gold-veined butterfly, ivory editorial card, and dual-tone script calligraphy.',
+      ar: 'فتح المظروف في 4 اتجاهات مع فراشة ملكية ذهبية ثابتة ترفرف برقة، وخلفية عاجية بتنسيق تايبوغرافي فخم.',
+    },
+    category: 'weddings',
+    themeStyle: 'romantic',
+    coverImage: '/images/samples/invitation_paper_botanical_1790456696743.jpg',
+    galleryPreview: [
+      '/images/samples/invitation_paper_botanical_1790456696743.jpg',
+      '/images/samples/couple_seafront_terrace_1790456664887.jpg',
+      '/images/samples/couple_rings_hands_1790456674517.jpg',
+    ],
+    supportedLanguages: ['ar', 'en'],
+    isFeatured: true,
+    isNew: true,
+    defaultColors: {
+      bg: '#FAF7F2',
+      cardBg: '#FFFFFF',
+      text: '#2B2625',
+      accent: '#7A1F35',
+    },
+    defaultFont: 'font-serif',
+    defaultData: {
+      eventTitle: 'حفل زفاف كريم وفريدة',
+      groomName: 'كَرِيـم الشنـاوي',
+      brideName: 'فَرِيـدة الشـاذلي',
+      groomParents: 'عائلة الشناوي الكريمة',
+      brideParents: 'عائلة الشاذلي الكريمة',
+      hostNames: 'عائلتي الشناوي والشاذلي',
+      eventDate: '2026-11-28',
+      eventTime: '20:30',
+      venueName: 'فورسيزونز نايل بلازا — قاعة بلازا الكبرى',
+      address: 'كورنيش النيل، جاردن سيتي، القاهرة',
+      googleMapsUrl: 'https://maps.google.com',
+      dressCode: 'Soft Rose & Romantic Black Tie',
+      customMessage: 'يسعدنا ويشرفنا دعوتكم لحضور حفل زفافنا ومشاركتنا أسعد لحظات العمر.',
+      rsvpDeadline: '2026-11-15',
+      groomAvatarUrl: '/images/samples/groom_portrait.jpg',
+      brideAvatarUrl: '/images/samples/bride_portrait.jpg',
+      coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
+      musicTrackUrl: '',
+      musicTrackName: 'موسيقى رومانسية كلاسيكية هادئة',
+      enableGallery: true,
+      galleryImages: [
+        '/images/samples/couple_seafront_terrace_1790456664887.jpg',
+        '/images/samples/couple_luxury_tuxedo_1790456685845.jpg',
+        '/images/samples/couple_rings_hands_1790456674517.jpg',
+      ],
+      enableSchedule: true,
+      scheduleTimeline: [
+        { id: 'bfr1', time: '20:00', title: 'استقبال الورود والضيافة', description: 'الترحيب بالسادة الضيوف الكرام' },
+        { id: 'bfr2', time: '21:30', title: 'مراسم الزفة والاحتفال', description: 'دخول العروسين وبدء المراسم' },
+        { id: 'bfr3', time: '23:00', title: 'مأدبة العشاء', description: 'تناول العشاء والتقاط الصور التذكارية' },
+      ],
+      enableGiftRegistry: true,
+      enableGuestbook: true,
+      wishesList: [
+        { id: 'wbfr1', invitationId: 'tmpl-butterfly-romance-001', authorName: 'منى الشناوي', relationship: 'أقارب', message: 'بارك الله لكما وبارك عليكما وألف مبروك لأجمل عروسين.', createdAt: '2026-09-28' },
+      ],
+      enableRSVP: true,
+      allowPlusOne: true,
+    },
+  },
   {
     id: '4237b9ea-0fba-4a61-bb58-51f5c8dc74a7',
     layoutType: 'cinematic',
