@@ -26,6 +26,7 @@ import {
 } from 'firebase/storage';
 import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
 import { saveAudioToIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
+import { saveAudioToCloudFirestore } from '../lib/audioStorage';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
 
@@ -108,21 +109,32 @@ export async function uploadSongPackageToStorage(
     }
   }
 
-  // 2. Resilient instant fallback: Convert previewBlob to Data URL (~150-250KB, works everywhere)
-  const previewDataUrl = await blobToDataUrl(previewBlob);
-  let audioDataUrl = '';
-  if (fullBlob.size < 2.5 * 1024 * 1024) {
-    audioDataUrl = await blobToDataUrl(fullBlob);
-  } else if (typeof URL !== 'undefined') {
-    audioDataUrl = URL.createObjectURL(fullBlob);
-  } else {
-    audioDataUrl = previewDataUrl;
-  }
+  // 2. Cloud Firestore Audio Vault: Saves audio directly to Google Cloud Firestore (chunked)
+  // Ensures any client on any phone/device worldwide can load and play the song without external storage
+  try {
+    const cloudAudioUrl = await saveAudioToCloudFirestore(fullBlob, `${trackId}_full`);
+    const cloudPreviewUrl = await saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`);
+    return {
+      audioUrl: cloudAudioUrl,
+      previewUrl: cloudPreviewUrl,
+    };
+  } catch (cloudErr) {
+    console.warn('Cloud Firestore audio write failed, fallback to local data URL:', cloudErr);
+    const previewDataUrl = await blobToDataUrl(previewBlob);
+    let audioDataUrl = '';
+    if (fullBlob.size < 2.5 * 1024 * 1024) {
+      audioDataUrl = await blobToDataUrl(fullBlob);
+    } else if (typeof URL !== 'undefined') {
+      audioDataUrl = URL.createObjectURL(fullBlob);
+    } else {
+      audioDataUrl = previewDataUrl;
+    }
 
-  return {
-    audioUrl: audioDataUrl || previewDataUrl,
-    previewUrl: previewDataUrl,
-  };
+    return {
+      audioUrl: audioDataUrl || previewDataUrl,
+      previewUrl: previewDataUrl,
+    };
+  }
 }
 
 // Backwards compatibility alias
@@ -177,7 +189,13 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
     }
   }
 
-  return localUrl;
+  // Upload to Cloud Firestore Audio Vault so it's accessible to every client
+  try {
+    const cloudUrl = await saveAudioToCloudFirestore(blob, `${trackId}_audio`);
+    return cloudUrl;
+  } catch {
+    return localUrl;
+  }
 }
 
 // Vite Dynamic Import for local bundled fallback assets

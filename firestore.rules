@@ -273,7 +273,8 @@ service cloud.firestore {
 
     match /cloud_audio_files/{id} {
       allow read: if true;
-      allow write, delete: if isSignedIn() || isAdmin();
+      allow write: if true;
+      allow delete: if isSignedIn() || isAdmin();
     }
 
     match /custom_templates/{id} {

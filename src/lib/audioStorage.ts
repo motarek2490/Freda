@@ -1,5 +1,6 @@
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { getAudioFromIDB } from './audioDb';
 
 const MEMORY_CACHE = new Map<string, string>();
 
@@ -23,6 +24,64 @@ function base64ToBlobUrl(dataUrl: string): string {
     console.warn('Could not convert base64 to blob url, using direct dataUrl:', err);
     return dataUrl;
   }
+}
+
+/**
+ * Converts a Blob to a base64 Data URL
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Uploads an audio blob to Cloud Firestore (with automatic sub-megabyte chunking).
+ * Ensures audio is 100% accessible to every user on any device worldwide without requiring Cloud Storage bucket.
+ */
+export async function saveAudioToCloudFirestore(blob: Blob, baseId: string): Promise<string> {
+  const dataUrl = await blobToBase64(blob);
+  const CHUNK_SIZE = 600000; // 600KB text chunks (well under Firestore's 1MB limit)
+
+  if (dataUrl.length <= CHUNK_SIZE) {
+    await setDoc(doc(db, 'cloud_audio_files', baseId), {
+      dataUrl,
+      isChunked: false,
+      totalChunks: 1,
+      sizeBytes: blob.size,
+      mimeType: blob.type || 'audio/mpeg',
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    const totalChunks = Math.ceil(dataUrl.length / CHUNK_SIZE);
+    const chunkWrites: Promise<void>[] = [];
+
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkStr = dataUrl.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      chunkWrites.push(
+        setDoc(doc(db, 'cloud_audio_files', `${baseId}_chk_${i}`), {
+          chunkIndex: i,
+          data: chunkStr,
+          totalChunks,
+        })
+      );
+    }
+
+    await Promise.all(chunkWrites);
+
+    await setDoc(doc(db, 'cloud_audio_files', baseId), {
+      isChunked: true,
+      totalChunks,
+      sizeBytes: blob.size,
+      mimeType: blob.type || 'audio/mpeg',
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  return `firestore-audio://${baseId}`;
 }
 
 /**
@@ -62,13 +121,47 @@ export async function resolveAudioTrackUrl(urlOrRef?: string): Promise<string> {
   // Firestore-stored Cloud Audio File reference
   if (urlOrRef.startsWith('firestore-audio://')) {
     const docId = urlOrRef.replace('firestore-audio://', '');
+
+    // Check local IndexedDB fast path first (instant playback for the uploader)
     try {
-      const audioDoc = await getDoc(doc(db, 'cloud_audio_files', docId));
-      if (audioDoc.exists() && audioDoc.data()?.dataUrl) {
-        const rawDataUrl = audioDoc.data().dataUrl;
-        const blobUrl = base64ToBlobUrl(rawDataUrl);
+      const localCached = await getAudioFromIDB(docId);
+      if (localCached) {
+        let blobUrl = '';
+        if (typeof localCached === 'string') {
+          blobUrl = base64ToBlobUrl(localCached);
+        } else {
+          blobUrl = URL.createObjectURL(localCached);
+        }
         MEMORY_CACHE.set(urlOrRef, blobUrl);
         return blobUrl;
+      }
+    } catch {}
+
+    try {
+      const audioDoc = await getDoc(doc(db, 'cloud_audio_files', docId));
+      if (audioDoc.exists()) {
+        const data = audioDoc.data();
+        if (data?.dataUrl) {
+          const blobUrl = base64ToBlobUrl(data.dataUrl);
+          MEMORY_CACHE.set(urlOrRef, blobUrl);
+          return blobUrl;
+        }
+
+        if (data?.isChunked && data?.totalChunks) {
+          const chunkPromises: Promise<string>[] = [];
+          for (let i = 0; i < data.totalChunks; i++) {
+            chunkPromises.push(
+              getDoc(doc(db, 'cloud_audio_files', `${docId}_chk_${i}`)).then(
+                (snap) => snap.data()?.data || ''
+              )
+            );
+          }
+          const chunkStrings = await Promise.all(chunkPromises);
+          const fullDataUrl = chunkStrings.join('');
+          const blobUrl = base64ToBlobUrl(fullDataUrl);
+          MEMORY_CACHE.set(urlOrRef, blobUrl);
+          return blobUrl;
+        }
       }
     } catch (err) {
       console.warn('Could not fetch cloud audio document from Firestore:', err);
