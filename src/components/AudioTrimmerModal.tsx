@@ -288,13 +288,13 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       };
 
       // 4. Save metadata to Firestore collection `music_library`
-      saveTrackToCloudLibrary(newTrack).catch((e) => console.warn('Save track metadata error:', e));
+      await saveTrackToCloudLibrary(newTrack);
 
       if (onSave) {
         onSave(dualPackage.fullBlob).catch(() => {});
       }
 
-      // Complete and notify parent instantly (0ms delay)
+      // Complete and notify parent
       setIsProcessing(false);
       onTrackReady?.(newTrack);
       onClose();

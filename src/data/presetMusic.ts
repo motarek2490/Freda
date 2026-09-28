@@ -70,17 +70,19 @@ export async function uploadSongPackageToStorage(
   cacheInMemoryAudio(fullRef, localAudioUrl);
   cacheInMemoryAudio(prevRef, previewDataUrl);
 
-  // 2. Background cloud persistence (never blocks the UI modal)
-  saveAudioToCloudFirestore(fullBlob, `${trackId}_full`).catch((e) =>
-    console.warn('Background full audio cloud sync:', e)
-  );
-  saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`).catch((e) =>
-    console.warn('Background preview audio cloud sync:', e)
-  );
+  // 2. Cloud Firestore Audio Vault: Save chunks to Firestore so ALL devices can play it
+  try {
+    await Promise.all([
+      saveAudioToCloudFirestore(fullBlob, `${trackId}_full`),
+      saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`),
+    ]);
+  } catch (e) {
+    console.warn('Cloud audio sync warning:', e);
+  }
 
   return {
     audioUrl: fullRef,
-    previewUrl: previewDataUrl,
+    previewUrl: prevRef,
   };
 }
 
@@ -253,6 +255,9 @@ export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise
     if (existing?.id || trackIdOrUrl) {
       const docId = existing?.id || trackIdOrUrl;
       await deleteDoc(doc(db, 'music_library', docId));
+      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_full`)).catch(() => {});
+      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_prev`)).catch(() => {});
+      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_audio`)).catch(() => {});
       deleteAudioFromIDB(`${docId}_full`).catch(() => {});
       deleteAudioFromIDB(`${docId}_preview`).catch(() => {});
       deleteAudioFromIDB(`${docId}_audio`).catch(() => {});
