@@ -287,8 +287,10 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         updatedAt: new Date().toISOString(),
       };
 
-      // 4. Save metadata to Firestore collection `music_library`
-      await saveTrackToCloudLibrary(newTrack);
+      // 4. Save metadata to Firestore public collection `music_library` only if uploaded by Admin
+      if (isAdmin) {
+        await saveTrackToCloudLibrary(newTrack);
+      }
 
       if (onSave) {
         onSave(dualPackage.fullBlob).catch(() => {});
