@@ -728,7 +728,7 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   royalPriceEGP: 399,
   diamondPriceEGP: 799,
   defaultDemoTrackUrl: '',
-  defaultDemoTrackName: 'فستانك الأبيض',
+  defaultDemoTrackName: '',
   siteTitle: 'FRIDA (فريدا) — Premium Digital Invitation Platform',
   metaDescription: 'صمم وشارك أفخم بطاقات الدعوة الرقمية الملكية لحفلات الزفاف والخطوبة والمناسبات الخاصة مع منصة فريدا (FRIDA).',
   ogTitle: 'FRIDA (فريدا) — بطاقات دعوة إلكترونية فاخرة',

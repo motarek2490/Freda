@@ -137,7 +137,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
           <div className="inline-flex items-center gap-2 text-xs font-mono tracking-[0.3em] uppercase text-[#C9A86A]">
             <span>HAUTE COUTURE SUITES</span>
             <span aria-hidden="true">·</span>
-            <span>11 PIECES</span>
+            <span>{TEMPLATES.length} {isRtl ? 'تصميماً ملكياً' : 'PIECES'}</span>
           </div>
 
           <h2

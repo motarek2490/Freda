@@ -91,65 +91,69 @@ async function fetchInvitationMeta(
   databaseId: string
 ): Promise<InvitationMeta | null> {
   const cleanSlug = slugOrId.toLowerCase().trim();
-  const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents`;
+  const dbIdsToTry = Array.from(new Set([databaseId, '(default)', 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf'])).filter(Boolean);
 
-  try {
-    let targetInvId = cleanSlug;
+  for (const activeDb of dbIdsToTry) {
+    const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${activeDb}/documents`;
 
-    // 1. Resolve slug doc
-    const slugUrl = `${baseUrl}/slugs/${encodeURIComponent(cleanSlug)}`;
-    const slugRes = await fetch(slugUrl, { headers: { Accept: 'application/json' } });
-    if (slugRes.ok) {
-      const slugDoc = (await slugRes.json()) as any;
-      if (slugDoc.fields?.invitationId?.stringValue) {
-        targetInvId = slugDoc.fields.invitationId.stringValue;
+    try {
+      let targetInvId = cleanSlug;
+
+      // 1. Resolve slug doc
+      const slugUrl = `${baseUrl}/slugs/${encodeURIComponent(cleanSlug)}`;
+      const slugRes = await fetch(slugUrl, { headers: { Accept: 'application/json' } });
+      if (slugRes.ok) {
+        const slugDoc = (await slugRes.json()) as any;
+        if (slugDoc.fields?.invitationId?.stringValue) {
+          targetInvId = slugDoc.fields.invitationId.stringValue;
+        }
       }
-    }
 
-    // 2. Fetch invitation doc
-    const invUrl = `${baseUrl}/invitations/${encodeURIComponent(targetInvId)}`;
-    const invRes = await fetch(invUrl, { headers: { Accept: 'application/json' } });
+      // 2. Fetch invitation doc
+      const invUrl = `${baseUrl}/invitations/${encodeURIComponent(targetInvId)}`;
+      const invRes = await fetch(invUrl, { headers: { Accept: 'application/json' } });
 
-    if (invRes.ok) {
-      const invDoc = (await invRes.json()) as any;
-      if (invDoc && invDoc.fields) {
-        const fields = invDoc.fields;
-        const title = fields.title?.stringValue || 'دعوة ملكية خاصة — FRIDA';
-        const eventDetails = fields.eventDetails?.mapValue?.fields || {};
-        const hostNames = eventDetails.hostNames?.stringValue || '';
-        const eventTitle = eventDetails.eventTitle?.stringValue || title;
-        const venueName = eventDetails.venueName?.stringValue || '';
-        const eventDate = eventDetails.eventDate?.stringValue || '';
-        const coverImage =
-          eventDetails.coverImageUrl?.stringValue ||
-          fields.coverImage?.stringValue ||
-          `${siteUrl}/og-default.jpg`;
+      if (invRes.ok) {
+        const invDoc = (await invRes.json()) as any;
+        if (invDoc && invDoc.fields) {
+          const fields = invDoc.fields;
+          const title = fields.title?.stringValue || 'دعوة ملكية خاصة — FRIDA';
+          const eventDetails = fields.eventDetails?.mapValue?.fields || {};
+          const hostNames = eventDetails.hostNames?.stringValue || '';
+          const eventTitle = eventDetails.eventTitle?.stringValue || title;
+          const venueName = eventDetails.venueName?.stringValue || '';
+          const eventDate = eventDetails.eventDate?.stringValue || '';
+          const coverImage =
+            eventDetails.coverImageUrl?.stringValue ||
+            fields.coverImage?.stringValue ||
+            `${siteUrl}/og-default.jpg`;
 
-        if (isPortal) {
+          if (isPortal) {
+            return {
+              title: `بوابة إدارة الضيوف | ${eventTitle} — فريدا`,
+              description: hostNames
+                ? `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) لدعوة ${eventTitle} الخاصة بعائلة ${hostNames}.`
+                : `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) الخاصة بدعوة ${eventTitle}.`,
+              coverImage,
+              url: `${siteUrl}/portal/${encodeURIComponent(cleanSlug)}`,
+            };
+          }
+
+          const desc = hostNames
+            ? `تتشرف عائلة ${hostNames} بدعوتكم لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` يوم ${eventDate}` : ''}.`
+            : `دعوة خاصة لحضور ${eventTitle}. انقر لمشاهدة تفاصيل الدعوة وتأكيد الحضور (RSVP).`;
+
           return {
-            title: `بوابة إدارة الضيوف | ${eventTitle} — فريدا`,
-            description: hostNames
-              ? `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) لدعوة ${eventTitle} الخاصة بعائلة ${hostNames}.`
-              : `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) الخاصة بدعوة ${eventTitle}.`,
+            title: `${eventTitle} | فريدا (FRIDA)`,
+            description: desc,
             coverImage,
-            url: `${siteUrl}/portal/${encodeURIComponent(cleanSlug)}`,
+            url: `${siteUrl}/i/${encodeURIComponent(cleanSlug)}`,
           };
         }
-
-        const desc = hostNames
-          ? `تتشرف عائلة ${hostNames} بدعوتكم لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` يوم ${eventDate}` : ''}.`
-          : `دعوة خاصة لحضور ${eventTitle}. انقر لمشاهدة تفاصيل الدعوة وتأكيد الحضور (RSVP).`;
-
-        return {
-          title: `${eventTitle} | فريدا (FRIDA)`,
-          description: desc,
-          coverImage,
-          url: `${siteUrl}/i/${encodeURIComponent(cleanSlug)}`,
-        };
       }
+    } catch (err) {
+      console.warn(`Worker Firestore fetch attempt on db '${activeDb}' error:`, err);
     }
-  } catch (err) {
-    console.error('Worker Firestore fetch error:', err);
   }
 
   return null;
