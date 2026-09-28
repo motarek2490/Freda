@@ -112,10 +112,12 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
 
   cacheInMemoryAudio(audioRef, localUrl);
 
-  // 2. Background cloud persistence
-  saveAudioToCloudFirestore(blob, `${trackId}_audio`).catch((e) =>
-    console.warn('Background audio cloud sync:', e)
-  );
+  // 2. Persist to Cloud Firestore Audio Vault
+  try {
+    await saveAudioToCloudFirestore(blob, `${trackId}_audio`);
+  } catch (e) {
+    console.warn('Audio cloud sync error:', e);
+  }
 
   return audioRef;
 }

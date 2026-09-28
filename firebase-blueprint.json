@@ -160,6 +160,21 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "category", "coverImage"]
+    },
+    "cloud_audio_file": {
+      "title": "Cloud Audio File",
+      "description": "Stored and synchronized audio binary chunks accessible across all client devices",
+      "type": "object",
+      "properties": {
+        "data": { "type": "string" },
+        "dataUrl": { "type": "string" },
+        "isChunked": { "type": "boolean" },
+        "totalChunks": { "type": "number" },
+        "chunkIndex": { "type": "number" },
+        "sizeBytes": { "type": "number" },
+        "mimeType": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -190,6 +205,10 @@
     "/music_library/{trackId}": {
       "schema": "music_track",
       "description": "Preset background music catalog, public read and admin write"
+    },
+    "/cloud_audio_files/{fileId}": {
+      "schema": "cloud_audio_file",
+      "description": "Synchronized audio chunks and binary data vault for cross-device playback"
     },
     "/reviews/{reviewId}": {
       "schema": "review",
