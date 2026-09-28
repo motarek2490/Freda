@@ -1,10 +1,19 @@
 /**
- * FRIDA AI CREATIVE DIRECTOR & CONTENT ASSISTANT
- * Server-side AI engine powered by Google Gemini (@google/genai SDK)
- * Helps couples design their wedding experience and write personalized invitation wording.
+ * FRIDA AI CREATIVE DIRECTOR & CONTENT ASSISTANT (client)
+ *
+ * This file NEVER talks to Gemini directly and NEVER reads a Gemini API key
+ * in the browser. The real AI calls run inside the `suggestAIDesignConfig`
+ * and `generateAIWording` Cloud Functions (see functions/src/index.ts),
+ * where the key is bound as a managed secret and stays server-side only.
+ *
+ * If you're tempted to add `VITE_GEMINI_API_KEY` or read `process.env` /
+ * `window.GEMINI_API_KEY` here again — don't. Any `VITE_`-prefixed value is
+ * compiled as plaintext into the shipped JS bundle and is readable by every
+ * visitor.
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './firebase';
 
 export interface AIDesignRecommendation {
   themeStyle: 'luxury' | 'classic' | 'minimal' | 'boho' | 'romantic' | 'playful' | 'floral';
@@ -30,113 +39,57 @@ export interface AIWordingRequest {
 }
 
 /**
- * Initializes Gemini AI client safely
- */
-function getGenAIClient(): GoogleGenAI | null {
-  const apiKey =
-    (typeof process !== 'undefined' && process.env.GEMINI_API_KEY) ||
-    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-    (typeof window !== 'undefined' && (window as any).GEMINI_API_KEY);
-
-  if (!apiKey) return null;
-
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
-}
-
-/**
- * Translates couple's natural prompt into structured design configuration
+ * Translates couple's natural prompt into structured design configuration.
+ * Calls the suggestAIDesignConfig Cloud Function; falls back to a sensible
+ * local default if the function is unreachable or AI is not configured.
  */
 export async function suggestDesignConfigWithAI(
   userPrompt: string
 ): Promise<AIDesignRecommendation> {
-  const ai = getGenAIClient();
-
-  // Smart fallback if AI key is unavailable or during offline preview
-  if (!ai) {
+  try {
+    const call = httpsCallable<{ userPrompt: string }, AIDesignRecommendation>(
+      functions,
+      'suggestAIDesignConfig'
+    );
+    const result = await call({ userPrompt });
+    const parsed = result.data;
+    return {
+      themeStyle: parsed.themeStyle || 'luxury',
+      openingExperience: parsed.openingExperience || 'royal_door',
+      recommendedTemplateId: parsed.recommendedTemplateId || 'frida-couture-2026',
+      colors: parsed.colors || { bg: '#0B132B', cardBg: '#1C2541', text: '#F8F9FA', accent: '#C5A880' },
+      typography: parsed.typography || 'font-serif',
+      wordingTone: parsed.wordingTone || 'ملكي فاخر',
+      suggestedPoeticMessage:
+        parsed.suggestedPoeticMessage ||
+        'فرحتنا اليوم اكتملت بوجودكم معنا، نتشرف بدعوتكم لمشاركتنا أجمل لحظات عمرنا.',
+    };
+  } catch (err) {
+    console.warn('AI Creative Director unavailable, using fallback:', err);
     return getFallbackDesignRecommendation(userPrompt);
   }
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: `أنت المخرج الفني ومصمم التجارب الرقمية لمنصة FRIDA للدعوات الملكية.
-المستخدم كتب الوصف التالي لزفافه أو مناسبته:
-"${userPrompt}"
-
-حلل طلب المستخدم واقترح الإعدادات الفنية والتصميمية المناسبة. ارجع النتيجة كـ JSON حقيقي يحتوي على الحقول التالية:
-- themeStyle: واحد من ("luxury", "classic", "minimal", "boho", "romantic", "playful", "floral")
-- openingExperience: واحد من ("royal_door", "envelope_seal", "palace_entrance", "garden_reveal", "moonlight_reveal")
-- recommendedTemplateId: "frida-royal-001" أو "frida-couture-2026" أو "frida-engagement-baroque"
-- colors: كائن به (bg, cardBg, text, accent) بصيغة Hex
-- typography: اسم خط مثل "font-playfair" أو "font-serif" أو "font-cairo"
-- wordingTone: اسم النبرة بالعربية
-- suggestedPoeticMessage: نص ترحيبي أو بيتي شعر راقٍ يعبر عن الفرحة باللغة العربية`,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
-
-    if (response.text) {
-      const parsed = JSON.parse(response.text);
-      return {
-        themeStyle: parsed.themeStyle || 'luxury',
-        openingExperience: parsed.openingExperience || 'royal_door',
-        recommendedTemplateId: parsed.recommendedTemplateId || 'frida-couture-2026',
-        colors: parsed.colors || { bg: '#0B132B', cardBg: '#1C2541', text: '#F8F9FA', accent: '#C5A880' },
-        typography: parsed.typography || 'font-serif',
-        wordingTone: parsed.wordingTone || 'ملكي فاخر',
-        suggestedPoeticMessage:
-          parsed.suggestedPoeticMessage ||
-          'فرحتنا اليوم اكتملت بوجودكم معنا، نتشرف بدعوتكم لمشاركتنا أجمل لحظات عمرنا.',
-      };
-    }
-  } catch (err) {
-    console.warn('AI Creative Director error, using fallback:', err);
-  }
-
-  return getFallbackDesignRecommendation(userPrompt);
 }
 
 /**
- * Generates custom invitation wording prose based on couple names and tone
+ * Generates custom invitation wording prose based on couple names and tone.
+ * Calls the generateAIWording Cloud Function; falls back to a static
+ * template if the function is unreachable or AI is not configured.
  */
 export async function generateWordingWithAI(req: AIWordingRequest): Promise<string> {
-  const ai = getGenAIClient();
-
-  if (!ai) {
-    return `فرحتنا لا تكتمل إلا بوجودكم معنا. تتشرف عائلاتنا بدعوتكم لحضور حفل زفاف ${req.coupleNames} في ليلة تملؤها البهجة والمحبة.`;
-  }
-
   try {
-    const isArabic = req.language !== 'en';
-    const prompt = isArabic
-      ? `اكتب صيغة دعوة زفاف فاخرة بأسلوب منصة فريدا الدعوات الرقمية.
-اسم العروسين: ${req.coupleNames}
-النبرة والأسلوب: ${req.tone || 'ملكياً راقياً وشاعرياً'}
-المشهد: ${req.additionalDetails || 'حفل زفاف راقٍ بأجواء من الدفء والمحبة'}
-المطلوب: فقرة ترحيبية واحدة دافئة وراقية من 2 إلى 3 أسطر تعبر عن فرحة الأهالي والعروسين.`
-      : `Write a luxury wedding invitation message for ${req.coupleNames} in an elegant, poetic, and heartwarming tone.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-    });
-
-    if (response.text) {
-      return response.text.trim();
+    const call = httpsCallable<AIWordingRequest, { text: string }>(functions, 'generateAIWording');
+    const result = await call(req);
+    if (result.data?.text) {
+      return result.data.text;
     }
   } catch (err) {
-    console.warn('AI Wording generation warning:', err);
+    console.warn('AI Wording generation unavailable, using fallback:', err);
   }
 
-  return `يسرنا أن تتفضلوا بمشاركتنا فرحتنا الكبرى بعقد قران وزفاف ${req.coupleNames} في أمسية استثنائية نتطلع إليها بشوق.`;
+  const isArabic = req.language !== 'en';
+  return isArabic
+    ? `فرحتنا لا تكتمل إلا بوجودكم معنا. تتشرف عائلاتنا بدعوتكم لحضور حفل زفاف ${req.coupleNames} في ليلة تملؤها البهجة والمحبة.`
+    : `We would be honored by your presence at ${req.coupleNames}'s wedding celebration.`;
 }
 
 function getFallbackDesignRecommendation(prompt: string): AIDesignRecommendation {
