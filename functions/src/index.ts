@@ -1,9 +1,16 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import * as crypto from 'crypto';
+import { GoogleGenAI } from '@google/genai';
+
+// GEMINI_API_KEY is stored as a managed Cloud Functions secret (set once via
+// `firebase functions:secrets:set GEMINI_API_KEY`) and is only ever readable
+// from inside these server-side functions — it is never sent to the browser.
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
 // DO-NOT-RENAME Infrastructure Constants
 export const FIREBASE_DB_ID = 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
@@ -419,5 +426,88 @@ export const expireInvitations = onSchedule(
     }
 
     console.log(`[expireInvitations] Finished daily expiration check. Total invitations marked expired: ${totalExpired}`);
+  }
+);
+
+// =============================================================================
+// AI Creative Director (Gemini) — server-side only.
+// The client (src/lib/fridaAI.ts) calls these via httpsCallable; the API key
+// never leaves this function's execution environment.
+// =============================================================================
+
+export const suggestAIDesignConfig = onCall(
+  { region: FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], cors: true },
+  async (request) => {
+    const userPrompt = String(request.data?.userPrompt || '').slice(0, 2000);
+    if (!userPrompt.trim()) {
+      throw new HttpsError('invalid-argument', 'userPrompt is required.');
+    }
+
+    const apiKey = GEMINI_API_KEY.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'AI is not configured.');
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: `أنت المخرج الفني ومصمم التجارب الرقمية لمنصة FRIDA للدعوات الملكية.
+المستخدم كتب الوصف التالي لزفافه أو مناسبته:
+"${userPrompt}"
+
+حلل طلب المستخدم واقترح الإعدادات الفنية والتصميمية المناسبة. ارجع النتيجة كـ JSON حقيقي يحتوي على الحقول التالية:
+- themeStyle: واحد من ("luxury", "classic", "minimal", "boho", "romantic", "playful", "floral")
+- openingExperience: واحد من ("royal_door", "envelope_seal", "palace_entrance", "garden_reveal", "moonlight_reveal")
+- recommendedTemplateId: "frida-royal-001" أو "frida-couture-2026" أو "frida-engagement-baroque"
+- colors: كائن به (bg, cardBg, text, accent) بصيغة Hex
+- typography: اسم خط مثل "font-playfair" أو "font-serif" أو "font-cairo"
+- wordingTone: اسم النبرة بالعربية
+- suggestedPoeticMessage: نص ترحيبي أو بيتي شعر راقٍ يعبر عن الفرحة باللغة العربية`,
+      config: { responseMimeType: 'application/json' },
+    });
+
+    if (!response.text) {
+      throw new HttpsError('internal', 'Empty AI response.');
+    }
+    return JSON.parse(response.text);
+  }
+);
+
+export const generateAIWording = onCall(
+  { region: FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], cors: true },
+  async (request) => {
+    const coupleNames = String(request.data?.coupleNames || '').slice(0, 200);
+    const tone = String(request.data?.tone || 'ملكياً راقياً وشاعرياً').slice(0, 100);
+    const additionalDetails = String(request.data?.additionalDetails || '').slice(0, 500);
+    const language = request.data?.language === 'en' ? 'en' : 'ar';
+
+    if (!coupleNames.trim()) {
+      throw new HttpsError('invalid-argument', 'coupleNames is required.');
+    }
+
+    const apiKey = GEMINI_API_KEY.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'AI is not configured.');
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt =
+      language === 'ar'
+        ? `اكتب صيغة دعوة زفاف فاخرة بأسلوب منصة فريدا الدعوات الرقمية.
+اسم العروسين: ${coupleNames}
+النبرة والأسلوب: ${tone}
+المشهد: ${additionalDetails || 'حفل زفاف راقٍ بأجواء من الدفء والمحبة'}
+المطلوب: فقرة ترحيبية واحدة دافئة وراقية من 2 إلى 3 أسطر تعبر عن فرحة الأهالي والعروسين.`
+        : `Write a luxury wedding invitation message for ${coupleNames} in an elegant, poetic, and heartwarming tone.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+    });
+
+    if (!response.text) {
+      throw new HttpsError('internal', 'Empty AI response.');
+    }
+    return { text: response.text.trim() };
   }
 );
