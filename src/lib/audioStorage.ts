@@ -84,6 +84,10 @@ export async function saveAudioToCloudFirestore(blob: Blob, baseId: string): Pro
   return `firestore-audio://${baseId}`;
 }
 
+export function cacheInMemoryAudio(ref: string, url: string): void {
+  MEMORY_CACHE.set(ref, url);
+}
+
 /**
  * Resolves any audio track URL or reference into a playable URL (HTTPS or direct asset path).
  * Works across all mobile devices, tablets, and browsers.

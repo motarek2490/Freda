@@ -26,7 +26,7 @@ import {
 } from 'firebase/storage';
 import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
 import { saveAudioToIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
-import { saveAudioToCloudFirestore } from '../lib/audioStorage';
+import { saveAudioToCloudFirestore, cacheInMemoryAudio } from '../lib/audioStorage';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
 
@@ -54,87 +54,34 @@ export async function uploadSongPackageToStorage(
     .substring(0, 40);
   const timestamp = Date.now();
   const trackId = `song_${timestamp}`;
+  const fullRef = `firestore-audio://${trackId}_full`;
+  const prevRef = `firestore-audio://${trackId}_prev`;
 
-  // Persist raw blobs to client-side IndexedDB immediately (instant playback safety)
-  await saveAudioToIDB(`${trackId}_full`, fullBlob);
-  await saveAudioToIDB(`${trackId}_preview`, previewBlob);
+  // 1. Instant local caching (IndexedDB + base64 data URLs)
+  saveAudioToIDB(`${trackId}_full`, fullBlob).catch(() => {});
+  saveAudioToIDB(`${trackId}_preview`, previewBlob).catch(() => {});
 
-  // 1. Quick attempt to Firebase Storage with strict 1.2s timeout (never hangs)
-  if (isStorageReachable !== false && storage) {
-    try {
-      let user = auth.currentUser;
-      if (!user) {
-        user = await ensureAnonymousAuth();
-      }
+  const previewDataUrl = await blobToDataUrl(previewBlob);
+  const localAudioUrl = (fullBlob.size < 2.5 * 1024 * 1024)
+    ? await blobToDataUrl(fullBlob)
+    : (typeof URL !== 'undefined' ? URL.createObjectURL(fullBlob) : previewDataUrl);
 
-      const fullPath = `audio/full/${timestamp}_${cleanTitle}_full.mp3`;
-      const fullRef = storageRef(storage, fullPath);
-      const fullSnap = await Promise.race([
-        uploadBytes(fullRef, fullBlob, { contentType: 'audio/mpeg' }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
-      const audioUrl = await Promise.race([
-        getDownloadURL(fullSnap.ref),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
+  // Cache in memory for 0ms immediate playback
+  cacheInMemoryAudio(fullRef, localAudioUrl);
+  cacheInMemoryAudio(prevRef, previewDataUrl);
 
-      const prevPath = `audio/previews/${timestamp}_${cleanTitle}_preview.mp3`;
-      const prevRef = storageRef(storage, prevPath);
-      const prevSnap = await Promise.race([
-        uploadBytes(prevRef, previewBlob, { contentType: 'audio/mpeg' }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
-      const previewUrl = await Promise.race([
-        getDownloadURL(prevSnap.ref),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
+  // 2. Background cloud persistence (never blocks the UI modal)
+  saveAudioToCloudFirestore(fullBlob, `${trackId}_full`).catch((e) =>
+    console.warn('Background full audio cloud sync:', e)
+  );
+  saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`).catch((e) =>
+    console.warn('Background preview audio cloud sync:', e)
+  );
 
-      if (audioUrl && previewUrl) {
-        isStorageReachable = true;
-        return {
-          audioUrl,
-          previewUrl,
-        };
-      }
-    } catch {
-      isStorageReachable = false;
-    }
-  }
-
-  // 2. Cloud Firestore Audio Vault: Saves audio directly to Google Cloud Firestore (chunked)
-  // Ensures any client on any phone/device worldwide can load and play the song without external storage
-  try {
-    const cloudAudioUrl = await saveAudioToCloudFirestore(fullBlob, `${trackId}_full`);
-    const cloudPreviewUrl = await saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`);
-    return {
-      audioUrl: cloudAudioUrl,
-      previewUrl: cloudPreviewUrl,
-    };
-  } catch (cloudErr) {
-    console.warn('Cloud Firestore audio write failed, fallback to local data URL:', cloudErr);
-    const previewDataUrl = await blobToDataUrl(previewBlob);
-    let audioDataUrl = '';
-    if (fullBlob.size < 2.5 * 1024 * 1024) {
-      audioDataUrl = await blobToDataUrl(fullBlob);
-    } else if (typeof URL !== 'undefined') {
-      audioDataUrl = URL.createObjectURL(fullBlob);
-    } else {
-      audioDataUrl = previewDataUrl;
-    }
-
-    return {
-      audioUrl: audioDataUrl || previewDataUrl,
-      previewUrl: previewDataUrl,
-    };
-  }
+  return {
+    audioUrl: fullRef,
+    previewUrl: previewDataUrl,
+  };
 }
 
 // Backwards compatibility alias
@@ -149,8 +96,10 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
     .substring(0, 50);
   const timestamp = Date.now();
   const trackId = `song_${timestamp}`;
+  const audioRef = `firestore-audio://${trackId}_audio`;
 
-  await saveAudioToIDB(`${trackId}_audio`, blob);
+  // 1. Instant local caching
+  saveAudioToIDB(`${trackId}_audio`, blob).catch(() => {});
 
   let localUrl = '';
   if (blob.size < 2.5 * 1024 * 1024) {
@@ -159,43 +108,14 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
     localUrl = URL.createObjectURL(blob);
   }
 
-  if (isStorageReachable !== false && storage) {
-    try {
-      let user = auth.currentUser;
-      if (!user) {
-        user = await ensureAnonymousAuth();
-      }
+  cacheInMemoryAudio(audioRef, localUrl);
 
-      const path = `audio/full/${timestamp}_${cleanName}.mp3`;
-      const sRef = storageRef(storage, path);
-      const snap = await Promise.race([
-        uploadBytes(sRef, blob, { contentType: 'audio/mpeg' }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
-      const downloadUrl = await Promise.race([
-        getDownloadURL(snap.ref),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 1200)
-        ),
-      ]);
-      if (downloadUrl) {
-        isStorageReachable = true;
-        return downloadUrl;
-      }
-    } catch {
-      isStorageReachable = false;
-    }
-  }
+  // 2. Background cloud persistence
+  saveAudioToCloudFirestore(blob, `${trackId}_audio`).catch((e) =>
+    console.warn('Background audio cloud sync:', e)
+  );
 
-  // Upload to Cloud Firestore Audio Vault so it's accessible to every client
-  try {
-    const cloudUrl = await saveAudioToCloudFirestore(blob, `${trackId}_audio`);
-    return cloudUrl;
-  } catch {
-    return localUrl;
-  }
+  return audioRef;
 }
 
 // Vite Dynamic Import for local bundled fallback assets

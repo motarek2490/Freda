@@ -163,20 +163,20 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
   const handleConfirmDelete = async () => {
     if (!trackToDelete) return;
 
+    const toDelete = trackToDelete;
+    // Immediately close modal and show instant confirmation (0ms delay)
+    setTrackToDelete(null);
+    setIsDeleting(false);
+    setUploadFeedback(
+      isRtl
+        ? `تم حذف معزوفة "${getTrackDisplayName(toDelete, 'ar')}" بنجاح 🗑️`
+        : 'Track removed successfully!'
+    );
+
     try {
-      setIsDeleting(true);
-      await onDeleteTrack(trackToDelete.id || '', trackToDelete.url || trackToDelete.audioUrl);
-      setUploadFeedback(
-        isRtl
-          ? `تم حذف معزوفة "${getTrackDisplayName(trackToDelete, 'ar')}" بنجاح 🗑️`
-          : 'Track removed successfully!'
-      );
-      setTrackToDelete(null);
+      await onDeleteTrack(toDelete.id || '', toDelete.url || toDelete.audioUrl);
     } catch (err: any) {
-      console.error('Error deleting track:', err);
-      setTrackToDelete(null);
-    } finally {
-      setIsDeleting(false);
+      console.warn('Error deleting track in background:', err);
     }
   };
 

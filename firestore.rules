@@ -253,28 +253,23 @@ service cloud.firestore {
     // 1.10 Settings, Music Library, Templates, Reviews, Rate Limits
     // =========================================================================
     match /settings/public_config {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /settings/admin_config {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /settings/{id} {
-      allow read: if id == 'public_config' || isAdmin();
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /music_library/{id} {
-      allow read: if true;
-      allow write, delete: if isSignedIn() || isAdmin();
+      allow read, write, delete: if true;
     }
 
     match /cloud_audio_files/{id} {
-      allow read: if true;
-      allow write: if true;
-      allow delete: if isSignedIn() || isAdmin();
+      allow read, write, delete: if true;
     }
 
     match /custom_templates/{id} {
