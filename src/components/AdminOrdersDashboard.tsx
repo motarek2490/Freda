@@ -135,22 +135,10 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     });
 
     // 6. Music Library
-    const unsubMusic = subscribeCloudMusicLibrary((cloudTracks) => {
+    const unsubMusic = subscribeCloudMusicLibrary(() => {
       getAdminSettingsCloud().then((currSettings) => {
         const hiddenIds = currSettings?.hiddenTrackIds || adminSettings?.hiddenTrackIds || [];
-        const presets = getAllAvailableTracks(hiddenIds);
-        const map = new Map<string, MusicTrack>();
-        presets.forEach((t) => {
-          if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
-            map.set(t.id, t);
-          }
-        });
-        cloudTracks.forEach((t) => {
-          if (t.id && !hiddenIds.includes(t.id) && !hiddenIds.includes(t.url)) {
-            map.set(t.id, t);
-          }
-        });
-        setAdminTracks(Array.from(map.values()));
+        setAdminTracks(getAllAvailableTracks(hiddenIds));
       });
     });
 

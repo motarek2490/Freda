@@ -100,14 +100,8 @@ export function useInvitationForm({
 
   // Load & Subscribe Cloud Shared Music Tracks on Mount
   useEffect(() => {
-    const unsub = subscribeCloudMusicLibrary((cloudTracks) => {
-      if (cloudTracks && cloudTracks.length > 0) {
-        setMusicTracks((prev) => {
-          const existingUrls = new Set(cloudTracks.map((t) => t.url));
-          const rest = prev.filter((t) => !existingUrls.has(t.url));
-          return [...cloudTracks, ...rest];
-        });
-      }
+    const unsub = subscribeCloudMusicLibrary(() => {
+      setMusicTracks(getAllAvailableTracks());
     });
 
     return () => {

@@ -30,8 +30,8 @@ export const AdminTemplateManager: React.FC<AdminTemplateManagerProps> = ({
     if (selectedTheme !== 'all' && template.themeStyle !== selectedTheme) return false;
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      const titleMatch = template.title[currentLang].toLowerCase().includes(q);
-      const descMatch = template.description[currentLang].toLowerCase().includes(q);
+      const titleMatch = (template.title?.[currentLang] || template.title?.ar || template.title?.en || '').toLowerCase().includes(q);
+      const descMatch = (template.description?.[currentLang] || template.description?.ar || template.description?.en || '').toLowerCase().includes(q);
       return titleMatch || descMatch;
     }
     return true;

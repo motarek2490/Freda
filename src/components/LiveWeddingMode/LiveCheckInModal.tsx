@@ -38,7 +38,7 @@ export const LiveCheckInModal: React.FC<LiveCheckInModalProps> = ({
   const totalAttending = rsvps.filter((r) => r.status === 'attending').length;
 
   const filteredGuests = rsvps.filter((r) =>
-    r.guestName.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    (r.guestName || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
     (r.phone && r.phone.includes(searchTerm.trim()))
   );
 

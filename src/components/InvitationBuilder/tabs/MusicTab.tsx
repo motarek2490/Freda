@@ -44,10 +44,22 @@ export const MusicTab: React.FC<MusicTabProps> = ({
 
   const filteredTracks = useMemo(() => {
     return musicTracks.filter((t) => {
-      const matchCategory = selectedCategory === 'all' || t.category === selectedCategory;
-      const title = (t.title || (typeof t.name === 'object' ? t.name.ar : t.name) || t.label || '').toLowerCase();
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q || title.includes(q) || (t.artist && t.artist.toLowerCase().includes(q));
+      if (!t) return false;
+      const matchCategory =
+        selectedCategory === 'all' ||
+        (t.category || '').toLowerCase() === (selectedCategory || '').toLowerCase();
+      const title = (
+        t.title ||
+        (typeof t.name === 'object' && t.name ? t.name.ar || t.name.en : t.name) ||
+        t.label ||
+        ''
+      ).toLowerCase();
+      const q = (searchQuery || '').toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        title.includes(q) ||
+        (t.artist && (t.artist || '').toLowerCase().includes(q)) ||
+        (t.label && (t.label || '').toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
   }, [musicTracks, selectedCategory, searchQuery]);

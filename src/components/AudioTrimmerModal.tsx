@@ -50,7 +50,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const isRtl = currentLang === 'ar';
 
   const [trackName, setTrackName] = useState<string>(
-    initialTrackName || audioFile.name?.replace(/\.[^/.]+$/, '').trim() || 'معزوفة مخصصة'
+    initialTrackName || (audioFile as File).name?.replace(/\.[^/.]+$/, '').trim() || 'معزوفة مخصصة'
   );
   const [artistName, setArtistName] = useState<string>('FRIDA Royal Orchestra');
   const [category, setCategory] = useState<string>('royal');
@@ -88,9 +88,9 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     // 2. Check cloud library for duplicates by clean name
     getCloudMusicLibrary().then((cloudTracks) => {
       if (!isMounted) return;
-      const cleanInput = trackName.toLowerCase().replace(/[^\w\u0600-\u06FF]+/g, '');
+      const cleanInput = (trackName || initialTrackName || '').toLowerCase().replace(/[^\w\u0600-\u06FF]+/g, '');
       const found = cloudTracks.find((t) => {
-        const cleanExisting = (t.label || t.title || '').toLowerCase().replace(/[^\w\u0600-\u06FF]+/g, '');
+        const cleanExisting = (t.label || t.title || (typeof t.name === 'object' ? t.name?.ar || t.name?.en : t.name) || '').toLowerCase().replace(/[^\w\u0600-\u06FF]+/g, '');
         return cleanExisting === cleanInput && cleanInput.length > 2;
       });
       if (found) {

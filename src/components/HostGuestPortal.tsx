@@ -217,7 +217,7 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
   // Filtered List
   const filteredRSVPs = rsvps.filter((r) => {
     const matchesSearch =
-      r.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.guestName || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
       (r.phone && r.phone.includes(searchTerm));
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     return matchesSearch && matchesStatus;

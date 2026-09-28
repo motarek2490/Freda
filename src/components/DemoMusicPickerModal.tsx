@@ -82,23 +82,25 @@ export const DemoMusicPickerModal: React.FC<DemoMusicPickerModalProps> = ({
 
   const filteredTracks = useMemo(() => {
     return tracks.filter((t) => {
+      if (!t) return false;
       const matchCategory =
         selectedCategory === 'all' ||
-        t.category?.toLowerCase() === selectedCategory.toLowerCase();
+        (t.category || '').toLowerCase() === (selectedCategory || '').toLowerCase();
 
       const title = (
         t.title ||
-        (typeof t.name === 'object' ? t.name.ar : t.name) ||
+        (typeof t.name === 'object' && t.name ? t.name.ar || t.name.en : t.name) ||
         t.label ||
         ''
       ).toLowerCase();
 
-      const q = searchQuery.toLowerCase().trim();
+      const q = (searchQuery || '').toLowerCase().trim();
       const matchSearch =
         !q ||
         title.includes(q) ||
-        (t.artist && t.artist.toLowerCase().includes(q)) ||
-        (t.category && t.category.toLowerCase().includes(q));
+        (t.artist && (t.artist || '').toLowerCase().includes(q)) ||
+        (t.category && (t.category || '').toLowerCase().includes(q)) ||
+        (t.label && (t.label || '').toLowerCase().includes(q));
 
       return matchCategory && matchSearch;
     });

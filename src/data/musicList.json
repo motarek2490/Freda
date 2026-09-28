@@ -1,38 +1,13 @@
 [
   {
-    "id": "track-royal-waltz",
-    "name": "فالس الزفاف الملكي الفاخر (Royal Wedding Waltz)",
+    "id": "fostanek-el-abyad",
+    "name": "فستانك الأبيض",
+    "title": "فستانك الأبيض",
     "url": "/music/royal-wedding-waltz.mp3",
-    "category": "royal"
-  },
-  {
-    "id": "track-royal-ambient",
-    "name": "موسيقى الأوتار والبيانو الملكية (Regal Strings & Piano)",
-    "url": "/music/royal-wedding-ambient.mp3",
-    "category": "wedding"
-  },
-  {
-    "id": "track-romantic-ambient",
-    "name": "موسيقى رومانسية كلاسيكية هادئة (Romantic Ambient)",
-    "url": "/music/romantic-ambient.mp3",
-    "category": "engagement"
-  },
-  {
-    "id": "track-canon-in-d",
-    "name": "كانون إن دي باخيلبيل الكلاسيكية (Canon in D)",
-    "url": "/music/canon-in-d.mp3",
-    "category": "classic"
-  },
-  {
-    "id": "track-ambient",
-    "name": "أنغام الطبيعة والهدوء (Serene Ambient)",
-    "url": "/music/ambient.mp3",
-    "category": "floral"
-  },
-  {
-    "id": "track-celebration-demo",
-    "name": "موسيقى الفرح والاحتفال (Celebration & Joy)",
-    "url": "/music/demo.mp3",
-    "category": "birthday"
+    "category": "wedding",
+    "artist": "FRIDA Royal Orchestra",
+    "duration": 101,
+    "isDefault": true,
+    "isActive": true
   }
 ]

@@ -444,7 +444,7 @@ export const CardImageModal: React.FC<CardImageModalProps> = ({
     let width = (canvas.width = canvas.offsetWidth);
     let height = (canvas.height = canvas.offsetHeight);
 
-    const norm = layoutType.toLowerCase();
+    const norm = (layoutType || 'royal').toLowerCase();
 
     interface P {
       x: number;

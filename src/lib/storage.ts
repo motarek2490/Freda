@@ -174,11 +174,11 @@ export function getInvitationBySlugOrId(slugOrId: string): InvitationData | unde
   // 2. Check VIP Demo Profiles (e.g. preview-demo-vip_1, vip_1, etc.)
   const vipProfile = EGYPTIAN_VIP_PROFILES.find(
     (p) =>
-      p.id.toLowerCase() === cleanId ||
-      p.id.toLowerCase() === lowerKey ||
-      `preview-demo-${p.id.toLowerCase()}` === lowerKey ||
-      `demo-${p.id.toLowerCase()}` === lowerKey ||
-      p.templateId?.toLowerCase() === cleanId ||
+      (p.id || '').toLowerCase() === cleanId ||
+      (p.id || '').toLowerCase() === lowerKey ||
+      `preview-demo-${(p.id || '').toLowerCase()}` === lowerKey ||
+      `demo-${(p.id || '').toLowerCase()}` === lowerKey ||
+      (p.templateId && p.templateId.toLowerCase() === cleanId) ||
       (p.layoutType && p.layoutType.toLowerCase() === cleanId)
   );
   if (vipProfile) {
@@ -188,13 +188,13 @@ export function getInvitationBySlugOrId(slugOrId: string): InvitationData | unde
   // 3. Check Templates by ID, clean ID, layoutType, or themeStyle
   const tmpl = TEMPLATES.find(
     (t) =>
-      t.id.toLowerCase() === cleanId ||
-      t.id.toLowerCase() === lowerKey ||
-      t.layoutType?.toLowerCase() === cleanId ||
-      t.layoutType?.toLowerCase() === lowerKey ||
-      `preview-${t.id.toLowerCase()}` === lowerKey ||
-      `demo-${t.id.toLowerCase()}` === lowerKey ||
-      `preview-${t.layoutType?.toLowerCase()}` === lowerKey
+      (t.id || '').toLowerCase() === cleanId ||
+      (t.id || '').toLowerCase() === lowerKey ||
+      (t.layoutType && t.layoutType.toLowerCase() === cleanId) ||
+      (t.layoutType && t.layoutType.toLowerCase() === lowerKey) ||
+      `preview-${(t.id || '').toLowerCase()}` === lowerKey ||
+      `demo-${(t.id || '').toLowerCase()}` === lowerKey ||
+      (t.layoutType && `preview-${t.layoutType.toLowerCase()}` === lowerKey)
   );
   if (tmpl) {
     return createTemplatePreviewInvitation(tmpl, 'ar', rawKey);

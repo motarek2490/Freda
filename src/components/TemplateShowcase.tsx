@@ -111,8 +111,8 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
       list = list.filter((t) => {
-        const titleMatch = (t.title[currentLang] || t.title.ar || '').toLowerCase().includes(q);
-        const descMatch = (t.description[currentLang] || t.description.ar || '').toLowerCase().includes(q);
+        const titleMatch = (t.title?.[currentLang] || t.title?.ar || t.title?.en || '').toLowerCase().includes(q);
+        const descMatch = (t.description?.[currentLang] || t.description?.ar || t.description?.en || '').toLowerCase().includes(q);
         return titleMatch || descMatch;
       });
     }

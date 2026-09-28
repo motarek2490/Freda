@@ -192,27 +192,34 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
     );
   };
 
-  const getTrackDisplayName = (t: MusicTrack, lang: 'ar' | 'en') => {
+  const getTrackDisplayName = (t: MusicTrack, lang: 'ar' | 'en'): string => {
+    if (!t) return '';
     if (t.title) return t.title;
-    if (!t.name) return t.label || '';
-    if (typeof t.name === 'object') {
-      return lang === 'ar' ? t.name.ar : t.name.en;
+    if (typeof t.name === 'object' && t.name) {
+      return (lang === 'ar' ? t.name.ar || t.name.en : t.name.en || t.name.ar) || t.label || '';
     }
-    return t.name;
+    if (typeof t.name === 'string') return t.name;
+    return t.label || '';
   };
 
   // Filtered & Paginated Tracks
   const filteredTracks = useMemo(() => {
     const hiddenIds = adminSettings?.hiddenTrackIds || [];
     return adminTracks.filter((t) => {
+      if (!t) return false;
       if (t.id && hiddenIds.includes(t.id)) return false;
       if (t.url && hiddenIds.includes(t.url)) return false;
       if (t.audioUrl && hiddenIds.includes(t.audioUrl)) return false;
-      const matchCategory = selectedCategory === 'all' || t.category === selectedCategory;
-      const nameAr = getTrackDisplayName(t, 'ar').toLowerCase();
-      const nameEn = getTrackDisplayName(t, 'en').toLowerCase();
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q || nameAr.includes(q) || nameEn.includes(q) || (t.artist && t.artist.toLowerCase().includes(q));
+      const matchCategory = selectedCategory === 'all' || (t.category || '').toLowerCase() === (selectedCategory || '').toLowerCase();
+      const nameAr = (getTrackDisplayName(t, 'ar') || '').toLowerCase();
+      const nameEn = (getTrackDisplayName(t, 'en') || '').toLowerCase();
+      const q = (searchQuery || '').toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        nameAr.includes(q) ||
+        nameEn.includes(q) ||
+        (t.artist && (t.artist || '').toLowerCase().includes(q)) ||
+        (t.label && (t.label || '').toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
   }, [adminTracks, adminSettings, selectedCategory, searchQuery]);
@@ -347,9 +354,9 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
             {displayedTracks.map((track, idx) => {
               const trackNameAr = getTrackDisplayName(track, 'ar');
               const trackNameEn = getTrackDisplayName(track, 'en');
-              const mainUrl = track.previewUrl || track.audioUrl || track.url;
-              const isPlaying = playingTrackUrl === mainUrl;
-              const isLoading = loadingTrackUrl === mainUrl;
+              const mainUrl = track.previewUrl || track.audioUrl || track.url || '';
+              const isPlaying = mainUrl ? playingTrackUrl === mainUrl : false;
+              const isLoading = mainUrl ? loadingTrackUrl === mainUrl : false;
               const isDefaultDemo =
                 adminSettings?.defaultDemoTrackUrl === track.url ||
                 adminSettings?.defaultDemoTrackUrl === track.audioUrl ||
@@ -395,7 +402,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
                       {isRtl ? trackNameAr : trackNameEn}
                     </h5>
                     <p className="text-[10px] text-[#8D8A84] truncate font-mono">
-                      {track.artist || 'FRIDA Royal Orchestra'} • {mainUrl.substring(0, 40)}...
+                      {track.artist || 'FRIDA Royal Orchestra'}{mainUrl ? ` • ${mainUrl.substring(0, 40)}...` : ''}
                     </p>
                   </div>
 

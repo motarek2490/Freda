@@ -124,34 +124,7 @@ const uploadedAudioModules = import.meta.glob<{ default: string }>(
   { eager: true }
 );
 
-const localUploadedTracks: MusicTrack[] = Object.entries(uploadedAudioModules).map(([path, module]) => {
-  const fileNameWithExt = path.split('/').pop() || '';
-  const fileName = fileNameWithExt.replace(/\.(mp3|wav|m4a|ogg|aac)$/i, '');
-
-  let category = 'royal';
-  let label = fileName;
-
-  if (fileName.includes('-')) {
-    const parts = fileName.split('-');
-    const catPart = parts[0].trim();
-    const labelPart = parts.slice(1).join('-').trim();
-    if (catPart) category = catPart;
-    if (labelPart) label = labelPart;
-  }
-
-  const url = typeof module === 'string' ? module : module.default;
-
-  return {
-    id: 'local-' + fileName,
-    title: label,
-    category,
-    label,
-    url,
-    audioUrl: url,
-    previewUrl: url,
-    isActive: true,
-  };
-});
+const localUploadedTracks: MusicTrack[] = [];
 
 export const MANUAL_MUSIC_TRACKS: MusicTrack[] = [];
 const LOCAL_STORAGE_KEY = 'frida_custom_uploaded_music';
@@ -405,33 +378,40 @@ export function getAllAvailableTracks(hiddenIds: string[] = []): MusicTrack[] {
   const jsonTracks: MusicTrack[] = Array.isArray(jsonMusicTracks)
     ? (jsonMusicTracks as any[]).map((t) => ({
         id: t.id,
-        title: t.name,
-        name: { ar: t.name, en: t.name },
-        label: t.name,
-        category: t.category,
+        title: t.title || t.name,
+        name: { ar: t.title || t.name, en: t.name || t.title },
+        label: t.title || t.name,
+        category: t.category || 'wedding',
         url: t.url,
         audioUrl: t.url,
         previewUrl: t.url,
+        artist: t.artist || 'FRIDA Royal Orchestra',
+        duration: t.duration || 101,
+        isDefault: t.isDefault ?? true,
         isActive: true,
       }))
     : [];
 
   const hiddenSet = new Set(hiddenIds);
+  const seenIds = new Set<string>();
   const seenUrls = new Set<string>();
   const combined: MusicTrack[] = [];
 
-  for (const trk of [...cachedCloudTracks, ...localCustom, ...jsonTracks, ...localUploadedTracks, ...MANUAL_MUSIC_TRACKS]) {
-    const mainUrl = trk.audioUrl || trk.url;
-    if ((trk.id && hiddenSet.has(trk.id)) || hiddenSet.has(mainUrl) || hiddenSet.has(trk.url)) {
+  // Prioritize Cloud Firestore tracks first, then local/fallback
+  for (const trk of [...cachedCloudTracks, ...localCustom, ...jsonTracks]) {
+    const mainUrl = trk.audioUrl || trk.url || '';
+    const trackId = trk.id || mainUrl;
+    if ((trk.id && hiddenSet.has(trk.id)) || (mainUrl && hiddenSet.has(mainUrl)) || (trk.url && hiddenSet.has(trk.url))) {
       continue;
     }
-    if (!seenUrls.has(mainUrl)) {
-      seenUrls.add(mainUrl);
+    if (trackId && !seenIds.has(trackId) && (!mainUrl || !seenUrls.has(mainUrl))) {
+      seenIds.add(trackId);
+      if (mainUrl) seenUrls.add(mainUrl);
       combined.push({
         ...trk,
-        url: mainUrl,
-        audioUrl: trk.audioUrl || mainUrl,
-        previewUrl: trk.previewUrl || mainUrl,
+        url: mainUrl || trk.url,
+        audioUrl: trk.audioUrl || mainUrl || trk.url,
+        previewUrl: trk.previewUrl || trk.audioUrl || mainUrl || trk.url,
       });
     }
   }
