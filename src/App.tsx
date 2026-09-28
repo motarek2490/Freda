@@ -384,8 +384,7 @@ export default function App() {
       TEMPLATES[0];
 
     const demoTrackUrl =
-      appAdminSettings?.defaultDemoTrackUrl ||
-      '/music/royal-wedding-waltz.mp3';
+      appAdminSettings?.defaultDemoTrackUrl || '';
     const demoTrackName =
       appAdminSettings?.defaultDemoTrackName ||
       `معزوفة أوركسترا زفاف ${BRAND_NAME_AR} الملكية`;

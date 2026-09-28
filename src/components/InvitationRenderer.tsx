@@ -139,7 +139,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   // Floating Demo Music Selector States
   const [showMusicPickerModal, setShowMusicPickerModal] = useState(false);
   const [activeMusicUrl, setActiveMusicUrl] = useState<string>(
-    invitation.eventDetails.musicTrackUrl || '/music/royal-wedding-waltz.mp3'
+    invitation.eventDetails.musicTrackUrl || ''
   );
   const [activeMusicName, setActiveMusicName] = useState<string>(
     invitation.eventDetails.musicTrackName || (isRtl ? 'معزوفة زفاف فريدا الملكية' : 'FRIDA Royal Waltz')

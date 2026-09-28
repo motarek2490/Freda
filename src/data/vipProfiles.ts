@@ -120,7 +120,7 @@ export function createDemoInvitationFromProfile(
   const defaultTrackUrl =
     DEFAULT_ADMIN_SETTINGS.defaultDemoTrackUrl ||
     matchingTemplate.defaultData?.musicTrackUrl ||
-    '/music/royal-wedding-waltz.mp3';
+    '';
 
   const defaultTrackName =
     DEFAULT_ADMIN_SETTINGS.defaultDemoTrackName ||
@@ -162,7 +162,7 @@ export function createTemplatePreviewInvitation(
   const defaultTrackUrl =
     DEFAULT_ADMIN_SETTINGS.defaultDemoTrackUrl ||
     tmpl.defaultData?.musicTrackUrl ||
-    '/music/royal-wedding-waltz.mp3';
+    '';
 
   const defaultTrackName =
     DEFAULT_ADMIN_SETTINGS.defaultDemoTrackName ||

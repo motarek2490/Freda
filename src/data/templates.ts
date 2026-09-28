@@ -51,7 +51,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/royal-wedding-ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى الأوتار والبيانو الملكية (Regal Strings & Piano)',
       enableGallery: true,
       galleryImages: [
@@ -125,7 +125,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/romantic-ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى رومانسية كلاسيكية هادئة (Romantic Ambient)',
       enableGallery: true,
       galleryImages: [
@@ -199,7 +199,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_luxury_tuxedo_1790456685845.jpg',
-      musicTrackUrl: '/music/royal-wedding-waltz.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'فالس الزفاف الملكي الفاخر (Royal Wedding Waltz)',
       enableGallery: true,
       galleryImages: [
@@ -273,7 +273,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_rings_hands_1790456674517.jpg',
-      musicTrackUrl: '/music/romantic-ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى رومانسية كلاسيكية هادئة (Romantic Ambient)',
       enableGallery: true,
       galleryImages: [
@@ -346,7 +346,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/canon-in-d.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'كانون إن دي باخيلبيل الكلاسيكية (Canon in D)',
       enableGallery: true,
       galleryImages: [
@@ -420,7 +420,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/canon-in-d.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'كانون إن دي باخيلبيل الكلاسيكية (Canon in D)',
       enableGallery: true,
       galleryImages: [
@@ -488,7 +488,7 @@ export const TEMPLATES: Template[] = [
       customMessage: 'كبرت سنة ومحتاجة كل صحابي وأحبابي معايا عشان نحتفل بأحلى ليلة ونقطع التورتة سوا!',
       rsvpDeadline: '2026-11-05',
       coverImageUrl: '/images/samples/baby_shower_mockup_1790456718080.jpg',
-      musicTrackUrl: '/music/demo.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى الفرح والاحتفال (Celebration & Joy)',
       enableGallery: true,
       galleryImages: [
@@ -561,7 +561,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'أنغام الطبيعة والهدوء (Serene Ambient)',
       enableGallery: true,
       galleryImages: [
@@ -629,7 +629,7 @@ export const TEMPLATES: Template[] = [
       customMessage: 'شرفنا بحمد الله وفضله ونور دنيتنا (زين)، ويسعدنا جداً مشاركتكم فرحتنا بقدومه المبارك.',
       rsvpDeadline: '2026-10-10',
       coverImageUrl: '/images/samples/baby_shower_mockup_1790456718080.jpg',
-      musicTrackUrl: '/music/ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'أنغام الطبيعة والهدوء (Serene Ambient)',
       enableGallery: true,
       galleryImages: [
@@ -701,7 +701,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_seafront_terrace_1790456664887.jpg',
-      musicTrackUrl: '/music/romantic-ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى رومانسية كلاسيكية هادئة (Romantic Ambient)',
       enableGallery: true,
       galleryImages: [
@@ -775,7 +775,7 @@ export const TEMPLATES: Template[] = [
       groomAvatarUrl: '/images/samples/groom_portrait.jpg',
       brideAvatarUrl: '/images/samples/bride_portrait.jpg',
       coverImageUrl: '/images/samples/couple_luxury_tuxedo_1790456685845.jpg',
-      musicTrackUrl: '/music/royal-wedding-ambient.mp3',
+      musicTrackUrl: '',
       musicTrackName: 'موسيقى الأوتار والبيانو الملكية (Regal Strings & Piano)',
       enableGallery: true,
       galleryImages: [

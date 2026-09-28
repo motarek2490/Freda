@@ -727,7 +727,7 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   basicPriceEGP: 199,
   royalPriceEGP: 399,
   diamondPriceEGP: 799,
-  defaultDemoTrackUrl: '/music/royal-wedding-waltz.mp3',
+  defaultDemoTrackUrl: '',
   defaultDemoTrackName: 'فستانك الأبيض',
   siteTitle: 'FRIDA (فريدا) — Premium Digital Invitation Platform',
   metaDescription: 'صمم وشارك أفخم بطاقات الدعوة الرقمية الملكية لحفلات الزفاف والخطوبة والمناسبات الخاصة مع منصة فريدا (FRIDA).',

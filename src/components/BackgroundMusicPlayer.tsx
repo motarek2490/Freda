@@ -10,8 +10,8 @@ interface BackgroundMusicPlayerProps {
   isSuppressed?: boolean; // When an invitation, builder, or admin panel is active
 }
 
-const DEFAULT_AMBIENT_TRACK_URL = '/music/royal-wedding-waltz.mp3';
-const DEFAULT_AMBIENT_TRACK_NAME = 'المعزوفة الملكية الحالمة (Royal Ambient)';
+const DEFAULT_AMBIENT_TRACK_URL = '';
+const DEFAULT_AMBIENT_TRACK_NAME = 'معزوفة مخصصة';
 
 const STORAGE_MUTED_KEY = 'frida_site_bg_music_muted';
 
@@ -34,7 +34,7 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
   });
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string>(DEFAULT_AMBIENT_TRACK_URL);
+  const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string>('');
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const [hasUserInteracted, setHasUserInteracted] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
@@ -42,7 +42,7 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
   const rawTrackUrl =
     typeof trackUrl === 'string' && trackUrl.trim()
       ? trackUrl.trim()
-      : DEFAULT_AMBIENT_TRACK_URL;
+      : '';
   const activeTrackName =
     typeof trackName === 'string' && trackName.trim()
       ? trackName.trim()
@@ -53,18 +53,24 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
   // Resolve raw track URL (handling frida-audio://, storage references, data URLs, remote URLs)
   useEffect(() => {
     let isCancelled = false;
+    if (!rawTrackUrl) {
+      setResolvedAudioUrl('');
+      setIsLoadingAudio(false);
+      return;
+    }
+
     setIsLoadingAudio(true);
 
     resolveAudioTrackUrl(rawTrackUrl)
       .then((playableUrl) => {
         if (!isCancelled) {
-          setResolvedAudioUrl(playableUrl || DEFAULT_AMBIENT_TRACK_URL);
+          setResolvedAudioUrl(playableUrl || '');
           setIsLoadingAudio(false);
         }
       })
       .catch(() => {
         if (!isCancelled) {
-          setResolvedAudioUrl(DEFAULT_AMBIENT_TRACK_URL);
+          setResolvedAudioUrl('');
           setIsLoadingAudio(false);
         }
       });
@@ -163,6 +169,10 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
       }
     }
   };
+
+  if (!resolvedAudioUrl && !isLoadingAudio) {
+    return null;
+  }
 
   return (
     <>

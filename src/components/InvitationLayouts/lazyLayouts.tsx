@@ -1,6 +1,13 @@
 import React, { lazy } from 'react';
 import { TemplateLayoutProps } from './types';
-import { RoyalLayout } from './RoyalLayout';
+
+const FallbackPlaceholder: React.FC<TemplateLayoutProps> = () => (
+  <div className="min-h-screen bg-[#0E0D0B] text-[#D4AF37] flex items-center justify-center p-6">
+    <div className="animate-pulse text-center font-serif text-lg tracking-widest">
+      FRIDA ROYAL INVITATION
+    </div>
+  </div>
+);
 
 /**
  * Resilient dynamic layout importer with automatic retry and graceful fallback.
@@ -21,14 +28,13 @@ function safeLazy<T extends Record<string, any>>(
         const mod = await importer();
         return { default: mod.default || mod[componentName] };
       } catch (secondErr) {
-        console.error(`[FRIDA Layout] Second load attempt failed for ${componentName}. Falling back to RoyalLayout:`, secondErr);
+        console.error(`[FRIDA Layout] Second load attempt failed for ${componentName}. Falling back:`, secondErr);
         try {
           const fallback = await import('./RoyalLayout');
           return { default: fallback.default || fallback.RoyalLayout };
         } catch (fallbackErr) {
-          console.error('[FRIDA Layout] Critical: Fallback to RoyalLayout also failed:', fallbackErr);
-          // Return synchronous RoyalLayout component
-          return { default: RoyalLayout };
+          console.error('[FRIDA Layout] Critical fallback failed:', fallbackErr);
+          return { default: FallbackPlaceholder };
         }
       }
     }
@@ -96,7 +102,7 @@ export class LayoutErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      return <RoyalLayout {...this.props.fallbackProps} />;
+      return <LazyRoyalLayout {...this.props.fallbackProps} />;
     }
     return this.props.children;
   }

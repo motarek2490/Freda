@@ -91,9 +91,9 @@ export function cacheInMemoryAudio(ref: string, url: string): void {
 export async function resolveAudioTrackUrl(urlOrRef?: string): Promise<string> {
   if (!urlOrRef) return '';
 
-  // Intercept expired / blocked Pixabay hotlinks and redirect to permanent local track
+  // Intercept expired / blocked Pixabay hotlinks
   if (urlOrRef.includes('cdn.pixabay.com') || urlOrRef.includes('pixabay.com/download')) {
-    return '/music/royal-wedding-waltz.mp3';
+    return '';
   }
 
   // 1. Check in-memory cache first

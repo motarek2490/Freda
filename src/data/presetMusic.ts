@@ -118,14 +118,6 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
   return audioRef;
 }
 
-// Vite Dynamic Import for local bundled fallback assets
-const uploadedAudioModules = import.meta.glob<{ default: string }>(
-  '/src/assets/music/*.{mp3,wav,m4a,ogg,aac}',
-  { eager: true }
-);
-
-const localUploadedTracks: MusicTrack[] = [];
-
 export const MANUAL_MUSIC_TRACKS: MusicTrack[] = [];
 const LOCAL_STORAGE_KEY = 'frida_custom_uploaded_music';
 
