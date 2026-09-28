@@ -240,8 +240,8 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
             </h4>
             <p className="text-xs text-[#8D8A84] mt-0.5 leading-relaxed">
               {isRtl
-                ? 'يتم تخزين الملفات الصوتية على التخزين السحابي مع مقطع معاينة سريع (Preview)، وحفظ البيانات الوصفية في Firestore.'
-                : 'Audio assets are stored in cloud storage with lightweight previews.'}
+                ? 'يتم تخزين ومعالجة الملفات الصوتية كاملة على السحابة مع المزامنة اللحظية وحفظ البيانات في Firestore.'
+                : 'Full audio assets are stored and synced across cloud storage.'}
             </p>
           </div>
 

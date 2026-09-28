@@ -46,43 +46,36 @@ let isStorageReachable: boolean | null = null;
  */
 export async function uploadSongPackageToStorage(
   fullBlob: Blob,
-  previewBlob: Blob,
+  _previewBlob: Blob,
   title: string
 ): Promise<{ previewUrl: string; audioUrl: string }> {
-  const cleanTitle = (title || 'custom_track')
-    .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_')
-    .substring(0, 40);
   const timestamp = Date.now();
   const trackId = `song_${timestamp}`;
-  const fullRef = `firestore-audio://${trackId}_full`;
-  const prevRef = `firestore-audio://${trackId}_prev`;
+  const audioRef = `firestore-audio://${trackId}_audio`;
 
   // 1. Instant local caching (IndexedDB + base64 data URLs)
-  saveAudioToIDB(`${trackId}_full`, fullBlob).catch(() => {});
-  saveAudioToIDB(`${trackId}_preview`, previewBlob).catch(() => {});
+  saveAudioToIDB(`${trackId}_audio`, fullBlob).catch(() => {});
 
-  const previewDataUrl = await blobToDataUrl(previewBlob);
   const localAudioUrl = (fullBlob.size < 2.5 * 1024 * 1024)
     ? await blobToDataUrl(fullBlob)
-    : (typeof URL !== 'undefined' ? URL.createObjectURL(fullBlob) : previewDataUrl);
+    : (typeof URL !== 'undefined' ? URL.createObjectURL(fullBlob) : await blobToDataUrl(fullBlob));
 
   // Cache in memory for 0ms immediate playback
-  cacheInMemoryAudio(fullRef, localAudioUrl);
-  cacheInMemoryAudio(prevRef, previewDataUrl);
+  cacheInMemoryAudio(audioRef, localAudioUrl);
 
   // 2. Cloud Firestore Audio Vault: Save chunks to Firestore so ALL devices can play it
   try {
-    await Promise.all([
-      saveAudioToCloudFirestore(fullBlob, `${trackId}_full`),
-      saveAudioToCloudFirestore(previewBlob, `${trackId}_prev`),
+    await Promise.race([
+      saveAudioToCloudFirestore(fullBlob, `${trackId}_audio`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Cloud upload timeout')), 15000)),
     ]);
   } catch (e) {
     console.warn('Cloud audio sync warning:', e);
   }
 
   return {
-    audioUrl: fullRef,
-    previewUrl: prevRef,
+    audioUrl: audioRef,
+    previewUrl: audioRef,
   };
 }
 
@@ -114,7 +107,10 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
 
   // 2. Persist to Cloud Firestore Audio Vault
   try {
-    await saveAudioToCloudFirestore(blob, `${trackId}_audio`);
+    await Promise.race([
+      saveAudioToCloudFirestore(blob, `${trackId}_audio`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Cloud upload timeout')), 15000)),
+    ]);
   } catch (e) {
     console.warn('Audio cloud sync error:', e);
   }

@@ -235,8 +235,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       setIsProcessing(true);
       setStatusMessage(
         isRtl
-          ? `جاري معالجة المعزوفة وإنشاء مقطع المعاينة السريع (Preview)...`
-          : `Processing dual audio package (Preview + Full)...`
+          ? `جاري معالجة وضغط المعزوفة بدقة الاستوديو...`
+          : `Processing audio in studio quality...`
       );
 
       if (audioPreviewRef.current) {
@@ -244,19 +244,19 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         setIsPlayingPreview(false);
       }
 
-      // 1. Generate Dual Audio Package: Preview (20s) + Full Track
-      const dualPackage = await generateDualAudioPackage(audioFile, startTime, selectedDuration, 20);
+      // 1. Generate Full Audio Track
+      const dualPackage = await generateDualAudioPackage(audioFile, startTime, selectedDuration);
 
       setStatusMessage(
         isRtl
-          ? 'جاري رفع الملفات إلى مساحة التخزين السحابي...'
-          : 'Uploading assets to cloud storage...'
+          ? 'جاري الرفع السحابي للملف الصوتي...'
+          : 'Uploading audio to cloud storage...'
       );
 
-      // 2. Upload to Cloud storage (audio/full and audio/previews)
+      // 2. Upload directly to Cloud Storage
       const { audioUrl, previewUrl } = await uploadSongPackageToStorage(
         dualPackage.fullBlob,
-        dualPackage.previewBlob,
+        dualPackage.fullBlob,
         trackName.trim()
       );
 
@@ -543,8 +543,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
             <span>{isRtl ? 'تخزين سحابي فائق السرعة' : 'Fast cloud storage'}</span>
           </div>
           <div className="p-2.5 bg-[#1F1E1B] rounded-xl border border-[#2A2722] text-center">
-            <span className="block text-emerald-400 font-bold">Preview 20s + Full</span>
-            <span>{isRtl ? 'معاينة فورية بدون سحب إنترنت' : 'Zero wasted bandwidth'}</span>
+            <span className="block text-emerald-400 font-bold">{isRtl ? 'ملف صوتي كامل' : 'Full Audio Track'}</span>
+            <span>{isRtl ? 'تشغيل كامل بدون اقتطاع' : 'Full playback quality'}</span>
           </div>
         </div>
 

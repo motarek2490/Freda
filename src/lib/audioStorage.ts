@@ -44,7 +44,7 @@ function blobToBase64(blob: Blob): Promise<string> {
  */
 export async function saveAudioToCloudFirestore(blob: Blob, baseId: string): Promise<string> {
   const dataUrl = await blobToBase64(blob);
-  const CHUNK_SIZE = 600000; // 600KB text chunks (well under Firestore's 1MB limit)
+  const CHUNK_SIZE = 350000; // 350KB text chunks (optimal for fast, reliable Firestore writes)
 
   if (dataUrl.length <= CHUNK_SIZE) {
     await setDoc(doc(db, 'cloud_audio_files', baseId), {
@@ -57,20 +57,16 @@ export async function saveAudioToCloudFirestore(blob: Blob, baseId: string): Pro
     });
   } else {
     const totalChunks = Math.ceil(dataUrl.length / CHUNK_SIZE);
-    const chunkWrites: Promise<void>[] = [];
 
     for (let i = 0; i < totalChunks; i++) {
       const chunkStr = dataUrl.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-      chunkWrites.push(
-        setDoc(doc(db, 'cloud_audio_files', `${baseId}_chk_${i}`), {
-          chunkIndex: i,
-          data: chunkStr,
-          totalChunks,
-        })
-      );
+      await setDoc(doc(db, 'cloud_audio_files', `${baseId}_chk_${i}`), {
+        chunkIndex: i,
+        data: chunkStr,
+        totalChunks,
+        createdAt: new Date().toISOString(),
+      });
     }
-
-    await Promise.all(chunkWrites);
 
     await setDoc(doc(db, 'cloud_audio_files', baseId), {
       isChunked: true,

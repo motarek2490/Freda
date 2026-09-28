@@ -263,29 +263,13 @@ export async function generateDualAudioPackage(
       fullBlob = audioBufferToWav(fullBuffer);
     }
 
-    // 2. Render Preview Audio (max 20s, lower bitrate 80kbps for instant mobile streaming)
-    const previewLength = Math.max(1, Math.floor(previewDuration * targetSampleRate));
-    const prevOfflineCtx = new OfflineAudioContext(1, previewLength, targetSampleRate);
-    const prevSource = prevOfflineCtx.createBufferSource();
-    prevSource.buffer = decodedAudio;
-    prevSource.connect(prevOfflineCtx.destination);
-    prevSource.start(0, actualStartTime, previewDuration);
-    const previewBuffer = await prevOfflineCtx.startRendering();
-
-    let previewBlob: Blob;
-    try {
-      previewBlob = audioBufferToMp3(previewBuffer, 80);
-    } catch {
-      previewBlob = audioBufferToWav(previewBuffer);
-    }
-
     return {
-      previewBlob,
-      previewDuration: Math.round(previewDuration * 10) / 10,
+      previewBlob: fullBlob,
+      previewDuration: Math.round(fullDuration * 10) / 10,
       fullBlob,
       fullDuration: Math.round(fullDuration * 10) / 10,
       originalDuration: Math.round(originalDuration * 10) / 10,
-      sizeKb: Math.round((fullBlob.size + previewBlob.size) / 1024),
+      sizeKb: Math.round(fullBlob.size / 1024),
     };
   } finally {
     if (audioContext.state !== 'closed') {
