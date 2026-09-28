@@ -222,6 +222,22 @@ service cloud.firestore {
         request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
         request.resource.data.amount is number &&
         request.resource.data.amount <= 100000 &&
+        (
+          (
+            exists(/databases/$(database)/documents/settings/public_config) &&
+            (
+              (request.resource.data.planTier == 'basic' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.basicPriceEGP) ||
+              (request.resource.data.planTier == 'royal_vip' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.royalPriceEGP) ||
+              (request.resource.data.planTier == 'diamond' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.diamondPriceEGP)
+            )
+          ) ||
+          (
+            !exists(/databases/$(database)/documents/settings/public_config) &&
+            request.resource.data.amount in [199, 399, 799]
+          )
+        ) &&
+        exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid &&
         request.resource.data.customerName is string &&
         request.resource.data.customerName.size() >= 2 &&
         request.resource.data.customerName.size() <= 100 &&
@@ -253,24 +269,29 @@ service cloud.firestore {
     // 1.10 Settings, Music Library, Templates, Reviews, Rate Limits
     // =========================================================================
     match /settings/public_config {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /settings/admin_config {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
 
     match /settings/{id} {
-      allow read, write: if true;
+      allow read: if id == 'public_config' || isAdmin();
+      allow write: if isAdmin();
     }
 
     match /music_library/{id} {
-      allow read, write, delete: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    match /cloud_audio_files/{id} {
-      allow read, write, delete: if true;
-    }
+    // NOTE: the legacy /cloud_audio_files collection (chunked Firestore audio
+    // storage) has been intentionally sunset — it is not covered by any rule
+    // here and therefore denied by the default-deny catch-all above. Do not
+    // re-add a permissive rule for it; finish removing the client code that
+    // still references it (audioStorage.ts / presetMusic.ts) instead.
 
     match /custom_templates/{id} {
       allow read: if true;
