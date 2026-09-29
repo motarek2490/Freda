@@ -12,7 +12,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const FIREBASE_DB_ID = '(default)';
+const FIREBASE_DB_ID = 'ai-studio-frida-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
 
 if (getApps().length === 0) {
   initializeApp();

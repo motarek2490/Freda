@@ -22,7 +22,7 @@ interface Env {
 // قيم احتياطية (Fallbacks) فقط في حال عدم وجود متغيرات بيئة
 const DEFAULT_SITE_URL = 'https://farid.invitationes.workers.dev';
 const DEFAULT_FIREBASE_PROJECT_ID = 'frida-ed3b5';
-const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
+const DEFAULT_FIRESTORE_DATABASE_ID = 'ai-studio-frida-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
 
 interface InvitationMeta {
   title: string;

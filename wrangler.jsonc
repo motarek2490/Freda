@@ -14,7 +14,7 @@
     "BRAND_NAME": "FRIDA",
     "BRAND_NAME_AR": "فريدا",
     "FIREBASE_PROJECT_ID": "frida-ed3b5",
-    "FIRESTORE_DATABASE_ID": "(default)"
+    "FIRESTORE_DATABASE_ID": "ai-studio-frida-eb6a19f5-9126-4bbb-b06c-270aac6778bf"
   },
   "observability": {
     "enabled": true

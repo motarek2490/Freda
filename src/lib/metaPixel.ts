@@ -33,8 +33,8 @@ export function initMetaPixel(): void {
 
   const pixelId = getMetaPixelId();
   if (!pixelId || pixelId === 'YOUR_META_PIXEL_ID') {
-    // Pixel ID not provided yet; helper is ready for when ID is set
-    console.info('Meta Pixel ID placeholder detected. Set VITE_META_PIXEL_ID in env or window.META_PIXEL_ID');
+    // Pixel ID not provided; skip loading script until configured
+    return;
   }
 
   const loadScript = () => {
