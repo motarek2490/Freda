@@ -338,11 +338,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {currentLang === 'en' ? 'التحويل للغة العربية' : 'Switch to English'}
               </button>
               {user ? (
-                <button onClick={onOpenDashboard} className="underline">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenDashboard();
+                  }}
+                  className="underline cursor-pointer hover:text-[#C9A86A] transition-colors"
+                >
                   {t.nav.dashboard}
                 </button>
               ) : (
-                <button onClick={onOpenAuth} className="underline">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenAuth();
+                  }}
+                  className="underline cursor-pointer hover:text-[#C9A86A] transition-colors"
+                >
                   {t.nav.signIn}
                 </button>
               )}

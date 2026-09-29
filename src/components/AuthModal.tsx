@@ -124,7 +124,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ currentLang, onClose, onSu
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-[#F7F4EE] flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-[#B99A65]" />
-              <span>{isRtl ? 'اسم المستخدم / رقم الهاتف المسجل به الطلب:' : 'Username / Registered Phone:'}</span>
+              <span>{isRtl ? 'رقم الهاتف / اسم المستخدم المسجل به الطلب:' : 'Registered Phone / Username:'}</span>
             </label>
             <input
               type="text"
@@ -132,7 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ currentLang, onClose, onSu
               autoFocus
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder={isRtl ? 'مثال: 01017219846' : 'e.g. 01017219846'}
+              placeholder={isRtl ? 'مثال: 01012345678 أو اسم المستخدم' : 'e.g. 01012345678 or username'}
               className="w-full bg-[#1F1E1B] border border-[#333] rounded-xl px-4 py-3 text-[#F7F4EE] placeholder-[#666] focus:outline-none focus:border-[#B99A65] transition-colors"
             />
           </div>
@@ -142,18 +142,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ currentLang, onClose, onSu
             <label className="text-xs font-bold text-[#F7F4EE] flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-[#B99A65]" />
-                <span>{isRtl ? 'كلمة المرور / كود الدخول السري (PIN):' : 'Password / Access PIN:'}</span>
+                <span>{isRtl ? 'كلمة المرور / كود المضيف (Access Code):' : 'Password / Host Access Code:'}</span>
               </span>
             </label>
             <input
-              type="password"
+              type="text"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={isRtl ? 'مثال: HOST-123456 أو كلمة المرور' : 'e.g. HOST-123456'}
               className="w-full bg-[#1F1E1B] border border-[#333] rounded-xl px-4 py-3 text-[#F7F4EE] placeholder-[#666] font-mono tracking-wider focus:outline-none focus:border-[#B99A65] transition-colors"
             />
           </div>
+
+          <p className="text-[10px] text-[#8D8A84] leading-relaxed">
+            {isRtl
+              ? '💡 تجد كود المضيف (HOST-XXXXXX) واسم المستخدم في رسالة تسليم الدعوة التي وصلتك عبر الواتساب من الإدارة.'
+              : '💡 Find your Host Access Code (HOST-XXXXXX) in the invitation delivery WhatsApp message sent by admin.'}
+          </p>
 
           {/* Error Message */}
           {errorMessage && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Language,
   Template,
@@ -7,6 +7,8 @@ import {
   UserProfile,
   AdminSettings,
 } from './types';
+
+type ActiveView = 'home' | 'dashboard' | 'live_invitation' | 'host_portal' | 'occasion';
 import {
   getAdminSettingsCloud,
   subscribeAdminSettingsCloud,
@@ -383,7 +385,14 @@ export default function App() {
     setShowBuilderModal(true);
   };
 
+  // Scroll Position Restoration State
+  const savedScrollYRef = useRef<number>(0);
+  const previousViewRef = useRef<ActiveView>('home');
+
   const handlePreviewInvitation = (invitation: InvitationData) => {
+    savedScrollYRef.current = window.scrollY || document.documentElement.scrollTop || 0;
+    previousViewRef.current = activeView;
+
     if (showAdminModal) {
       setReturnToAdminOnBack(true);
       setShowAdminModal(false);
@@ -482,6 +491,10 @@ export default function App() {
             window.history.pushState({}, '', '/');
             setActiveView('dashboard');
           }}
+          onOpenPricing={(inv) => {
+            setPricingTargetInvitation(inv);
+            setShowPricingModal(true);
+          }}
         />
       </React.Suspense>
     );
@@ -555,12 +568,18 @@ export default function App() {
           invitation={livePreviewInvitation}
           userLang={currentLang}
           onBackToApp={() => {
-            window.history.pushState({}, '', '/');
-            setActiveView('home');
+            const prevView = previousViewRef.current || 'home';
+            window.history.pushState({}, '', prevView === 'occasion' && activeOccasion ? `/occasions/${activeOccasion}` : '/');
+            setActiveView(prevView);
             setLivePreviewInvitation(null);
             if (returnToAdminOnBack) {
               setShowAdminModal(true);
               setReturnToAdminOnBack(false);
+            } else {
+              const targetY = savedScrollYRef.current;
+              setTimeout(() => {
+                window.scrollTo({ top: targetY, behavior: 'instant' as ScrollBehavior });
+              }, 40);
             }
           }}
         />

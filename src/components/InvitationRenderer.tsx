@@ -35,7 +35,7 @@ import {
   Disc3,
 } from 'lucide-react';
 import { InvitationData, Language, RSVPResponse, GuestWish, TemplateLayoutType, PaymentAccountType } from '../types';
-import { saveRSVP } from '../lib/storage';
+import { saveRSVP, getStoredRSVPs } from '../lib/storage';
 import { saveWishCloud, subscribeAdminSettingsCloud } from '../lib/firestoreService';
 import { resolveAudioTrackUrl } from '../lib/audioStorage';
 import { useTranslation } from '../data/translations';
@@ -235,6 +235,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const [rsvpPlusOneName, setRsvpPlusOneName] = useState('');
   const [rsvpDietaryNotes, setRsvpDietaryNotes] = useState('');
   const [rsvpSuccess, setRsvpSuccess] = useState(false);
+  const [rsvpLimitError, setRsvpLimitError] = useState<string | null>(null);
 
   // Bank Gift Registry Modal State
   const [showBankModal, setShowBankModal] = useState(false);
@@ -540,6 +541,22 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const handleRsvpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rsvpGuestName.trim()) return;
+
+    // Check Plan Tier Limit (Basic Package: Max 50 RSVPs)
+    const tier = invitation.planTier || 'basic';
+    if (tier === 'basic') {
+      const currentRsvps = getStoredRSVPs(invitation.id);
+      if (currentRsvps.length >= 50) {
+        setRsvpLimitError(
+          isRtl
+            ? 'عذراً، وصلت هذه الدعوة للحد الأقصى لردود الحضور (50 معزوم) المتاحة للباقة الأساسية. يرجى التواصل مع العريس/العروس للترقية للباقة الملكية.'
+            : 'This basic invitation has reached its 50 RSVP limit. Please contact the host to upgrade.'
+        );
+        return;
+      }
+    }
+
+    setRsvpLimitError(null);
 
     saveRSVP({
       invitationId: invitation.id,
@@ -1046,6 +1063,12 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
                     {details.eventTitle}
                   </p>
                 </div>
+
+                {rsvpLimitError && (
+                  <div className="p-3 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs text-center leading-relaxed">
+                    {rsvpLimitError}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-2">
                   <button

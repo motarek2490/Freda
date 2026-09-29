@@ -3,6 +3,7 @@ import {
   Users,
   CheckCircle,
   XCircle,
+  X,
   Clock,
   Download,
   Printer,
@@ -54,17 +55,29 @@ interface HostGuestPortalProps {
   invitation: InvitationData;
   userLang?: Language;
   onBack: () => void;
+  onOpenPricing?: (invitation: InvitationData) => void;
 }
 
 export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
   invitation: initialInvitation,
   userLang = 'ar',
   onBack,
+  onOpenPricing,
 }) => {
   const isRtl = userLang === 'ar';
   const t = useTranslation(userLang);
 
   const [invitation, setInvitation] = useState<InvitationData>(initialInvitation);
+
+  // Package Tier Rights & Capability Resolution
+  const planTier = invitation.planTier || 'basic';
+  const isBasic = planTier === 'basic';
+  const isRoyal = planTier === 'royal_vip' || planTier === 'diamond';
+  const isDiamond = planTier === 'diamond';
+  const maxAllowedRsvps = isBasic ? 50 : Infinity;
+
+  // Upgrade Gate Modal State for Restricted Features
+  const [showUpgradeModal, setShowUpgradeModal] = useState<string | null>(null);
 
   // Host Auth Gate State
   const [isHostAuthenticated, setIsHostAuthenticated] = useState<boolean>(false);
@@ -530,16 +543,48 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
               <span className="px-2.5 py-0.5 rounded-full bg-[#B99A65]/20 border border-[#B99A65] text-[#B99A65] text-[10px] font-bold uppercase tracking-wider">
                 {isRtl ? 'بوابة العميل الخاصة (Host VIP)' : 'Host VIP Portal'}
               </span>
+
+              {/* Package Tier Badge */}
+              {isDiamond ? (
+                <span className="px-3 py-1 rounded-full bg-gradient-to-r from-cyan-900/60 to-blue-900/60 border border-cyan-400/80 text-cyan-200 text-xs font-bold shadow-[0_0_15px_rgba(6,182,212,0.3)] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                  <span>{isRtl ? '💎 الباقة الماسية (Diamond VIP)' : '💎 Diamond VIP Package'}</span>
+                </span>
+              ) : isRoyal ? (
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-[#B99A65]/25 to-[#d6bd91]/25 border border-[#B99A65] text-[#B99A65] text-xs font-bold shadow-md flex items-center gap-1.5">
+                    <Crown className="w-3.5 h-3.5 text-[#B99A65]" />
+                    <span>{isRtl ? '👑 الباقة الملكية (Royal VIP)' : '👑 Royal VIP Package'}</span>
+                  </span>
+                  {onOpenPricing && (
+                    <button
+                      onClick={() => onOpenPricing(invitation)}
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-bold cursor-pointer"
+                    >
+                      {isRtl ? 'ترقية للماسية' : 'Upgrade to Diamond'}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-full bg-amber-950/60 border border-amber-600/60 text-amber-300 text-xs font-bold shadow-md flex items-center gap-1.5">
+                    <span>🥉 {isRtl ? 'الباقة الأساسية (50 معزوم)' : 'Basic Package (50 Guests)'}</span>
+                  </span>
+                  {onOpenPricing && (
+                    <button
+                      onClick={() => onOpenPricing(invitation)}
+                      className="px-3 py-1 rounded-full bg-[#B99A65] text-[#171717] font-bold text-xs hover:bg-[#d6bd91] shadow-lg transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>{isRtl ? 'ترقية للباقة الملكية (غير محدود)' : 'Upgrade to Royal VIP'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               <span className="text-xs text-[#8D8A84]">
                 كود المضيف: <strong className="text-[#F7F4EE] font-mono">{invitation.hostAccessCode || '••••••••'}</strong>
               </span>
-              {invitation.expiresAt && (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
-                  {isRtl
-                    ? `⏳ صالحة حتى: ${new Date(invitation.expiresAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })}`
-                    : `⏳ Valid until: ${new Date(invitation.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
-                </span>
-              )}
             </div>
             <h1 className="font-playfair text-2xl sm:text-3xl font-bold text-[#F7F4EE]">
               {invitation.title || invitation.eventDetails.eventTitle}
@@ -587,7 +632,7 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
 
         {/* Live Attendance Statistics Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#1F1E1B] border border-[#333] rounded-2xl p-5 text-center shadow-lg space-y-1">
+          <div className="bg-[#1F1E1B] border border-[#333] rounded-2xl p-5 text-center shadow-lg space-y-1 relative overflow-hidden">
             <div className="w-10 h-10 rounded-full bg-[#B99A65]/10 text-[#B99A65] flex items-center justify-center mx-auto mb-2">
               <Users className="w-5 h-5" />
             </div>
@@ -595,7 +640,12 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
               {isRtl ? 'إجمالي الردود المسجلة' : 'Total Responses'}
             </span>
             <span className="font-playfair text-3xl font-bold text-[#F7F4EE]">
-              {rsvps.length}
+              {rsvps.length} {isBasic && <span className="text-xs text-[#8D8A84] font-mono">/ 50</span>}
+            </span>
+            <span className="text-[10px] text-[#B99A65] font-semibold block">
+              {isBasic
+                ? isRtl ? `مستهلك ${rsvps.length} من 50 (الباقة الأساسية)` : `${rsvps.length} / 50 used (Basic)`
+                : isRtl ? 'عدد لا محدود ✅' : 'Unlimited ✅'}
             </span>
           </div>
 
@@ -943,20 +993,63 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
 
         {/* TAB 3: VIP PERSONALIZED LINKS */}
         {activeTab === 'vip_links' && (
-          <div className="max-w-2xl mx-auto bg-[#1F1E1B] border border-[#B99A65]/40 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
-            <div className="space-y-1 border-b border-[#333] pb-4">
-              <div className="flex items-center gap-2">
-                <Crown className="w-5 h-5 text-[#B99A65]" />
-                <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
-                  {isRtl ? 'مولّد روابط المعازيم الملكية (Personalized VIP Links)' : 'Personalized VIP Guest Link Generator'}
-                </h3>
+          isBasic ? (
+            <div className="max-w-xl mx-auto bg-[#1F1E1B] border border-amber-500/40 rounded-3xl p-8 space-y-5 text-center shadow-2xl relative overflow-hidden">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
+                <Crown className="w-8 h-8" />
               </div>
-              <p className="text-xs text-[#8D8A84]">
-                {isRtl
-                  ? 'قم بكتابة اسم الضيف لإنشاء رابط مخصص يرحب به بالاسم عند فتح الدعوة (مثال: أهلاً بك معالي المستشار محمد)'
-                  : 'Generate custom links that greet each guest by their title and name.'}
-              </p>
+
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                  🔒 {isRtl ? 'ميزة حصرية بالباقة الملكية والماسية' : 'Royal & Diamond Exclusive'}
+                </span>
+                <h3 className="font-playfair text-2xl font-bold text-[#F7F4EE]">
+                  {isRtl ? 'روابط المعازيم المخصصة باسم كل ضيف (VIP Links)' : 'Personalized Guest VIP Links'}
+                </h3>
+                <p className="text-xs text-[#8D8A84] leading-relaxed max-w-md mx-auto">
+                  {isRtl
+                    ? 'تتيح لك هذه الميزة إرسال رابط فريد باسم كل ضيف (مثال: سعادة المستشار أحمد المنصور وعائلته) ليظهر اسمه مذهّباً وفخماً على الظرف المغلق ويتم ملء بياناته تلقائياً.'
+                    : 'Send customized links that greet each guest by name and title on the gilded wax seal envelope.'}
+                </p>
+              </div>
+
+              <div className="bg-[#171717] border border-[#333] rounded-2xl p-4 text-xs text-[#E9E1D5] space-y-2 text-right">
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <Sparkles className="w-4 h-4" />
+                  <span>{isRtl ? 'مميزات الباقة الملكية (Royal VIP):' : 'Royal VIP Included Features:'}</span>
+                </div>
+                <ul className="space-y-1 text-[11px] text-[#8D8A84] list-disc list-inside">
+                  <li>{isRtl ? 'تأكيد حضور وتسجيل ردود غير محدود (بدون حد الـ 50)' : 'Unlimited RSVP guest confirmations'}</li>
+                  <li>{isRtl ? 'طباعة اسم كل ضيف ورقم طاولته على ظهوره' : 'Personalized names & table numbers'}</li>
+                  <li>{isRtl ? 'تصدير كشف إكسل معتمد لأمن القاعة' : 'Full Excel export & printable security checklist'}</li>
+                </ul>
+              </div>
+
+              {onOpenPricing && (
+                <button
+                  onClick={() => onOpenPricing(invitation)}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#B99A65] via-[#d6bd91] to-[#B99A65] text-[#171717] font-bold text-xs uppercase tracking-wider hover:shadow-[0_0_20px_rgba(185,154,101,0.4)] transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>{isRtl ? 'ترقية دعوتك للباقة الملكية الآن (200 ج.م فقط)' : 'Upgrade to Royal VIP Now'}</span>
+                </button>
+              )}
             </div>
+          ) : (
+            <div className="max-w-2xl mx-auto bg-[#1F1E1B] border border-[#B99A65]/40 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
+              <div className="space-y-1 border-b border-[#333] pb-4">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-[#B99A65]" />
+                  <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
+                    {isRtl ? 'مولّد روابط المعازيم الملكية (Personalized VIP Links)' : 'Personalized VIP Guest Link Generator'}
+                  </h3>
+                </div>
+                <p className="text-xs text-[#8D8A84]">
+                  {isRtl
+                    ? 'قم بكتابة اسم الضيف لإنشاء رابط مخصص يرحب به بالاسم عند فتح الدعوة (مثال: أهلاً بك معالي المستشار محمد)'
+                    : 'Generate custom links that greet each guest by their title and name.'}
+                </p>
+              </div>
 
             <div className="space-y-4">
               <div>
@@ -1068,7 +1161,8 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
               )}
             </div>
           </div>
-        )}
+        )
+      )}
 
         {/* TAB 4: WEDDING MEMORIES POST-EVENT ALBUM */}
         {activeTab === 'memories' && (
@@ -1345,20 +1439,83 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
         </div>
       )}
 
-      {/* Frida Live Wedding Check-In Modal */}
+      {/* Frida Live Wedding Check-In Modal / Diamond Package Gate */}
       {showLiveCheckIn && (
-        <LiveCheckInModal
-          invitation={invitation}
-          rsvps={rsvps}
-          onCheckInGuest={(rsvpId) => {
-            const guest = rsvps.find((r) => r.id === rsvpId);
-            if (guest) {
-              handleToggleCheckIn(guest);
-            }
-          }}
-          onClose={() => setShowLiveCheckIn(false)}
-          isRtl={isRtl}
-        />
+        isDiamond ? (
+          <LiveCheckInModal
+            invitation={invitation}
+            rsvps={rsvps}
+            onCheckInGuest={(rsvpId) => {
+              const guest = rsvps.find((r) => r.id === rsvpId);
+              if (guest) {
+                handleToggleCheckIn(guest);
+              }
+            }}
+            onClose={() => setShowLiveCheckIn(false)}
+            isRtl={isRtl}
+          />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+            <div className="relative w-full max-w-lg bg-[#1F1E1B] border border-cyan-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(6,182,212,0.2)] text-center space-y-5">
+              <button
+                onClick={() => setShowLiveCheckIn(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#171717] border border-[#333] flex items-center justify-center text-[#F7F4EE] hover:text-[#B99A65] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="w-16 h-16 rounded-2xl bg-cyan-950/60 border border-cyan-500/50 flex items-center justify-center mx-auto text-cyan-300 shadow-xl">
+                <QrCode className="w-8 h-8 animate-pulse" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
+                  🔒 {isRtl ? 'خاصية الباقة الماسية (Diamond VIP)' : 'Diamond Package Feature'}
+                </span>
+                <h3 className="font-playfair text-2xl font-bold text-[#F7F4EE]">
+                  {isRtl ? 'ماسح كود הـ QR الفوري لاستقبال القاعة' : 'Instant Camera Gate QR Scanner'}
+                </h3>
+                <p className="text-xs text-[#8D8A84] leading-relaxed">
+                  {isRtl
+                    ? 'تتيح لك الباقة الماسية تزويد أمن القاعة أو المنظمين بماسح كاميرا تفاعلي يقرأ كود QR المطبوع على بطاقة الضيف لتأكيد دخوله ومنع التطفل مع نغمة صوتية فورية.'
+                    : 'The Diamond VIP package provides your hall security with a live camera QR scanner to verify guest entry passes with instant audio chimes.'}
+                </p>
+              </div>
+
+              <div className="bg-[#171717] border border-[#333] rounded-2xl p-4 text-xs text-right space-y-2 text-[#E9E1D5]">
+                <strong className="text-cyan-300 block font-bold">
+                  ✨ {isRtl ? 'شامل في الباقة الماسية:' : 'Diamond VIP Package Includes:'}
+                </strong>
+                <ul className="text-[11px] text-[#8D8A84] space-y-1 list-disc list-inside">
+                  <li>{isRtl ? 'كود QR دخول سريع لكل ضيف مع بطاقته' : 'Individual automated QR entry passes for every guest'}</li>
+                  <li>{isRtl ? 'كاميرا الماسح التفاعلية بوضع الحفل المباشر' : 'Live Camera Scanner mode for gatekeepers'}</li>
+                  <li>{isRtl ? 'مساعد ومنسق شخصي لتجهيز ورسم دعوتك خطوة بخطوة' : 'Dedicated concierge assistant for custom setup'}</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowLiveCheckIn(false)}
+                  className="flex-1 py-3 rounded-xl border border-[#333] text-xs font-semibold text-[#8D8A84] hover:text-[#F7F4EE] transition-colors cursor-pointer"
+                >
+                  {isRtl ? 'إغلاق' : 'Close'}
+                </button>
+                {onOpenPricing && (
+                  <button
+                    onClick={() => {
+                      setShowLiveCheckIn(false);
+                      onOpenPricing(invitation);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-cyan-600 text-white font-bold text-xs hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
+                  >
+                    <Crown className="w-4 h-4 text-amber-300" />
+                    <span>{isRtl ? 'الترقية للباقة الماسية' : 'Upgrade to Diamond'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
       )}
 
     </div>

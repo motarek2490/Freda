@@ -177,13 +177,15 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
   return (
     <>
       {/* Hidden Audio Player with resolved playable URL */}
-      <audio
-        ref={audioRef}
-        src={resolvedAudioUrl}
-        preload="none"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-      />
+      {resolvedAudioUrl ? (
+        <audio
+          ref={audioRef}
+          src={resolvedAudioUrl}
+          preload="none"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      ) : null}
 
       {/* Top Header Music Controller Button */}
       <div

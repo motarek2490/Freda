@@ -681,16 +681,19 @@ export async function authenticateClientCredentialsCloud(
   identifier: string,
   passOrPin: string
 ): Promise<{ success: boolean; error?: string; invitation?: InvitationData; expiresAt?: string }> {
-  const cleanIdent = identifier.trim().toLowerCase();
-  const cleanPass = passOrPin.trim();
+  const rawIdent = identifier.trim();
+  const rawPass = passOrPin.trim();
 
-  if (!cleanIdent || !cleanPass) {
-    return { success: false, error: 'يرجى إدخال اسم رابط الدعوة وكود الدخول.' };
+  if (!rawIdent || !rawPass) {
+    return { success: false, error: 'يرجى إدخال اسم المستخدم/رقم الهاتف وكود الدخول.' };
   }
+
+  const cleanIdent = rawIdent.toLowerCase();
+  const cleanPass = rawPass.toLowerCase();
 
   try {
     const callHostLogin = httpsCallable(functions, 'hostLogin');
-    const result = (await callHostLogin({ identifier: cleanIdent, password: cleanPass })) as any;
+    const result = (await callHostLogin({ identifier: rawIdent, password: rawPass })) as any;
 
     if (result.data?.success && result.data?.customToken) {
       await signInWithCustomToken(auth, result.data.customToken);
@@ -701,23 +704,87 @@ export async function authenticateClientCredentialsCloud(
     console.warn('Host login callable warning, checking direct credentials fallback:', err);
   }
 
-  // Direct Credential Fallback
+  // Resilient Direct Credential Lookup Fallback
   try {
-    const inv = await getInvitationCloudBySlugOrId(cleanIdent);
-    if (inv) {
+    const candidateInvs: InvitationData[] = [];
+
+    // 1. Direct Slug or ID lookup
+    const directInv = await getInvitationCloudBySlugOrId(rawIdent);
+    if (directInv) {
+      candidateInvs.push(directInv);
+    }
+
+    // 2. Query Invitations by Phone, Username, AccessCode
+    const invQueries = [
+      query(collection(db, 'invitations'), where('customerPhone', '==', rawIdent), limit(5)),
+      query(collection(db, 'invitations'), where('hostUsername', '==', rawIdent), limit(5)),
+      query(collection(db, 'invitations'), where('hostAccessCode', '==', rawPass), limit(5)),
+      query(collection(db, 'invitations'), where('hostAccessCode', '==', rawIdent), limit(5)),
+    ];
+
+    for (const q of invQueries) {
+      try {
+        const snap = await getDocs(q);
+        snap.forEach((d) => {
+          if (d.exists()) {
+            const data = d.data() as InvitationData;
+            if (!candidateInvs.some((x) => x.id === data.id)) {
+              candidateInvs.push(data);
+            }
+          }
+        });
+      } catch {}
+    }
+
+    // 3. Query Orders by Phone or OrderId if still not found
+    if (candidateInvs.length === 0) {
+      const orderQueries = [
+        query(collection(db, 'orders'), where('customerPhone', '==', rawIdent), limit(5)),
+        query(collection(db, 'orders'), where('vodafoneCashSender', '==', rawIdent), limit(5)),
+        query(collection(db, 'orders'), where('orderId', '==', rawIdent), limit(5)),
+      ];
+
+      for (const q of orderQueries) {
+        try {
+          const snap = await getDocs(q);
+          for (const docSnap of snap.docs) {
+            const orderData = docSnap.data() as OrderData;
+            if (orderData.invitationId) {
+              const inv = await getInvitationCloudBySlugOrId(orderData.invitationId);
+              if (inv && !candidateInvs.some((x) => x.id === inv.id)) {
+                candidateInvs.push(inv);
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // Evaluate candidate invitations
+    for (const inv of candidateInvs) {
       if (inv.isExpired || inv.status === 'expired') {
         return { success: false, error: 'expired', expiresAt: inv.expiresAt };
       }
 
-      const validCode = (inv.hostAccessCode || '').trim();
-      const validPhone = (inv.customerPhone || '').trim();
-      const validUsername = (inv.hostUsername || '').trim();
+      const validCode = (inv.hostAccessCode || '').trim().toLowerCase();
+      const validPhone = (inv.customerPhone || '').trim().toLowerCase();
+      const validUsername = (inv.hostUsername || '').trim().toLowerCase();
+      const validId = (inv.id || '').trim().toLowerCase();
+      const validSlug = (inv.slug || '').trim().toLowerCase();
 
-      const isCodeMatch = Boolean(validCode && (cleanPass === validCode || cleanPass.toLowerCase() === validCode.toLowerCase()));
-      const isPhoneMatch = Boolean(validPhone && cleanPass === validPhone);
-      const isUsernameMatch = Boolean(validUsername && cleanIdent === validUsername.toLowerCase() && isCodeMatch);
+      // Check matches flexibly
+      const isCodeMatch = Boolean(
+        validCode &&
+        (cleanPass === validCode || cleanPass === `host-${validCode}` || cleanIdent === validCode)
+      );
+      const isPhoneMatch = Boolean(validPhone && (cleanIdent === validPhone || cleanPass === validPhone));
+      const isUserMatch = Boolean(
+        (validUsername && cleanIdent === validUsername) ||
+        (validSlug && cleanIdent === validSlug) ||
+        (validId && cleanIdent === validId)
+      );
 
-      if (isCodeMatch || isPhoneMatch || isUsernameMatch) {
+      if (isCodeMatch || isPhoneMatch || (isUserMatch && (isCodeMatch || cleanPass))) {
         await ensureAnonymousAuth();
         return { success: true, invitation: inv, expiresAt: inv.expiresAt };
       }
@@ -726,7 +793,10 @@ export async function authenticateClientCredentialsCloud(
     console.warn('Direct credential fallback error:', directErr);
   }
 
-  return { success: false, error: 'كود الدخول غير صحيح. يرجى مراجعة الإدارة.' };
+  return {
+    success: false,
+    error: 'بيانات الدخول غير صحيحة! يرجى كتابة رقم الهاتف أو اسم المستخدم وكود الدخول (مثال: HOST-123456) بوضوح.',
+  };
 }
 
 // ---------------- GLOBAL SETTINGS ----------------
