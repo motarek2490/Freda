@@ -33,11 +33,11 @@ export default defineConfig(() => {
             },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
+              handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'google-fonts-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 30,
                   maxAgeSeconds: 365 * 24 * 60 * 60,
                 },
                 cacheableResponse: {
@@ -51,7 +51,7 @@ export default defineConfig(() => {
               options: {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: {
-                  maxEntries: 15,
+                  maxEntries: 120,
                   maxAgeSeconds: 365 * 24 * 60 * 60,
                 },
                 cacheableResponse: {
