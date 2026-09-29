@@ -17,6 +17,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { Language, MusicTrack } from '../types';
+import { auth } from '../lib/firebase';
 import {
   generateDualAudioPackage,
   getAudioFileDuration,
@@ -253,13 +254,15 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
           : 'Uploading audio to cloud storage...'
       );
 
-      // 2. Upload directly to Cloud Storage
+      // 2. Upload directly to Cloud Storage (Cloudflare R2)
       const songId = `song_${Date.now()}`;
       const { audioUrl, previewUrl } = await uploadSongPackageToStorage(
         dualPackage.fullBlob,
         dualPackage.fullBlob,
         trackName.trim(),
-        songId
+        songId,
+        isAdmin ? 'library' : 'users',
+        auth.currentUser?.uid
       );
 
       setStatusMessage(isRtl ? 'جاري حفظ بيانات المقطوعة في قاعدة البيانات...' : 'Saving metadata to database...');

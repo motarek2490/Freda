@@ -119,7 +119,7 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
     try {
       const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
       const trackId = `song_${Date.now()}`;
-      const cdnUrl = await uploadAudioFileToCloudStorage(file, cleanName, trackId);
+      const cdnUrl = await uploadAudioFileToCloudStorage(file, cleanName, trackId, 'library');
 
       if (cdnUrl) {
         const newTrack: MusicTrack = {

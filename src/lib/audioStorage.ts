@@ -1,8 +1,145 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth, ensureAnonymousAuth } from './firebase';
 import { getAudioFromIDB } from './audioDb';
 
 const MEMORY_CACHE = new Map<string, string>();
+
+/**
+ * Returns Worker origin for audio API calls in development / preview or relative path in production
+ */
+export function getAudioApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // In local dev or cloud preview iframe environments, point directly to the deployed Worker
+    if (host === 'localhost' || host === '127.0.0.1' || host.includes('run.app')) {
+      return 'https://farid.invitationes.workers.dev';
+    }
+  }
+  return '';
+}
+
+export interface R2AudioUploadOptions {
+  fileName?: string;
+  type?: 'library' | 'users';
+  userId?: string;
+  trackId?: string;
+}
+
+export interface R2AudioUploadResult {
+  key: string;
+  url: string;
+  publicUrl: string;
+  size: number;
+}
+
+/**
+ * Uploads an audio blob to Cloudflare R2 bucket via the Worker /api/audio/upload route.
+ * Verifies Firebase Auth ID token and admin/owner claim.
+ */
+export async function uploadAudioToR2(
+  blob: Blob,
+  options: R2AudioUploadOptions = {}
+): Promise<R2AudioUploadResult> {
+  await ensureAnonymousAuth().catch(() => {});
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Authentication required for audio upload');
+  }
+
+  const token = await currentUser.getIdToken();
+  const formData = new FormData();
+  const fileName = options.fileName || `${options.trackId || 'audio'}.mp3`;
+  formData.append('file', blob, fileName);
+  formData.append('type', options.type || 'library');
+  if (options.userId) {
+    formData.append('userId', options.userId);
+  }
+  if (options.trackId) {
+    formData.append('trackId', options.trackId);
+  } else if (options.fileName) {
+    formData.append('customId', options.fileName);
+  }
+
+  const baseUrl = getAudioApiBaseUrl();
+  const endpoint = `${baseUrl}/api/audio/upload`;
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let errMsg = `Upload failed with status ${res.status}`;
+    try {
+      const errJson = await res.json();
+      if (errJson.error) errMsg = errJson.error;
+    } catch {}
+    throw new Error(errMsg);
+  }
+
+  const result = await res.json();
+  const relativeUrl = result.url || `/${result.key}`;
+  const publicUrl = result.publicUrl || `https://farid.invitationes.workers.dev/${result.key}`;
+
+  // Cache in-memory
+  cacheInMemoryAudio(relativeUrl, relativeUrl);
+  cacheInMemoryAudio(publicUrl, publicUrl);
+  if (options.trackId) {
+    cacheInMemoryAudio(options.trackId, publicUrl);
+  }
+
+  return {
+    key: result.key,
+    url: relativeUrl,
+    publicUrl,
+    size: result.size || blob.size,
+  };
+}
+
+/**
+ * Deletes an audio object from Cloudflare R2 bucket via Worker DELETE /api/audio/{key}.
+ * Non-blocking safe: returns true/false without throwing.
+ */
+export async function deleteAudioFromR2(urlOrKey: string): Promise<boolean> {
+  if (!urlOrKey) return false;
+
+  // Extract pure R2 key from URL or path
+  let key = urlOrKey;
+  if (key.includes('/audio/')) {
+    key = key.substring(key.indexOf('/audio/') + 1); // e.g. "audio/library/song_123.mp3"
+  } else if (key.startsWith('/')) {
+    key = key.substring(1);
+  }
+
+  if (!key.startsWith('audio/')) {
+    key = `audio/${key}`;
+  }
+
+  try {
+    await ensureAnonymousAuth().catch(() => {});
+    const currentUser = auth.currentUser;
+    if (!currentUser) return false;
+
+    const token = await currentUser.getIdToken();
+    const baseUrl = getAudioApiBaseUrl();
+    const endpoint = `${baseUrl}/api/audio/${encodeURIComponent(key)}`;
+
+    const res = await fetch(endpoint, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return res.ok;
+  } catch (err) {
+    console.warn('Could not delete audio from R2:', err);
+    return false;
+  }
+}
 
 /**
  * Converts a Base64 data URL to a native Blob URL for ultra-fast audio decoding
@@ -99,6 +236,20 @@ export async function resolveAudioTrackUrl(urlOrRef?: string): Promise<string> {
   // 1. Check in-memory cache first
   if (MEMORY_CACHE.has(urlOrRef)) {
     return MEMORY_CACHE.get(urlOrRef)!;
+  }
+
+  // 0. Cloudflare R2 Audio paths (/audio/... or audio/...)
+  if (urlOrRef.startsWith('/audio/')) {
+    const baseUrl = getAudioApiBaseUrl();
+    const resolved = baseUrl ? `${baseUrl}${urlOrRef}` : urlOrRef;
+    MEMORY_CACHE.set(urlOrRef, resolved);
+    return resolved;
+  }
+  if (urlOrRef.startsWith('audio/')) {
+    const baseUrl = getAudioApiBaseUrl();
+    const resolved = baseUrl ? `${baseUrl}/${urlOrRef}` : `/${urlOrRef}`;
+    MEMORY_CACHE.set(urlOrRef, resolved);
+    return resolved;
   }
 
   // Direct local or root-relative path (e.g. /music/...)

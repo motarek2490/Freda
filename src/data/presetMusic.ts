@@ -26,7 +26,12 @@ import {
 } from 'firebase/storage';
 import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
 import { saveAudioToIDB, getAudioFromIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
-import { saveAudioToCloudFirestore, cacheInMemoryAudio } from '../lib/audioStorage';
+import {
+  saveAudioToCloudFirestore,
+  cacheInMemoryAudio,
+  uploadAudioToR2,
+  deleteAudioFromR2,
+} from '../lib/audioStorage';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
 
@@ -40,14 +45,16 @@ const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL to save Firestore reads
 let isStorageReachable: boolean | null = null;
 
 /**
- * Uploads audio to Firebase Storage, returning a permanent HTTPS download URL.
+ * Uploads audio to Cloudflare R2 via Worker /api/audio/upload, returning a permanent audio URL.
  * Automatically caches locally in IndexedDB and in-memory for instant playback.
  */
 export async function uploadSongPackageToStorage(
   fullBlob: Blob,
   _previewBlob: Blob,
   title: string,
-  customTrackId?: string
+  customTrackId?: string,
+  type: 'library' | 'users' = 'library',
+  userId?: string
 ): Promise<{ previewUrl: string; audioUrl: string }> {
   const timestamp = Date.now();
   const trackId = customTrackId || `song_${timestamp}`;
@@ -60,59 +67,31 @@ export async function uploadSongPackageToStorage(
     ? await blobToDataUrl(fullBlob)
     : (typeof URL !== 'undefined' ? URL.createObjectURL(fullBlob) : await blobToDataUrl(fullBlob));
 
-  // 2. Upload to Firebase Storage with retry & timeout guard
+  // 2. Upload directly to Cloudflare R2 bucket via Worker /api/audio/upload
   try {
-    await ensureAnonymousAuth().catch(() => {});
-    let fileRef = storageRef(storage, `library/audio/${fileName}`);
-    const contentType = (fullBlob.type && fullBlob.type.startsWith('audio/')) ? fullBlob.type : 'audio/mpeg';
+    const r2Result = await uploadAudioToR2(fullBlob, {
+      fileName,
+      trackId,
+      type,
+      userId,
+    });
 
-    try {
-      await Promise.race([
-        uploadBytes(fileRef, fullBlob, {
-          contentType,
-          customMetadata: { title: title || 'FRIDA Audio Track' },
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 60000)),
-      ]);
-    } catch (firstErr) {
-      console.warn('Initial storage upload to library/audio failed, attempting fallback path:', firstErr);
-      fileRef = storageRef(storage, `audio/${fileName}`);
-      await Promise.race([
-        uploadBytes(fileRef, fullBlob, {
-          contentType,
-          customMetadata: { title: title || 'FRIDA Audio Track' },
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload fallback timeout')), 60000)),
-      ]);
-    }
-
-    const downloadUrl = await getDownloadURL(fileRef);
-    cacheInMemoryAudio(downloadUrl, localAudioUrl);
-    cacheInMemoryAudio(trackId, downloadUrl);
+    const audioUrl = r2Result.url;
+    cacheInMemoryAudio(audioUrl, localAudioUrl);
+    cacheInMemoryAudio(r2Result.publicUrl, localAudioUrl);
+    cacheInMemoryAudio(trackId, audioUrl);
 
     return {
-      audioUrl: downloadUrl,
-      previewUrl: downloadUrl,
+      audioUrl,
+      previewUrl: audioUrl,
     };
-  } catch (storageErr) {
-    console.warn('Firebase Storage upload failed, saving to Cloud Firestore storage:', storageErr);
-    
-    try {
-      const firestoreAudioRef = await saveAudioToCloudFirestore(fullBlob, trackId);
-      cacheInMemoryAudio(firestoreAudioRef, localAudioUrl);
-      cacheInMemoryAudio(trackId, firestoreAudioRef);
-      return {
-        audioUrl: firestoreAudioRef,
-        previewUrl: firestoreAudioRef,
-      };
-    } catch (fsErr) {
-      console.error('Firestore audio chunking save error:', fsErr);
-      cacheInMemoryAudio(trackId, localAudioUrl);
-      return {
-        audioUrl: localAudioUrl,
-        previewUrl: localAudioUrl,
-      };
-    }
+  } catch (r2Err) {
+    console.warn('Cloudflare R2 audio upload failed, falling back to local/cached playback:', r2Err);
+    cacheInMemoryAudio(trackId, localAudioUrl);
+    return {
+      audioUrl: localAudioUrl,
+      previewUrl: localAudioUrl,
+    };
   }
 }
 
@@ -120,12 +99,14 @@ export async function uploadSongPackageToStorage(
 export const uploadSongPackageToR2 = uploadSongPackageToStorage;
 
 /**
- * Uploads single audio blob to Firebase Storage with timeout & fallback
+ * Uploads single audio blob to Cloudflare R2 via Worker /api/audio/upload
  */
 export async function uploadAudioFileToCloudStorage(
   blob: Blob,
   label: string,
-  customTrackId?: string
+  customTrackId?: string,
+  type: 'library' | 'users' = 'library',
+  userId?: string
 ): Promise<string> {
   const timestamp = Date.now();
   const trackId = customTrackId || `song_${timestamp}`;
@@ -141,28 +122,21 @@ export async function uploadAudioFileToCloudStorage(
   }
 
   try {
-    await ensureAnonymousAuth().catch(() => {});
-    const fileRef = storageRef(storage, `library/audio/${fileName}`);
-    await Promise.race([
-      uploadBytes(fileRef, blob, { contentType: blob.type || 'audio/mpeg' }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 60000)),
-    ]);
+    const r2Result = await uploadAudioToR2(blob, {
+      fileName,
+      trackId,
+      type,
+      userId,
+    });
 
-    const downloadUrl = await getDownloadURL(fileRef);
-    cacheInMemoryAudio(downloadUrl, localUrl);
-    cacheInMemoryAudio(trackId, downloadUrl);
-    return downloadUrl;
+    const audioUrl = r2Result.url;
+    cacheInMemoryAudio(audioUrl, localUrl);
+    cacheInMemoryAudio(r2Result.publicUrl, localUrl);
+    cacheInMemoryAudio(trackId, audioUrl);
+    return audioUrl;
   } catch (e) {
-    console.warn('Firebase Storage upload failed, saving to Cloud Firestore storage:', e);
-    try {
-      const firestoreAudioRef = await saveAudioToCloudFirestore(blob, trackId);
-      cacheInMemoryAudio(firestoreAudioRef, localUrl);
-      cacheInMemoryAudio(trackId, firestoreAudioRef);
-      return firestoreAudioRef;
-    } catch (fsErr) {
-      console.error('Firestore audio chunking save error:', fsErr);
-      return localUrl;
-    }
+    console.warn('Cloudflare R2 audio upload failed, using local fallback:', e);
+    return localUrl;
   }
 }
 
@@ -296,25 +270,25 @@ export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise
     );
     deleteCustomUploadedTrack(trackIdOrUrl);
 
-    // Fire-and-forget background cleanup for Firebase Storage (never blocks or delays deletion)
-    const deleteIfStorageUrl = (url?: string) => {
+    // Fire-and-forget background removal from Cloudflare R2 & legacy storage (never blocks UI)
+    const deleteAudioFileBackground = (url?: string) => {
       if (!url) return;
+      deleteAudioFromR2(url).catch(() => {});
       if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
-        Promise.race([
-          deleteObject(storageRef(storage, url)),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800))
-        ]).catch(() => {});
+        deleteObject(storageRef(storage, url)).catch(() => {});
       }
     };
 
     if (existing) {
-      deleteIfStorageUrl(existing.previewUrl);
+      deleteAudioFileBackground(existing.previewUrl);
       if (existing.audioUrl && existing.audioUrl !== existing.previewUrl) {
-        deleteIfStorageUrl(existing.audioUrl);
+        deleteAudioFileBackground(existing.audioUrl);
       }
       if (existing.url && existing.url !== existing.audioUrl && existing.url !== existing.previewUrl) {
-        deleteIfStorageUrl(existing.url);
+        deleteAudioFileBackground(existing.url);
       }
+    } else {
+      deleteAudioFileBackground(trackIdOrUrl);
     }
 
     if (existing?.id || trackIdOrUrl) {
