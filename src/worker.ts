@@ -258,7 +258,7 @@ const TEST_JWK: JwkKey = {
   alg: 'RS256',
   use: 'sig',
   kid: 'frida-test-admin-key',
-  n: 'x7YH54TPI9mX2VByBCcNfLiK_GsBr_Jjul5q5z1gn4Tt2DMQ4IVXORdGsk7Qq7A0u9Ui3_pZLL3cQ-H_MCn2wT31Uw31JuWOvuKDAgPhNCI4geZDdoem-MSloewJATWoFKqCM-fv1Pyp4yTqYAiHupOJ6zzPJzMw-Gey3lMHQ-z2gwCk8ysLE3UlJXu98zGSANbSJCd3te0eGR1Ho2zlJzbMJp7w4eb9JJqC-gcKtaYItezm0sz9CFvaeg5Fot2hC_dDAladbtRubDkpaI7xWSC49pAzajBxuFyVmpi3THmTMsJD8hB5OAfgygXg9OlR_M0hR1sQ0qMyF0qakn3ouQ',
+  n: 'uiM3L8EkgROq9WqG9NzGlIHCA6izYtmAHTVBSMQKUFe0gKLWGkv0b2Kn1CFvv2dVLGQLP63bem_qplnMzaJKUrN5BaI20L2_v2UPZNKWFHXpGrbN8YDISxbV0o6Cl_2BNm8w2xTUy9mqpovPshc5J6tQDu50cDKoJGBTtMlY0_QPf_mlTalBYvLKC6F5BhV8mpfyT6gAtTHrdRmBB_aVX7RXo2kWLFj2kLDwheHjzHcqQbKx3ox0hqzX5nC-O3GmCkJ_zGuIfdswPYgs9s4cf5rYF2jzVJGYTOnR0RRlFf8RR7gyrNFh0oGaznJ68KG_icze2B7DazZoTsVNzs6Dpw',
   e: 'AQAB',
 };
 

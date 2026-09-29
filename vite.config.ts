@@ -18,7 +18,7 @@ export default defineConfig(() => {
           maximumFileSizeToCacheInBytes: 5000000,
           cleanupOutdatedCaches: true,
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/i\//, /^\/portal\//, /^\/api\//],
+          navigateFallbackDenylist: [/^\/i\//, /^\/portal\//, /^\/api\//, /^\/audio\//],
           runtimeCaching: [
             {
               urlPattern: ({ url }) => url.pathname.startsWith('/images/'),
