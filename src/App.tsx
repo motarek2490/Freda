@@ -582,8 +582,8 @@ export default function App() {
           onNavigateSection={handleNavigateSection}
           onOpenAdmin={() => setShowAdminModal(true)}
           onOpenTrackOrder={() => setShowOrderStatusModal(true)}
-          bgTrackUrl={appAdminSettings?.defaultDemoTrackUrl}
-          bgTrackName={appAdminSettings?.defaultDemoTrackName}
+          bgTrackUrl={appAdminSettings?.websiteBackgroundMusicUrl || appAdminSettings?.defaultDemoTrackUrl}
+          bgTrackName={appAdminSettings?.websiteBackgroundMusicName || appAdminSettings?.defaultDemoTrackName}
         />
         <OccasionLanding
           occasion={activeOccasion}
@@ -625,8 +625,8 @@ export default function App() {
         onNavigateSection={handleNavigateSection}
         onOpenAdmin={() => setShowAdminModal(true)}
         onOpenTrackOrder={() => setShowOrderStatusModal(true)}
-        bgTrackUrl={appAdminSettings?.defaultDemoTrackUrl}
-        bgTrackName={appAdminSettings?.defaultDemoTrackName}
+        bgTrackUrl={appAdminSettings?.websiteBackgroundMusicUrl || appAdminSettings?.defaultDemoTrackUrl}
+        bgTrackName={appAdminSettings?.websiteBackgroundMusicName || appAdminSettings?.defaultDemoTrackName}
         isAudioSuppressed={
           showBuilderModal ||
           showAdminModal ||

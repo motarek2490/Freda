@@ -106,7 +106,8 @@ export async function uploadAudioFileToCloudStorage(
   label: string,
   customTrackId?: string,
   type: 'library' | 'users' = 'library',
-  userId?: string
+  userId?: string,
+  onProgress?: (percent: number, loadedBytes: number, totalBytes: number) => void
 ): Promise<string> {
   const timestamp = Date.now();
   const trackId = customTrackId || `song_${timestamp}`;
@@ -127,6 +128,7 @@ export async function uploadAudioFileToCloudStorage(
       trackId,
       type,
       userId,
+      onProgress,
     });
 
     const audioUrl = r2Result.url;

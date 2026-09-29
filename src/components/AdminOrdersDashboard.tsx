@@ -293,11 +293,23 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
   };
 
   const handleSetDefaultDemoTrack = async (url: string, name: string) => {
-    if (!adminSettings) return;
+    const baseSettings = adminSettings || DEFAULT_ADMIN_SETTINGS;
     const updated: AdminSettings = {
-      ...adminSettings,
+      ...baseSettings,
       defaultDemoTrackUrl: url,
       defaultDemoTrackName: name,
+    };
+    await saveAdminSettingsCloud(updated);
+    setAdminSettings(updated);
+    if (onSettingsUpdated) onSettingsUpdated(updated);
+  };
+
+  const handleSetWebsiteBgTrack = async (url: string, name: string) => {
+    const baseSettings = adminSettings || DEFAULT_ADMIN_SETTINGS;
+    const updated: AdminSettings = {
+      ...baseSettings,
+      websiteBackgroundMusicUrl: url,
+      websiteBackgroundMusicName: name,
     };
     await saveAdminSettingsCloud(updated);
     setAdminSettings(updated);
@@ -396,6 +408,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
             onSaveTrack={handleSaveTrack}
             onDeleteTrack={handleDeleteTrack}
             onSetDefaultDemoTrack={handleSetDefaultDemoTrack}
+            onSetWebsiteBgTrack={handleSetWebsiteBgTrack}
           />
         )}
 

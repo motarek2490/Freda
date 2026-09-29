@@ -36,6 +36,9 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
     diamondPriceEGP: adminSettings?.diamondPriceEGP || DEFAULT_PLAN_PRICES.diamond,
     defaultDemoTrackUrl: adminSettings?.defaultDemoTrackUrl || '',
     defaultDemoTrackName: adminSettings?.defaultDemoTrackName || '',
+    websiteBackgroundMusicUrl: adminSettings?.websiteBackgroundMusicUrl || '',
+    websiteBackgroundMusicName: adminSettings?.websiteBackgroundMusicName || '',
+    websiteBackgroundMusicAutoplay: adminSettings?.websiteBackgroundMusicAutoplay ?? true,
     siteTitle: adminSettings?.siteTitle || 'FRIDA (فريدا) — Premium Digital Invitation Platform',
     metaDescription:
       adminSettings?.metaDescription ||
@@ -197,6 +200,99 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
               <span className="text-xs text-[#8D8A84] font-bold">EGP</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Website Background & Demo Music Settings */}
+      <div className="bg-[#1F1E1B] rounded-3xl p-6 border border-[#2E2C28] space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#B99A65]/20 border border-[#B99A65] flex items-center justify-center text-[#B99A65]">
+            <Music className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-playfair text-base font-bold text-[#F7F4EE]">
+              {isRtl ? 'إعدادات موسيقى الموقع والدعوات التجريبية' : 'Website Background & Demo Music Settings'}
+            </h4>
+            <p className="text-xs text-[#8D8A84]">
+              {isRtl
+                ? 'تعيين المعزوفة الصوتية التي تعمل في خلفية الموقع العام والمعزوفة الافتراضية للدعوات التجريبية.'
+                : 'Configure background ambient music for the entire website and the default track for demo previews.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          {/* Website Background Music URL */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#F7F4EE]">
+              {isRtl ? 'رابط موسيقى خلفية الموقع (Website BG Music):' : 'Website BG Music URL:'}
+            </label>
+            <input
+              type="text"
+              placeholder="/audio/library/... or https://..."
+              value={form.websiteBackgroundMusicUrl || ''}
+              onChange={(e) => setForm({ ...form, websiteBackgroundMusicUrl: e.target.value })}
+              className="w-full bg-[#171717] border border-[#333] rounded-xl px-3.5 py-2.5 text-[#F7F4EE] font-mono focus:outline-none focus:border-[#B99A65]"
+            />
+          </div>
+
+          {/* Website Background Music Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#F7F4EE]">
+              {isRtl ? 'اسم معزوفة خلفية الموقع:' : 'Website BG Music Name:'}
+            </label>
+            <input
+              type="text"
+              placeholder={isRtl ? 'معزوفة فريدا الملكية' : 'FRIDA Royal Ambient'}
+              value={form.websiteBackgroundMusicName || ''}
+              onChange={(e) => setForm({ ...form, websiteBackgroundMusicName: e.target.value })}
+              className="w-full bg-[#171717] border border-[#333] rounded-xl px-3.5 py-2.5 text-[#F7F4EE] focus:outline-none focus:border-[#B99A65]"
+            />
+          </div>
+
+          {/* Default Demo Track URL */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#B99A65]">
+              {isRtl ? 'رابط معزوفة الديمو الافتراضية (Default Demo Track):' : 'Default Demo Track URL:'}
+            </label>
+            <input
+              type="text"
+              placeholder="/audio/library/... or https://..."
+              value={form.defaultDemoTrackUrl || ''}
+              onChange={(e) => setForm({ ...form, defaultDemoTrackUrl: e.target.value })}
+              className="w-full bg-[#171717] border border-[#B99A65]/40 rounded-xl px-3.5 py-2.5 text-[#F7F4EE] font-mono focus:outline-none focus:border-[#B99A65]"
+            />
+          </div>
+
+          {/* Default Demo Track Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#B99A65]">
+              {isRtl ? 'اسم معزوفة الديمو الافتراضية:' : 'Default Demo Track Name:'}
+            </label>
+            <input
+              type="text"
+              placeholder={isRtl ? 'معزوفة زفاف فريدا الملكية' : 'FRIDA Royal Waltz'}
+              value={form.defaultDemoTrackName || ''}
+              onChange={(e) => setForm({ ...form, defaultDemoTrackName: e.target.value })}
+              className="w-full bg-[#171717] border border-[#B99A65]/40 rounded-xl px-3.5 py-2.5 text-[#F7F4EE] focus:outline-none focus:border-[#B99A65]"
+            />
+          </div>
+        </div>
+
+        {/* Autoplay Toggle */}
+        <div className="flex items-center gap-3 bg-[#171717] p-3.5 rounded-2xl border border-[#333]">
+          <input
+            type="checkbox"
+            id="bgMusicAutoplay"
+            checked={form.websiteBackgroundMusicAutoplay ?? true}
+            onChange={(e) => setForm({ ...form, websiteBackgroundMusicAutoplay: e.target.checked })}
+            className="w-4 h-4 rounded text-[#B99A65] focus:ring-[#B99A65] bg-[#1F1E1B] border-[#444] cursor-pointer"
+          />
+          <label htmlFor="bgMusicAutoplay" className="text-xs text-[#F7F4EE] font-medium cursor-pointer">
+            {isRtl
+              ? 'تشغيل موسيقى الموقع تلقائياً عند تفاعل الزائر مع الصفحة (Autoplay with User Gesture)'
+              : 'Enable automatic background music playback upon user first interaction'}
+          </label>
         </div>
       </div>
 

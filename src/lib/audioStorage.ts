@@ -23,6 +23,7 @@ export interface R2AudioUploadOptions {
   type?: 'library' | 'users';
   userId?: string;
   trackId?: string;
+  onProgress?: (percent: number, loadedBytes: number, totalBytes: number) => void;
 }
 
 export interface R2AudioUploadResult {
@@ -35,6 +36,7 @@ export interface R2AudioUploadResult {
 /**
  * Uploads an audio blob to Cloudflare R2 bucket via the Worker /api/audio/upload route.
  * Verifies Firebase Auth ID token and admin/owner claim.
+ * Supports real-time upload progress tracking via onProgress callback.
  */
 export async function uploadAudioToR2(
   blob: Blob,
@@ -63,24 +65,76 @@ export async function uploadAudioToR2(
   const baseUrl = getAudioApiBaseUrl();
   const endpoint = `${baseUrl}/api/audio/upload`;
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
+  // Use XMLHttpRequest when available in browser for real byte-by-byte progress tracking
+  const result = await new Promise<any>((resolve, reject) => {
+    if (typeof XMLHttpRequest !== 'undefined') {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', endpoint);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+      if (options.onProgress) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+            options.onProgress?.(percent, event.loaded, event.total);
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            options.onProgress?.(100, blob.size, blob.size);
+            resolve(json);
+          } catch (e) {
+            reject(new Error('Invalid JSON response from audio upload server'));
+          }
+        } else {
+          let errMsg = `Upload failed with status ${xhr.status}`;
+          try {
+            const errJson = JSON.parse(xhr.responseText);
+            if (errJson.error) errMsg = errJson.error;
+          } catch {}
+          reject(new Error(errMsg));
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('Network error during audio upload'));
+      };
+
+      xhr.ontimeout = () => {
+        reject(new Error('Audio upload timed out'));
+      };
+
+      xhr.send(formData);
+    } else {
+      // Fallback for non-DOM environments
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            let errMsg = `Upload failed with status ${res.status}`;
+            try {
+              const errJson = await res.json();
+              if (errJson.error) errMsg = errJson.error;
+            } catch {}
+            throw new Error(errMsg);
+          }
+          return res.json();
+        })
+        .then((json) => {
+          options.onProgress?.(100, blob.size, blob.size);
+          resolve(json);
+        })
+        .catch(reject);
+    }
   });
 
-  if (!res.ok) {
-    let errMsg = `Upload failed with status ${res.status}`;
-    try {
-      const errJson = await res.json();
-      if (errJson.error) errMsg = errJson.error;
-    } catch {}
-    throw new Error(errMsg);
-  }
-
-  const result = await res.json();
   const relativeUrl = result.url || `/${result.key}`;
   const publicUrl = result.publicUrl || `https://farid.invitationes.workers.dev/${result.key}`;
 

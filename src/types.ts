@@ -262,6 +262,9 @@ export interface AdminSettings {
   diamondPriceEGP: number;
   defaultDemoTrackUrl?: string;
   defaultDemoTrackName?: string;
+  websiteBackgroundMusicUrl?: string;
+  websiteBackgroundMusicName?: string;
+  websiteBackgroundMusicAutoplay?: boolean;
   hiddenTrackIds?: string[];
   siteTitle?: string;
   metaDescription?: string;

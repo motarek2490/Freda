@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { InvitationData, Language, RSVPResponse, GuestWish, TemplateLayoutType, PaymentAccountType } from '../types';
 import { saveRSVP } from '../lib/storage';
-import { saveWishCloud } from '../lib/firestoreService';
+import { saveWishCloud, subscribeAdminSettingsCloud } from '../lib/firestoreService';
 import { resolveAudioTrackUrl } from '../lib/audioStorage';
 import { useTranslation } from '../data/translations';
 import { trackRSVPSubmitted } from '../lib/analytics';
@@ -147,10 +147,6 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   );
   const [musicToastMessage, setMusicToastMessage] = useState<string | null>(null);
 
-  // Synchronize invitation eventDetails with selected music
-  invitation.eventDetails.musicTrackUrl = activeMusicUrl;
-  invitation.eventDetails.musicTrackName = activeMusicName;
-
   // Determine if this is a demo or preview invitation
   const isDemoInvitation =
     !isStandaloneView ||
@@ -160,6 +156,23 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     Boolean(invitation.slug?.startsWith('demo-')) ||
     invitation.hostAccessCode === 'HOST-DEMO' ||
     invitation.hostAccessCode === 'HOST-PREVIEW';
+
+  // Synchronize with Admin Default Demo Track for demo invitations and invitations without custom tracks
+  useEffect(() => {
+    const unsub = subscribeAdminSettingsCloud((settings) => {
+      if (settings?.defaultDemoTrackUrl) {
+        if (isDemoInvitation || !invitation.eventDetails.musicTrackUrl) {
+          setActiveMusicUrl((current) => current || settings.defaultDemoTrackUrl!);
+          setActiveMusicName((current) => (current === (isRtl ? 'معزوفة زفاف فريدا الملكية' : 'FRIDA Royal Waltz') ? (settings.defaultDemoTrackName || current) : current));
+        }
+      }
+    });
+    return () => unsub();
+  }, [isDemoInvitation, invitation.eventDetails.musicTrackUrl, isRtl]);
+
+  // Synchronize invitation eventDetails with selected music
+  invitation.eventDetails.musicTrackUrl = activeMusicUrl;
+  invitation.eventDetails.musicTrackName = activeMusicName;
 
   // Auto-dismiss music toast
   useEffect(() => {
@@ -297,6 +310,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
       createdAudio = new Audio(playableUrl);
       createdAudio.preload = 'auto';
       createdAudio.loop = true;
+      createdAudio.volume = 0.45;
       setAudioRef(createdAudio);
 
       if (envelopeOpened) {
@@ -329,6 +343,30 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
       audioRef.pause();
     }
   }, [envelopeOpened, isPlayingMusic, audioRef]);
+
+  // Universal first user interaction gesture listener to smoothly start audio on strict mobile browsers
+  useEffect(() => {
+    const handleFirstUserGesture = () => {
+      if (audioRef && (envelopeOpened || !invitation.layoutType || invitation.layoutType === 'minimalist') && audioRef.paused) {
+        audioRef
+          .play()
+          .then(() => setIsPlayingMusic(true))
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener('click', handleFirstUserGesture, { once: true, passive: true });
+    window.addEventListener('touchstart', handleFirstUserGesture, { once: true, passive: true });
+    window.addEventListener('scroll', handleFirstUserGesture, { once: true, passive: true });
+    window.addEventListener('keydown', handleFirstUserGesture, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstUserGesture);
+      window.removeEventListener('touchstart', handleFirstUserGesture);
+      window.removeEventListener('scroll', handleFirstUserGesture);
+      window.removeEventListener('keydown', handleFirstUserGesture);
+    };
+  }, [audioRef, envelopeOpened, invitation.layoutType]);
 
   // Ensure the page always starts at the very top (scrollTop = 0) upon opening
   useEffect(() => {
@@ -711,7 +749,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
           )}
 
           {/* Music Audio Control Button */}
-          {details.musicTrackUrl && (
+          {(activeMusicUrl || details.musicTrackUrl) && (
             <button
               onClick={toggleMusic}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#171717]/80 backdrop-blur-md border border-[#B99A65]/40 text-xs font-medium text-[#F7F4EE] hover:border-[#B99A65] transition-all cursor-pointer shadow-lg"
