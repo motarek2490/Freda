@@ -807,17 +807,27 @@ export async function getWebsiteReviewsCloud(): Promise<WebsiteReview[]> {
   }
 }
 
-export function subscribeWebsiteReviewsCloud(callback: (reviews: WebsiteReview[]) => void): () => void {
+export function subscribeWebsiteReviewsCloud(callback: (reviews: WebsiteReview[]) => void, approvedOnly = true): () => void {
   try {
-    const q = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(100));
+    const coll = collection(db, 'reviews');
+    // Non-admin guests can only read approved reviews per Firestore security rules
+    const q = approvedOnly
+      ? query(coll, where('approved', '==', true), limit(60))
+      : query(coll, limit(100));
+
     return onSnapshot(
       q,
       (snap) => {
         const list: WebsiteReview[] = [];
         snap.forEach((d) => list.push(d.data() as WebsiteReview));
+        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         callback(list);
       },
       (err) => {
+        // Fallback to approved reviews if permission-denied occurred
+        if (!approvedOnly && (err as any)?.code === 'permission-denied') {
+          return subscribeWebsiteReviewsCloud(callback, true);
+        }
         console.warn('Reviews listener error:', err);
       }
     );
@@ -828,13 +838,13 @@ export function subscribeWebsiteReviewsCloud(callback: (reviews: WebsiteReview[]
 
 export async function getAllReviewsAdminCloud(): Promise<WebsiteReview[]> {
   try {
-    const q = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(100));
+    const q = query(collection(db, 'reviews'), limit(100));
     const snap = await getDocs(q);
     const list: WebsiteReview[] = [];
     snap.forEach((d) => list.push(d.data() as WebsiteReview));
-    return list;
+    return list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   } catch {
-    return [];
+    return getWebsiteReviewsCloud();
   }
 }
 

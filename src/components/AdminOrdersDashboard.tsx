@@ -132,7 +132,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     // 5. Reviews
     const unsubReviews = subscribeWebsiteReviewsCloud((res) => {
       if (res) setReviews(res);
-    });
+    }, false);
 
     // 6. Music Library
     const unsubMusic = subscribeCloudMusicLibrary(() => {

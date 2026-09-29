@@ -312,15 +312,16 @@ service cloud.firestore {
         request.resource.data.rating is number &&
         request.resource.data.rating >= 1 &&
         request.resource.data.rating <= 5 &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() >= 2 &&
-        request.resource.data.name.size() <= 100 &&
+        (
+          (request.resource.data.keys().contains('customerName') && request.resource.data.customerName is string && request.resource.data.customerName.size() >= 2 && request.resource.data.customerName.size() <= 100) ||
+          (request.resource.data.keys().contains('name') && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100)
+        ) &&
         request.resource.data.comment is string &&
         request.resource.data.comment.size() >= 3 &&
         request.resource.data.comment.size() <= 800 &&
         request.resource.data.keys().hasOnly([
-          'id', 'name', 'rating', 'comment', 'approved', 'createdAt',
-          'templateId', 'avatarUrl', 'role'
+          'id', 'name', 'customerName', 'rating', 'comment', 'approved', 'createdAt',
+          'templateId', 'avatarUrl', 'role', 'eventType', 'designTitle', 'invitationTitle'
         ]);
       allow update, delete: if isAdmin();
     }
