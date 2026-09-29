@@ -705,13 +705,19 @@ export async function authenticateClientCredentialsCloud(
   try {
     const inv = await getInvitationCloudBySlugOrId(cleanIdent);
     if (inv) {
-      const validCode = inv.hostAccessCode;
-      if (
-        (validCode && cleanPass === validCode) ||
-        cleanPass === '2026' ||
-        cleanPass === 'admin2026' ||
-        cleanPass === 'farida2026'
-      ) {
+      if (inv.isExpired || inv.status === 'expired') {
+        return { success: false, error: 'expired', expiresAt: inv.expiresAt };
+      }
+
+      const validCode = (inv.hostAccessCode || '').trim();
+      const validPhone = (inv.customerPhone || '').trim();
+      const validUsername = (inv.hostUsername || '').trim();
+
+      const isCodeMatch = Boolean(validCode && (cleanPass === validCode || cleanPass.toLowerCase() === validCode.toLowerCase()));
+      const isPhoneMatch = Boolean(validPhone && cleanPass === validPhone);
+      const isUsernameMatch = Boolean(validUsername && cleanIdent === validUsername.toLowerCase() && isCodeMatch);
+
+      if (isCodeMatch || isPhoneMatch || isUsernameMatch) {
         await ensureAnonymousAuth();
         return { success: true, invitation: inv, expiresAt: inv.expiresAt };
       }

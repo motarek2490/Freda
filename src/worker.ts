@@ -41,7 +41,7 @@ function getContentSecurityPolicy(siteUrl: string): string {
     "font-src 'self' data: https://fonts.gstatic.com",
     `img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleusercontent.com https://images.unsplash.com https://www.facebook.com https://www.google-analytics.com https://${host}`,
     `media-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://${host}`,
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://recaptchaenterprise.googleapis.com wss://*.firebaseio.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://graph.facebook.com",
+    "connect-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://recaptchaenterprise.googleapis.com wss://*.firebaseio.com https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://graph.facebook.com",
     "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://www.google.com/recaptcha/ https://recaptchaenterprise.googleapis.com",
     "object-src 'none'",
     "base-uri 'self'",

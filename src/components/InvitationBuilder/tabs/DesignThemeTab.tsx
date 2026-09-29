@@ -23,14 +23,33 @@ const COLOR_PRESETS = [
   { name: 'Pearl Minimal', primary: '#78716C', secondary: '#F5F5F4', accent: '#292524', background: '#FAFAF9' },
 ];
 
-const FONT_OPTIONS = [
-  { label: 'Playfair Display (ملكي كلاسيكي)', value: 'Playfair Display' },
-  { label: 'Amiri (خط أميري عربي فاخر)', value: 'Amiri' },
-  { label: 'Cinzel (أنيق ورسمي)', value: 'Cinzel' },
-  { label: 'Cairo (عصري ومقروء)', value: 'Cairo' },
-  { label: 'Marcellus (روماني فخم)', value: 'Marcellus' },
-  { label: 'Great Vibes (مخطوطة يدوية)', value: 'Great Vibes' },
+const ARABIC_FONTS = [
+  { label: 'Amiri (أميري عثماني فاخر)', value: 'Amiri', preview: 'ألف ليلة وليلة - دعوة ملكية' },
+  { label: 'El Messiri (المسيري ناعم وأنيق)', value: 'El Messiri', preview: 'حفل زفاف مبارك وميمون' },
+  { label: 'Reem Kufi (ريم كوفي هندسي راقٍ)', value: 'Reem Kufi', preview: 'ليلة العمر والبهجة والسرور' },
+  { label: 'Tajawal (تجوال عصري وحديث)', value: 'Tajawal', preview: 'يشرفنا حضوركم ومشاركتنا' },
+  { label: 'Cairo (كايرو واضح ومميز)', value: 'Cairo', preview: 'فرحتنا تكتمل بوجودكم' },
+  { label: 'Noto Kufi Arabic (نوتو كوفي رسمي)', value: 'Noto Kufi Arabic', preview: 'أجمل ليالي الفرح والسرور' },
+  { label: 'Lateef (لطيف رشيق وانسيابي)', value: 'Lateef', preview: 'لحظات استثنائية لا تُنسى' },
+  { label: 'Ruwudu (رودو نسخي فخم)', value: 'Ruwudu', preview: 'أهلاً وسهلاً بضيوفنا الكرام' },
+  { label: 'Beiruti (بيروتي لمسة عريقة)', value: 'Beiruti', preview: 'موعدنا في ليلة الأحلام' },
+  { label: 'Zain (زين جذاب وممتلئ)', value: 'Zain', preview: 'طابت لياليكم بكل خير' },
 ];
+
+const ENGLISH_FONTS = [
+  { label: 'Cormorant Garamond (Royal Aristocratic)', value: 'Cormorant Garamond', preview: 'Together with their families' },
+  { label: 'Playfair Display (Classic High-End)', value: 'Playfair Display', preview: 'Save the Date for Our Wedding' },
+  { label: 'Great Vibes (Romantic Script Calligraphy)', value: 'Great Vibes', preview: 'Forever & Always in Love' },
+  { label: 'Bodoni Moda (Couture & High Fashion)', value: 'Bodoni Moda', preview: 'An Evening of Luxury' },
+  { label: 'Cinzel (Majestic Roman Carving)', value: 'Cinzel', preview: 'The Royal Wedding Gala' },
+  { label: 'Marcellus (Athenian Elegance)', value: 'Marcellus', preview: 'Honored to Invite You' },
+  { label: 'Italiana (Ultra-Refined Milanese)', value: 'Italiana', preview: 'A Grand Celebration of Love' },
+  { label: 'Montserrat (Modern Editorial Sans)', value: 'Montserrat', preview: 'Celebrate with Us' },
+  { label: 'Lora (Warm Literary Romance)', value: 'Lora', preview: 'Request the Pleasure of Your Company' },
+  { label: 'Dancing Script (Playful & Joyful Flow)', value: 'Dancing Script', preview: 'Join Us for a Magical Night' },
+];
+
+const FONT_OPTIONS = [...ARABIC_FONTS, ...ENGLISH_FONTS];
 
 export const DesignThemeTab: React.FC<DesignThemeTabProps> = ({
   currentLang,
@@ -45,6 +64,7 @@ export const DesignThemeTab: React.FC<DesignThemeTabProps> = ({
   const isRtl = currentLang === 'ar';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [fontLanguageTab, setFontLanguageTab] = useState<'ar' | 'en'>(isRtl ? 'ar' : 'en');
 
   const handleMobileCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,28 +201,75 @@ export const DesignThemeTab: React.FC<DesignThemeTabProps> = ({
 
       {/* Typography */}
       <div className="space-y-3">
-        <label className="text-xs font-bold text-[#F7F4EE] flex items-center gap-1.5">
-          <Type className="w-3.5 h-3.5 text-[#B99A65]" />
-          <span>{isRtl ? 'الخط والطباعة الملكية:' : 'Typography & Font Family:'}</span>
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {FONT_OPTIONS.map((f) => (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <label className="text-xs font-bold text-[#F7F4EE] flex items-center gap-1.5">
+            <Type className="w-3.5 h-3.5 text-[#B99A65]" />
+            <span>{isRtl ? 'الخط والطباعة الملكية (20 خطاً استثنائياً):' : 'Typography & Royal Font Family (20 Luxury Fonts):'}</span>
+          </label>
+
+          {/* Language Category Filter */}
+          <div className="flex items-center gap-1 bg-[#171717] p-1 rounded-xl border border-[#333] self-start sm:self-auto">
             <button
-              key={f.value}
               type="button"
-              onClick={() => setCustomFont(f.value)}
-              className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                customFont === f.value
-                  ? 'bg-[#B99A65]/15 border-[#B99A65] text-[#F7F4EE]'
-                  : 'bg-[#171717] border-[#333] text-[#8D8A84] hover:text-[#F7F4EE]'
+              onClick={() => setFontLanguageTab('ar')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                fontLanguageTab === 'ar'
+                  ? 'bg-[#B99A65] text-[#171717] shadow-sm'
+                  : 'text-[#8D8A84] hover:text-[#F7F4EE]'
               }`}
             >
-              <span style={{ fontFamily: f.value }} className="text-sm">
-                {f.label}
-              </span>
-              {customFont === f.value && <Check className="w-4 h-4 text-[#B99A65]" />}
+              {isRtl ? 'الخطوط العربية (10)' : 'Arabic Fonts (10)'}
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setFontLanguageTab('en')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                fontLanguageTab === 'en'
+                  ? 'bg-[#B99A65] text-[#171717] shadow-sm'
+                  : 'text-[#8D8A84] hover:text-[#F7F4EE]'
+              }`}
+            >
+              {isRtl ? 'الخطوط الإنجليزية (10)' : 'English Fonts (10)'}
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Font Indicator */}
+        <div className="text-[11px] text-[#B99A65] flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B99A65]/10 border border-[#B99A65]/30">
+          <span>{isRtl ? 'الخط المطبق حالياً:' : 'Active Font:'}</span>
+          <strong className="font-semibold text-[#F7F4EE]">{customFont || 'Playfair Display'}</strong>
+        </div>
+
+        {/* Font Selection Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1">
+          {(fontLanguageTab === 'ar' ? ARABIC_FONTS : ENGLISH_FONTS).map((f) => {
+            const isSelected = customFont === f.value;
+            return (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setCustomFont(f.value)}
+                className={`p-3.5 rounded-2xl border text-right flex flex-col gap-1.5 transition-all cursor-pointer text-start ${
+                  isSelected
+                    ? 'bg-[#B99A65]/15 border-[#B99A65] text-[#F7F4EE] shadow-[0_0_15px_rgba(185,154,101,0.2)]'
+                    : 'bg-[#171717] border-[#333] text-[#8D8A84] hover:text-[#F7F4EE] hover:border-[#555]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold text-[#E9E1D5]">
+                    {f.label}
+                  </span>
+                  {isSelected && <Check className="w-4 h-4 text-[#B99A65] shrink-0" />}
+                </div>
+                <div
+                  style={{ fontFamily: `'${f.value}', sans-serif` }}
+                  className="text-base text-[#F7F4EE] tracking-normal pt-1 border-t border-white/5 truncate"
+                >
+                  {f.preview}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

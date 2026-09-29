@@ -111,7 +111,7 @@ function generateSecureAccessCode(): string {
 // =============================================================================
 
 export const setHostCredentials = onCall(
-  { region: FUNCTIONS_REGION },
+  { region: FUNCTIONS_REGION, cors: true },
   async (request) => {
     const uid = request.auth?.uid;
     if (!uid) {
@@ -175,7 +175,7 @@ export const setHostCredentials = onCall(
 // =============================================================================
 
 export const hostLogin = onCall(
-  { region: FUNCTIONS_REGION },
+  { region: FUNCTIONS_REGION, cors: true },
   async (request) => {
     const rawIdentifier = (request.data?.identifier || '').toString().trim();
     const password = (request.data?.password || '').toString().trim();
@@ -312,7 +312,7 @@ async function recordFailedRateLimit(rateLimitRef: any, globalRateRef: any) {
 // =============================================================================
 
 export const approveOrder = onCall(
-  { region: FUNCTIONS_REGION },
+  { region: FUNCTIONS_REGION, cors: true },
   async (request) => {
     const uid = request.auth?.uid;
     const token = request.auth?.token;
