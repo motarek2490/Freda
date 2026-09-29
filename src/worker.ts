@@ -21,7 +21,7 @@ interface Env {
 
 // قيم احتياطية (Fallbacks) فقط في حال عدم وجود متغيرات بيئة
 const DEFAULT_SITE_URL = 'https://farid.invitationes.workers.dev';
-const DEFAULT_FIREBASE_PROJECT_ID = 'gen-lang-client-0740490915';
+const DEFAULT_FIREBASE_PROJECT_ID = 'frida-ed3b5';
 const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
 
 interface InvitationMeta {

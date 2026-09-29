@@ -13,7 +13,7 @@ import { GoogleGenAI } from '@google/genai';
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
 // DO-NOT-RENAME Infrastructure Constants
-export const FIREBASE_DB_ID = 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
+export const FIREBASE_DB_ID = '(default)';
 export const FUNCTIONS_REGION = 'europe-west1';
 
 // Initialize Firebase Admin SDK
