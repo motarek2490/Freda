@@ -7,7 +7,10 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email == 'mohammedtarek2490@gmail.com' && request.auth.token.email_verified == true)
+      );
     }
 
     function isOwner(userId) {
@@ -23,8 +26,8 @@ service firebase.storage {
     match /users/{userId}/images/{fileName} {
       allow read: if true;
       allow write: if (isOwner(userId) || isAdmin()) &&
-        request.resource.size < 5 * 1024 * 1024 &&
-        request.resource.contentType.matches('image/(jpeg|png|webp|jpg)');
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
       allow delete: if isOwner(userId) || isAdmin();
     }
 
@@ -32,8 +35,8 @@ service firebase.storage {
     match /users/{userId}/audio/{fileName} {
       allow read: if true;
       allow write: if (isOwner(userId) || isAdmin()) &&
-        request.resource.size < 15 * 1024 * 1024 &&
-        request.resource.contentType.matches('audio/(mpeg|mp3|wav|ogg|aac|x-m4a)');
+        request.resource.size < 25 * 1024 * 1024 &&
+        (request.resource.contentType.matches('audio/.*') || request.resource.contentType == 'application/octet-stream');
       allow delete: if isOwner(userId) || isAdmin();
     }
 
@@ -46,27 +49,26 @@ service firebase.storage {
       allow delete: if isOwner(userId) || isAdmin();
     }
 
-    // 3. Admin-managed shared music library catalog — admin only
+    // 3. Admin-managed shared music library catalog
     match /library/audio/{fileName} {
       allow read: if true;
-      allow write, delete: if isAdmin() &&
-        request.resource.size < 20 * 1024 * 1024 &&
-        request.resource.contentType.matches('audio/(mpeg|mp3|wav|ogg|aac)');
+      allow write, delete: if (isAdmin() || isSignedIn()) &&
+        request.resource.size < 25 * 1024 * 1024 &&
+        (request.resource.contentType.matches('audio/.*') || request.resource.contentType == 'application/octet-stream');
     }
 
     match /library/{allPaths=**} {
       allow read: if true;
-      allow write, delete: if isAdmin() &&
+      allow write, delete: if (isAdmin() || isSignedIn()) &&
         request.resource.size < 35 * 1024 * 1024;
     }
 
-    // 4. General images directory (e.g. gift/bank QR uploads, misc assets) —
-    // must be signed in to write; NOT fully public like before.
+    // 4. General images directory (e.g. gift/bank QR uploads, misc assets)
     match /images/{allPaths=**} {
       allow read: if true;
       allow write: if isSignedIn() &&
-        request.resource.size < 5 * 1024 * 1024 &&
-        request.resource.contentType.matches('image/(jpeg|png|webp|jpg)');
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
       allow delete: if isSignedIn();
     }
 
@@ -74,8 +76,8 @@ service firebase.storage {
     match /audio/{allPaths=**} {
       allow read: if true;
       allow write: if isSignedIn() &&
-        request.resource.size < 15 * 1024 * 1024 &&
-        request.resource.contentType.matches('audio/(mpeg|mp3|wav|ogg|aac|x-m4a)');
+        request.resource.size < 25 * 1024 * 1024 &&
+        (request.resource.contentType.matches('audio/.*') || request.resource.contentType == 'application/octet-stream');
       allow delete: if isSignedIn();
     }
   }

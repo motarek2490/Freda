@@ -12,7 +12,7 @@ export const SITE_URL =
   'https://farid.invitationes.workers.dev';
 
 // DO-NOT-RENAME Infrastructure Identifiers
-export const FIREBASE_DB_ID = 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
+export const FIREBASE_DB_ID = '(default)';
 export const FUNCTIONS_REGION = 'europe-west1';
 
 export const BRAND_TAGLINE_EN = 'Your Moments. Beautifully Invited.';

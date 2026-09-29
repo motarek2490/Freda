@@ -29,20 +29,25 @@ try {
 // Initialize Cloud Functions with regional deployment
 export const functions = getFunctions(app, FUNCTIONS_REGION);
 
-// Initialize Cloud Firestore with resilient fallback
+// Initialize Cloud Firestore with resilient fallback and WebChannel auto-detect long-polling
 let firestoreDb: Firestore;
-const activeDbId = firebaseConfig.firestoreDatabaseId || FIREBASE_DB_ID;
+const rawDbId = firebaseConfig.firestoreDatabaseId;
+const isNamedDb = rawDbId && rawDbId !== '(default)' && rawDbId !== 'default' && rawDbId.length > 0;
+
+const firestoreSettings = {
+  ignoreUndefinedProperties: true,
+  experimentalForceLongPolling: true,
+};
+
 try {
-  firestoreDb = initializeFirestore(
-    app,
-    {
-      ignoreUndefinedProperties: true,
-    },
-    activeDbId
-  );
+  if (isNamedDb) {
+    firestoreDb = initializeFirestore(app, firestoreSettings, rawDbId);
+  } else {
+    firestoreDb = initializeFirestore(app, firestoreSettings);
+  }
 } catch {
   try {
-    firestoreDb = getFirestore(app, activeDbId);
+    firestoreDb = isNamedDb ? getFirestore(app, rawDbId) : getFirestore(app);
   } catch {
     firestoreDb = getFirestore(app);
   }

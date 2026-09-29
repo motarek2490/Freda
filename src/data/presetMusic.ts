@@ -52,26 +52,38 @@ export async function uploadSongPackageToStorage(
   const trackId = `song_${timestamp}`;
   const fileName = `${trackId}.mp3`;
 
-  // 1. Instant local caching (IndexedDB + base64 data URLs)
+  // 1. Instant local caching (IndexedDB + memory cache)
   saveAudioToIDB(`${trackId}_audio`, fullBlob).catch(() => {});
 
   const localAudioUrl = (fullBlob.size < 2.5 * 1024 * 1024)
     ? await blobToDataUrl(fullBlob)
     : (typeof URL !== 'undefined' ? URL.createObjectURL(fullBlob) : await blobToDataUrl(fullBlob));
 
-  // 2. Upload to Firebase Storage with timeout guard
+  // 2. Upload to Firebase Storage with retry & timeout guard
   try {
     await ensureAnonymousAuth().catch(() => {});
-    const fileRef = storageRef(storage, `library/audio/${fileName}`);
-    
-    // Upload bytes with 20s timeout
-    await Promise.race([
-      uploadBytes(fileRef, fullBlob, {
-        contentType: fullBlob.type || 'audio/mpeg',
-        customMetadata: { title: title || 'FRIDA Audio Track' },
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 20000)),
-    ]);
+    let fileRef = storageRef(storage, `library/audio/${fileName}`);
+    const contentType = (fullBlob.type && fullBlob.type.startsWith('audio/')) ? fullBlob.type : 'audio/mpeg';
+
+    try {
+      await Promise.race([
+        uploadBytes(fileRef, fullBlob, {
+          contentType,
+          customMetadata: { title: title || 'FRIDA Audio Track' },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 15000)),
+      ]);
+    } catch (firstErr) {
+      console.warn('Initial storage upload to library/audio failed, attempting fallback path:', firstErr);
+      fileRef = storageRef(storage, `audio/${fileName}`);
+      await Promise.race([
+        uploadBytes(fileRef, fullBlob, {
+          contentType,
+          customMetadata: { title: title || 'FRIDA Audio Track' },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload fallback timeout')), 15000)),
+      ]);
+    }
 
     const downloadUrl = await getDownloadURL(fileRef);
     cacheInMemoryAudio(downloadUrl, localAudioUrl);
@@ -82,7 +94,7 @@ export async function uploadSongPackageToStorage(
       previewUrl: downloadUrl,
     };
   } catch (storageErr) {
-    console.warn('Firebase Storage upload failed or offline, falling back to local audio package:', storageErr);
+    console.warn('Firebase Storage upload failed, falling back to local audio package:', storageErr);
     
     // Fallback: use local audio URL
     cacheInMemoryAudio(trackId, localAudioUrl);
@@ -180,18 +192,22 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
   const audioUrl = anyTrack.audioUrl || anyTrack.url;
   const previewUrl = anyTrack.previewUrl || audioUrl;
 
-  // Firestore doc limit is 1MB. If audioUrl is a very large data URL (> 700KB),
-  // store previewUrl in Firestore doc, while keeping the full track in local cache/memory.
-  const firestoreAudioUrl = (audioUrl && typeof audioUrl === 'string' && audioUrl.length > 700000)
-    ? previewUrl
-    : audioUrl;
+  // Never store blob URLs or oversized data URLs in Firestore document
+  const isBlobUrl = typeof audioUrl === 'string' && audioUrl.startsWith('blob:');
+  const isDataUrl = typeof audioUrl === 'string' && audioUrl.startsWith('data:');
+  const firestoreAudioUrl = (isBlobUrl || (isDataUrl && audioUrl.length > 500000))
+    ? ''
+    : (audioUrl || '');
+  const firestorePreviewUrl = (isBlobUrl || (isDataUrl && previewUrl && previewUrl.length > 500000))
+    ? ''
+    : (previewUrl || firestoreAudioUrl);
 
   const docData: SongDocument = {
     id: trackId,
     title: trackTitle,
     artist: track.artist || 'FRIDA Royal Orchestra',
     duration: track.duration || 60,
-    previewUrl,
+    previewUrl: firestorePreviewUrl,
     audioUrl: firestoreAudioUrl,
     coverUrl: track.coverUrl || '',
     category: track.category || 'royal',
@@ -206,7 +222,7 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
     ...docData,
     name: { ar: docData.title, en: docData.title },
     label: docData.title,
-    url: docData.audioUrl,
+    url: firestoreAudioUrl || audioUrl,
     isCloud: true,
   };
 
@@ -216,7 +232,7 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
   try {
     await Promise.race([
       setDoc(doc(db, 'music_library', trackId), docData, { merge: true }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 8000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 5000)),
     ]);
   } catch (err) {
     console.warn('Failed to save song metadata to Firestore:', err);

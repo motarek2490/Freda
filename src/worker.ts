@@ -19,10 +19,10 @@ interface Env {
   FIRESTORE_DATABASE_ID?: string;
 }
 
-// قيم احتياطية (Fallbacks) فقط في حال عدم وجود متغيرات بيئة، مع تصحيح الاسم إلى frida
-const DEFAULT_SITE_URL = 'https://frida.invitationes.workers.dev';
+// قيم احتياطية (Fallbacks) فقط في حال عدم وجود متغيرات بيئة
+const DEFAULT_SITE_URL = 'https://farid.invitationes.workers.dev';
 const DEFAULT_FIREBASE_PROJECT_ID = 'gen-lang-client-0740490915';
-const DEFAULT_FIRESTORE_DATABASE_ID = 'ai-studio-vowly-eb6a19f5-9126-4bbb-b06c-270aac6778bf';
+const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
 
 interface InvitationMeta {
   title: string;

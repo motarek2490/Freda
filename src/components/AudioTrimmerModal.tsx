@@ -296,9 +296,17 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
         onSave(dualPackage.fullBlob).catch(() => {});
       }
 
+      setStatusMessage(isRtl ? 'تم تجهيز وحفظ المعزوفة بنجاح!' : 'Track processed and saved successfully!');
+
       // Complete and notify parent
+      if (onTrackReady) {
+        try {
+          await Promise.resolve(onTrackReady(newTrack));
+        } catch (readyErr) {
+          console.warn('onTrackReady notification error:', readyErr);
+        }
+      }
       setIsProcessing(false);
-      onTrackReady?.(newTrack);
       onClose();
     } catch (err: any) {
       console.error('Audio trim error:', err);
