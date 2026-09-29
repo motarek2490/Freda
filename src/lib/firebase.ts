@@ -20,8 +20,8 @@ export const auth = getAuth(app);
 // Initialize Cloud Storage
 export const storage = getStorage(app);
 try {
-  storage.maxUploadRetryTime = 3000;
-  storage.maxOperationRetryTime = 3000;
+  storage.maxUploadRetryTime = 120000;
+  storage.maxOperationRetryTime = 120000;
 } catch (e) {
   console.warn('Storage timeout setup:', e);
 }
@@ -36,7 +36,7 @@ const isNamedDb = rawDbId && rawDbId !== '(default)' && rawDbId !== 'default' &&
 
 const firestoreSettings = {
   ignoreUndefinedProperties: true,
-  experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: true,
 };
 
 try {

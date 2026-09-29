@@ -254,16 +254,17 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       );
 
       // 2. Upload directly to Cloud Storage
+      const songId = `song_${Date.now()}`;
       const { audioUrl, previewUrl } = await uploadSongPackageToStorage(
         dualPackage.fullBlob,
         dualPackage.fullBlob,
-        trackName.trim()
+        trackName.trim(),
+        songId
       );
 
       setStatusMessage(isRtl ? 'جاري حفظ بيانات المقطوعة في قاعدة البيانات...' : 'Saving metadata to database...');
 
       // 3. Construct clean Metadata object (No raw binaries in database)
-      const songId = `song_${Date.now()}`;
       const finalTitle = `${trackName.trim()}${selectedDuration < 180 ? ` (${selectedDuration}s)` : ''}`;
 
       const newTrack: MusicTrack = {

@@ -46,10 +46,11 @@ let isStorageReachable: boolean | null = null;
 export async function uploadSongPackageToStorage(
   fullBlob: Blob,
   _previewBlob: Blob,
-  title: string
+  title: string,
+  customTrackId?: string
 ): Promise<{ previewUrl: string; audioUrl: string }> {
   const timestamp = Date.now();
-  const trackId = `song_${timestamp}`;
+  const trackId = customTrackId || `song_${timestamp}`;
   const fileName = `${trackId}.mp3`;
 
   // 1. Instant local caching (IndexedDB + memory cache)
@@ -71,7 +72,7 @@ export async function uploadSongPackageToStorage(
           contentType,
           customMetadata: { title: title || 'FRIDA Audio Track' },
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 15000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 60000)),
       ]);
     } catch (firstErr) {
       console.warn('Initial storage upload to library/audio failed, attempting fallback path:', firstErr);
@@ -81,7 +82,7 @@ export async function uploadSongPackageToStorage(
           contentType,
           customMetadata: { title: title || 'FRIDA Audio Track' },
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload fallback timeout')), 15000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload fallback timeout')), 60000)),
       ]);
     }
 
@@ -121,9 +122,13 @@ export const uploadSongPackageToR2 = uploadSongPackageToStorage;
 /**
  * Uploads single audio blob to Firebase Storage with timeout & fallback
  */
-export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): Promise<string> {
+export async function uploadAudioFileToCloudStorage(
+  blob: Blob,
+  label: string,
+  customTrackId?: string
+): Promise<string> {
   const timestamp = Date.now();
-  const trackId = `song_${timestamp}`;
+  const trackId = customTrackId || `song_${timestamp}`;
   const fileName = `${trackId}.mp3`;
 
   saveAudioToIDB(`${trackId}_audio`, blob).catch(() => {});
@@ -140,17 +145,19 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
     const fileRef = storageRef(storage, `library/audio/${fileName}`);
     await Promise.race([
       uploadBytes(fileRef, blob, { contentType: blob.type || 'audio/mpeg' }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 20000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 60000)),
     ]);
 
     const downloadUrl = await getDownloadURL(fileRef);
     cacheInMemoryAudio(downloadUrl, localUrl);
+    cacheInMemoryAudio(trackId, downloadUrl);
     return downloadUrl;
   } catch (e) {
     console.warn('Firebase Storage upload failed, saving to Cloud Firestore storage:', e);
     try {
       const firestoreAudioRef = await saveAudioToCloudFirestore(blob, trackId);
       cacheInMemoryAudio(firestoreAudioRef, localUrl);
+      cacheInMemoryAudio(trackId, firestoreAudioRef);
       return firestoreAudioRef;
     } catch (fsErr) {
       console.error('Firestore audio chunking save error:', fsErr);
@@ -266,9 +273,10 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
   saveCustomUploadedTrack(unifiedTrack);
 
   try {
+    await ensureAnonymousAuth().catch(() => {});
     await Promise.race([
       setDoc(doc(db, 'music_library', trackId), docData, { merge: true }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 5000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 15000)),
     ]);
   } catch (err) {
     console.warn('Failed to save song metadata to Firestore:', err);

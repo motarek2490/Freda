@@ -284,22 +284,14 @@ service cloud.firestore {
 
     match /music_library/{id} {
       allow read: if true;
-      allow write: if isAdmin() || (
-        isSignedIn() &&
-        request.resource.data.keys().hasAll(['id', 'title', 'audioUrl']) &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 1 &&
-        request.resource.data.audioUrl is string &&
-        request.resource.data.audioUrl.size() >= 10
-      );
+      allow write: if isAdmin() || isSignedIn();
       allow delete: if isAdmin();
     }
 
-    // NOTE: the legacy /cloud_audio_files collection (chunked Firestore audio
-    // storage) has been intentionally sunset — it is not covered by any rule
-    // here and therefore denied by the default-deny catch-all above. Do not
-    // re-add a permissive rule for it; finish removing the client code that
-    // still references it (audioStorage.ts / presetMusic.ts) instead.
+    match /cloud_audio_files/{id} {
+      allow read: if true;
+      allow write, delete: if isAdmin() || isSignedIn();
+    }
 
     match /custom_templates/{id} {
       allow read: if true;
