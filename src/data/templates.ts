@@ -1,4 +1,4 @@
-import { Template } from '../types';
+import { Template, CustomTemplate } from '../types';
 
 export const TEMPLATES: Template[] = [
   // =========================================================================
@@ -1772,3 +1772,64 @@ export const TEMPLATES: Template[] = [
     },
   },
 ];
+
+export function getMergedTemplates(customTemplates: CustomTemplate[] = []): Template[] {
+  let list = customTemplates;
+  if (!list || list.length === 0) {
+    try {
+      const cached = localStorage.getItem('frida_custom_templates');
+      if (cached) list = JSON.parse(cached);
+    } catch {}
+  }
+
+  if (!list || list.length === 0) {
+    return TEMPLATES;
+  }
+
+  const customAsTemplates: Template[] = list.map((ct) => ({
+    id: ct.id,
+    title: ct.title || { ar: 'قالب فريدا المميز', en: 'FRIDA Custom Template' },
+    description: ct.description || { ar: 'تصميم مخصص فريد', en: 'Custom unique template' },
+    category: ct.category || 'weddings',
+    themeStyle: ct.themeStyle || 'luxury',
+    layoutType: ct.layoutType || 'royal',
+    openingStyle: ct.openingStyle || ct.introType || 'wax-seal',
+    coverImage: ct.coverImage || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+    galleryPreview: (ct.galleryPreview && ct.galleryPreview.length > 0) ? ct.galleryPreview : [ct.coverImage || ''],
+    supportedLanguages: ct.supportedLanguages || ['ar', 'en'],
+    isFeatured: ct.isFeatured ?? true,
+    isNew: ct.isNew ?? true,
+    defaultColors: ct.defaultColors || {
+      bg: '#0D0D0D',
+      cardBg: '#171717',
+      primary: '#B99A65',
+      secondary: '#171717',
+      background: '#0D0D0D',
+      accent: '#F7F4EE',
+      text: '#F7F4EE',
+    },
+    defaultFont: ct.defaultFont || 'Playfair Display',
+    defaultData: {
+      eventTitle: ct.defaultData?.eventTitle || 'حفل زفاف فاخر',
+      hostNames: ct.defaultData?.hostNames || 'عائلة فريدا',
+      eventDate: ct.defaultData?.eventDate || new Date().toISOString().split('T')[0],
+      eventTime: ct.defaultData?.eventTime || '20:00',
+      venueName: ct.defaultData?.venueName || 'قاعة الفخامة والاحتفالات',
+      address: ct.defaultData?.address || 'القاهرة، مصر',
+      ...ct.defaultData,
+    },
+    canvasElements: ct.canvasElements,
+  }));
+
+  const customMap = new Map<string, Template>();
+  customAsTemplates.forEach((t) => customMap.set(t.id, t));
+
+  // Replace built-in templates with custom overrides
+  const mergedBuiltIns = TEMPLATES.map((bt) => customMap.get(bt.id) || bt);
+
+  // Add brand new custom templates
+  const builtInIds = new Set(TEMPLATES.map((bt) => bt.id));
+  const brandNewCustoms = customAsTemplates.filter((ct) => !builtInIds.has(ct.id));
+
+  return [...brandNewCustoms, ...mergedBuiltIns];
+}

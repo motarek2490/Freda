@@ -8,7 +8,7 @@ import {
   PaymentAccount,
   PaymentAccountType,
 } from '../../types';
-import { TEMPLATES } from '../../data/templates';
+import { TEMPLATES, getMergedTemplates } from '../../data/templates';
 import { saveInvitation } from '../../lib/storage';
 import { saveInvitationCloud } from '../../lib/firestoreService';
 import { ensureAnonymousAuth } from '../../lib/firebase';
@@ -37,11 +37,14 @@ export function useInvitationForm({
 
   const [currentStep, setCurrentStep] = useState<number>(existingInvitation ? 2 : 1);
 
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(
-    initialTemplate ||
-      TEMPLATES.find((t) => t.id === existingInvitation?.templateId) ||
-      TEMPLATES[0]
-  );
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(() => {
+    const mergedList = getMergedTemplates();
+    return (
+      initialTemplate ||
+      mergedList.find((t) => t.id === existingInvitation?.templateId) ||
+      mergedList[0]
+    );
+  });
 
   const [invitationLanguage, setInvitationLanguage] = useState<Language>(
     existingInvitation?.language || currentLang

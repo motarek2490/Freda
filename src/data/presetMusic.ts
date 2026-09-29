@@ -25,7 +25,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import { db, storage, auth, ensureAnonymousAuth } from '../lib/firebase';
-import { saveAudioToIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
+import { saveAudioToIDB, getAudioFromIDB, deleteAudioFromIDB, blobToDataUrl } from '../lib/audioDb';
 import { saveAudioToCloudFirestore, cacheInMemoryAudio } from '../lib/audioStorage';
 import jsonMusicTracks from './musicList.json';
 import { MusicTrack, SongDocument } from '../types';
@@ -94,14 +94,24 @@ export async function uploadSongPackageToStorage(
       previewUrl: downloadUrl,
     };
   } catch (storageErr) {
-    console.warn('Firebase Storage upload failed, falling back to local audio package:', storageErr);
+    console.warn('Firebase Storage upload failed, saving to Cloud Firestore storage:', storageErr);
     
-    // Fallback: use local audio URL
-    cacheInMemoryAudio(trackId, localAudioUrl);
-    return {
-      audioUrl: localAudioUrl,
-      previewUrl: localAudioUrl,
-    };
+    try {
+      const firestoreAudioRef = await saveAudioToCloudFirestore(fullBlob, trackId);
+      cacheInMemoryAudio(firestoreAudioRef, localAudioUrl);
+      cacheInMemoryAudio(trackId, firestoreAudioRef);
+      return {
+        audioUrl: firestoreAudioRef,
+        previewUrl: firestoreAudioRef,
+      };
+    } catch (fsErr) {
+      console.error('Firestore audio chunking save error:', fsErr);
+      cacheInMemoryAudio(trackId, localAudioUrl);
+      return {
+        audioUrl: localAudioUrl,
+        previewUrl: localAudioUrl,
+      };
+    }
   }
 }
 
@@ -137,8 +147,15 @@ export async function uploadAudioFileToCloudStorage(blob: Blob, label: string): 
     cacheInMemoryAudio(downloadUrl, localUrl);
     return downloadUrl;
   } catch (e) {
-    console.warn('Audio cloud sync fallback to local URL:', e);
-    return localUrl;
+    console.warn('Firebase Storage upload failed, saving to Cloud Firestore storage:', e);
+    try {
+      const firestoreAudioRef = await saveAudioToCloudFirestore(blob, trackId);
+      cacheInMemoryAudio(firestoreAudioRef, localUrl);
+      return firestoreAudioRef;
+    } catch (fsErr) {
+      console.error('Firestore audio chunking save error:', fsErr);
+      return localUrl;
+    }
   }
 }
 
@@ -192,15 +209,34 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
   const audioUrl = anyTrack.audioUrl || anyTrack.url;
   const previewUrl = anyTrack.previewUrl || audioUrl;
 
-  // Never store blob URLs or oversized data URLs in Firestore document
+  // Never store blob URLs or oversized data URLs in Firestore document (convert blob URLs to Cloud Firestore reference)
   const isBlobUrl = typeof audioUrl === 'string' && audioUrl.startsWith('blob:');
   const isDataUrl = typeof audioUrl === 'string' && audioUrl.startsWith('data:');
-  const firestoreAudioUrl = (isBlobUrl || (isDataUrl && audioUrl.length > 500000))
-    ? ''
-    : (audioUrl || '');
-  const firestorePreviewUrl = (isBlobUrl || (isDataUrl && previewUrl && previewUrl.length > 500000))
-    ? ''
-    : (previewUrl || firestoreAudioUrl);
+
+  let firestoreAudioUrl = (isDataUrl && audioUrl.length > 500000) ? '' : (audioUrl || '');
+
+  if (isBlobUrl) {
+    try {
+      const idbData = (await getAudioFromIDB(`${trackId}_audio`)) || (await getAudioFromIDB(trackId));
+      if (idbData) {
+        const blob = typeof idbData === 'string' ? new Blob([idbData], { type: 'audio/mpeg' }) : idbData;
+        firestoreAudioUrl = await saveAudioToCloudFirestore(blob, trackId);
+      } else {
+        const res = await fetch(audioUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          firestoreAudioUrl = await saveAudioToCloudFirestore(blob, trackId);
+        } else {
+          firestoreAudioUrl = `firestore-audio://${trackId}`;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not store blob audio to Cloud Firestore:', err);
+      firestoreAudioUrl = `firestore-audio://${trackId}`;
+    }
+  }
+
+  const firestorePreviewUrl = firestoreAudioUrl || (previewUrl && !previewUrl.startsWith('blob:') ? previewUrl : firestoreAudioUrl);
 
   const docData: SongDocument = {
     id: trackId,
@@ -318,16 +354,20 @@ export function subscribeCloudMusicLibrary(callback: (tracks: MusicTrack[]) => v
         const list: MusicTrack[] = [];
         snap.forEach((d) => {
           const data = d.data() as SongDocument;
+          const trackId = data.id || d.id;
+          const rawUrl = data.audioUrl || (data as any).url || '';
+          const finalUrl = (rawUrl && !rawUrl.startsWith('blob:')) ? rawUrl : `firestore-audio://${trackId}`;
+
           list.push({
-            id: data.id || d.id,
+            id: trackId,
             title: data.title,
             name: { ar: data.title, en: data.title },
             label: data.title,
             artist: data.artist,
             duration: data.duration,
-            url: data.audioUrl || (data as any).url,
-            audioUrl: data.audioUrl || (data as any).url,
-            previewUrl: data.previewUrl || data.audioUrl || (data as any).url,
+            url: finalUrl,
+            audioUrl: finalUrl,
+            previewUrl: (data.previewUrl && !data.previewUrl.startsWith('blob:')) ? data.previewUrl : finalUrl,
             coverUrl: data.coverUrl,
             category: data.category || 'royal',
             isActive: data.isActive ?? true,
@@ -367,16 +407,20 @@ export async function getCloudMusicLibrary(forceRefresh = false): Promise<MusicT
     const list: MusicTrack[] = [];
     snap.forEach((d) => {
       const data = d.data() as SongDocument;
+      const trackId = data.id || d.id;
+      const rawUrl = data.audioUrl || (data as any).url || '';
+      const finalUrl = (rawUrl && !rawUrl.startsWith('blob:')) ? rawUrl : `firestore-audio://${trackId}`;
+
       list.push({
-        id: data.id || d.id,
+        id: trackId,
         title: data.title,
         name: { ar: data.title, en: data.title },
         label: data.title,
         artist: data.artist,
         duration: data.duration,
-        url: data.audioUrl || (data as any).url,
-        audioUrl: data.audioUrl || (data as any).url,
-        previewUrl: data.previewUrl || data.audioUrl || (data as any).url,
+        url: finalUrl,
+        audioUrl: finalUrl,
+        previewUrl: (data.previewUrl && !data.previewUrl.startsWith('blob:')) ? data.previewUrl : finalUrl,
         coverUrl: data.coverUrl,
         category: data.category || 'royal',
         isActive: data.isActive ?? true,

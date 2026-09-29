@@ -181,6 +181,7 @@ export interface Template {
   themeStyle: ThemeStyle;
   layoutType?: TemplateLayoutType;
   openingStyle?: 'envelope-butterfly' | 'petal-scatter' | 'wax-seal' | 'curtain-reveal' | 'royal_door' | string;
+  introType?: string;
   coverImage: string;
   previewImage?: string;
   galleryPreview: string[];
@@ -190,6 +191,7 @@ export interface Template {
   defaultColors: CustomThemeColors;
   defaultFont: string;
   defaultData: EventDetails;
+  canvasElements?: CustomTemplateCanvasElement[];
 }
 
 export interface InvitationData {
@@ -203,6 +205,7 @@ export interface InvitationData {
   themeStyle: ThemeStyle;
   layoutType?: TemplateLayoutType;
   openingStyle?: 'envelope-butterfly' | 'petal-scatter' | 'wax-seal' | 'curtain-reveal' | 'royal_door' | string;
+  introType?: string;
   customColors: CustomThemeColors;
   customFont: string;
   eventDetails: EventDetails;
@@ -347,6 +350,14 @@ export interface WebsiteReview {
   approved?: boolean;
 }
 
+export interface CustomTemplateCanvasElement {
+  id: string;
+  type: 'icon' | 'image' | 'badge' | 'text' | 'frame';
+  content: string;
+  position: { x: number; y: number }; // Percentage offset 0-100
+  style?: Record<string, any>;
+}
+
 export interface CustomTemplate {
   id: string;
   title: Record<Language, string>;
@@ -354,6 +365,8 @@ export interface CustomTemplate {
   category: Category;
   themeStyle: ThemeStyle;
   layoutType?: TemplateLayoutType;
+  openingStyle?: string;
+  introType?: string;
   coverImage: string;
   galleryPreview: string[];
   supportedLanguages: Language[];
@@ -361,6 +374,8 @@ export interface CustomTemplate {
   isNew?: boolean;
   defaultColors: CustomThemeColors;
   defaultFont: string;
+  defaultData?: Partial<EventDetails>;
+  canvasElements?: CustomTemplateCanvasElement[];
   createdAt: string;
 }
 

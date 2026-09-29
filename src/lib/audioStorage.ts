@@ -106,8 +106,33 @@ export async function resolveAudioTrackUrl(urlOrRef?: string): Promise<string> {
     return urlOrRef;
   }
 
+  // Handle blob URLs safely (blob URLs created on another device will fail, so handle gracefully)
+  if (urlOrRef.startsWith('blob:')) {
+    try {
+      const res = await fetch(urlOrRef);
+      if (res.ok) return urlOrRef;
+    } catch {
+      console.warn('Local blob URL not found on this device session:', urlOrRef);
+      return '';
+    }
+  }
+
   // Direct remote HTTPS audio link
-  if (urlOrRef.startsWith('http://') || urlOrRef.startsWith('https://') || urlOrRef.startsWith('blob:')) {
+  if (urlOrRef.startsWith('http://') || urlOrRef.startsWith('https://')) {
+    // If it's a Firebase Storage link, pre-cache or return
+    if (urlOrRef.includes('firebasestorage.googleapis.com')) {
+      try {
+        const res = await fetch(urlOrRef);
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          MEMORY_CACHE.set(urlOrRef, blobUrl);
+          return blobUrl;
+        }
+      } catch (err) {
+        console.warn('Direct fetch for Firebase Storage link warning, using raw URL:', err);
+      }
+    }
     return urlOrRef;
   }
 
@@ -118,68 +143,73 @@ export async function resolveAudioTrackUrl(urlOrRef?: string): Promise<string> {
     return blobUrl;
   }
 
-  // Firestore-stored Cloud Audio File reference
-  if (urlOrRef.startsWith('firestore-audio://')) {
-    const docId = urlOrRef.replace('firestore-audio://', '');
+  // Firestore-stored Cloud Audio File reference or track ID
+  const isFirestoreAudioRef = urlOrRef.startsWith('firestore-audio://');
+  const docId = isFirestoreAudioRef ? urlOrRef.replace('firestore-audio://', '') : urlOrRef;
 
-    // Check local IndexedDB fast path first (instant playback for the uploader)
-    try {
-      const localCached = await getAudioFromIDB(docId);
-      if (localCached) {
-        let blobUrl = '';
-        if (typeof localCached === 'string') {
-          blobUrl = base64ToBlobUrl(localCached);
-        } else {
-          blobUrl = URL.createObjectURL(localCached);
-        }
+  // Check local IndexedDB fast path first (instant playback for the uploader)
+  try {
+    const localCached = await getAudioFromIDB(docId) || await getAudioFromIDB(`${docId}_audio`);
+    if (localCached) {
+      let blobUrl = '';
+      if (typeof localCached === 'string') {
+        blobUrl = base64ToBlobUrl(localCached);
+      } else {
+        blobUrl = URL.createObjectURL(localCached);
+      }
+      MEMORY_CACHE.set(urlOrRef, blobUrl);
+      return blobUrl;
+    }
+  } catch {}
+
+  // Fetch Cloud Audio document from Firestore collection `cloud_audio_files`
+  try {
+    const audioDoc = await getDoc(doc(db, 'cloud_audio_files', docId));
+    if (audioDoc.exists()) {
+      const data = audioDoc.data();
+      if (data?.dataUrl) {
+        const blobUrl = base64ToBlobUrl(data.dataUrl);
         MEMORY_CACHE.set(urlOrRef, blobUrl);
         return blobUrl;
       }
-    } catch {}
 
-    try {
-      const audioDoc = await getDoc(doc(db, 'cloud_audio_files', docId));
-      if (audioDoc.exists()) {
-        const data = audioDoc.data();
-        if (data?.dataUrl) {
-          const blobUrl = base64ToBlobUrl(data.dataUrl);
-          MEMORY_CACHE.set(urlOrRef, blobUrl);
-          return blobUrl;
+      if (data?.isChunked && data?.totalChunks) {
+        const chunkPromises: Promise<string>[] = [];
+        for (let i = 0; i < data.totalChunks; i++) {
+          chunkPromises.push(
+            getDoc(doc(db, 'cloud_audio_files', `${docId}_chk_${i}`)).then(
+              (snap) => snap.data()?.data || ''
+            )
+          );
         }
-
-        if (data?.isChunked && data?.totalChunks) {
-          const chunkPromises: Promise<string>[] = [];
-          for (let i = 0; i < data.totalChunks; i++) {
-            chunkPromises.push(
-              getDoc(doc(db, 'cloud_audio_files', `${docId}_chk_${i}`)).then(
-                (snap) => snap.data()?.data || ''
-              )
-            );
-          }
-          const chunkStrings = await Promise.all(chunkPromises);
-          const fullDataUrl = chunkStrings.join('');
-          const blobUrl = base64ToBlobUrl(fullDataUrl);
-          MEMORY_CACHE.set(urlOrRef, blobUrl);
-          return blobUrl;
-        }
+        const chunkStrings = await Promise.all(chunkPromises);
+        const fullDataUrl = chunkStrings.join('');
+        const blobUrl = base64ToBlobUrl(fullDataUrl);
+        MEMORY_CACHE.set(urlOrRef, blobUrl);
+        return blobUrl;
       }
-    } catch (err) {
-      console.warn('Could not fetch cloud audio document from Firestore:', err);
     }
+  } catch (err) {
+    console.warn('Could not fetch cloud audio document from Firestore:', err);
   }
 
   // Check Cloud Firestore music_library catalog if it's a catalog track ID
   try {
-    const musicDoc = await getDoc(doc(db, 'music_library', urlOrRef));
-    if (musicDoc.exists() && musicDoc.data()?.url) {
-      const innerUrl = musicDoc.data().url;
-      const resolved = await resolveAudioTrackUrl(innerUrl);
-      MEMORY_CACHE.set(urlOrRef, resolved);
-      return resolved;
+    const musicDoc = await getDoc(doc(db, 'music_library', docId));
+    if (musicDoc.exists()) {
+      const mData = musicDoc.data();
+      const innerUrl = mData?.audioUrl || mData?.url;
+      if (innerUrl && innerUrl !== urlOrRef) {
+        const resolved = await resolveAudioTrackUrl(innerUrl);
+        if (resolved) {
+          MEMORY_CACHE.set(urlOrRef, resolved);
+          return resolved;
+        }
+      }
     }
   } catch (err) {
     console.warn('Could not fetch audio track from music_library:', err);
   }
 
-  return urlOrRef;
+  return isFirestoreAudioRef ? '' : urlOrRef;
 }

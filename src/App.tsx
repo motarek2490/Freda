@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Language,
   Template,
+  CustomTemplate,
   InvitationData,
   UserProfile,
   AdminSettings,
@@ -9,6 +10,7 @@ import {
 import {
   getAdminSettingsCloud,
   subscribeAdminSettingsCloud,
+  subscribeCustomTemplatesCloud,
 } from './lib/firestoreService';
 import { subscribeCloudMusicLibrary } from './data/presetMusic';
 import {
@@ -39,7 +41,7 @@ import { InvitationLoadingScreen } from './components/InvitationLoadingScreen';
 import { InvitationNotFoundScreen } from './components/InvitationNotFoundScreen';
 import { OccasionLanding, OccasionType } from './components/OccasionLanding';
 import { checkAndExpireInvitationsCloud } from './lib/firestoreService';
-import { TEMPLATES } from './data/templates';
+import { TEMPLATES, getMergedTemplates } from './data/templates';
 import { BRAND_NAME, BRAND_NAME_AR } from './config/brand';
 
 // Code-split heavy modals and dashboards for maximum landing page performance
@@ -101,22 +103,40 @@ export default function App() {
   // Global Admin Settings for Default Demo Song & Pricing
   const [appAdminSettings, setAppAdminSettings] = useState<AdminSettings | null>(null);
 
+  // Global Custom Templates State
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('frida_custom_templates') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     // 1. Real-time Admin Settings subscription across all devices
     const unsubSettings = subscribeAdminSettingsCloud((res) => {
       if (res) setAppAdminSettings(res);
     });
 
-    // 2. Real-time Cloud Music Library cache subscription
+    // 2. Real-time Custom Templates subscription across all devices
+    const unsubCustomTmpls = subscribeCustomTemplatesCloud((res) => {
+      if (res) setCustomTemplates(res);
+    });
+
+    // 3. Real-time Cloud Music Library cache subscription
     const unsubMusic = subscribeCloudMusicLibrary(() => {
       // Synchronized globally into cache
     });
 
     return () => {
       unsubSettings();
+      unsubCustomTmpls();
       unsubMusic();
     };
   }, []);
+
+  // Compute merged templates globally so custom template edits appear everywhere on site
+  const allMergedTemplates = useMemo(() => getMergedTemplates(customTemplates), [customTemplates]);
 
   // Dynamic Head SEO Tag injection
   useEffect(() => {
@@ -224,7 +244,7 @@ export default function App() {
         setRouteState({ isLoading: false });
       } else {
         const cleanId = previewParam.replace(/^preview-/, '').replace(/^demo-/, '');
-        const tmpl = TEMPLATES.find((t) => t.id === cleanId || t.id === previewParam);
+        const tmpl = allMergedTemplates.find((t) => t.id === cleanId || t.id === previewParam);
         if (tmpl) {
           const sample: InvitationData = {
             id: `preview-${tmpl.id}`,
@@ -670,6 +690,7 @@ export default function App() {
           {/* Section 3: The FRIDA Atelier (Template Showcase) */}
           <TemplateShowcase
             currentLang={currentLang}
+            allTemplates={allMergedTemplates}
             onSelectPreview={(tmpl) => {
               setSelectedTemplate(tmpl);
               setShowDetailModal(true);

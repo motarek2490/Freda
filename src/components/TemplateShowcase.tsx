@@ -10,24 +10,28 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { Template, Category, ThemeStyle, Language } from '../types';
-import { TEMPLATES } from '../data/templates';
+import { TEMPLATES, getMergedTemplates } from '../data/templates';
 import { TemplateCard } from './TemplateCard';
 import { useTranslation } from '../data/translations';
 import { colors, typography } from '../styles/designTokens';
 
 interface TemplateShowcaseProps {
   currentLang: Language;
+  allTemplates?: Template[];
   onSelectPreview: (template: Template) => void;
   onStartCustomize: (template: Template) => void;
 }
 
 export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
   currentLang,
+  allTemplates,
   onSelectPreview,
   onStartCustomize,
 }) => {
   const t = useTranslation(currentLang);
   const isRtl = currentLang === 'ar';
+
+  const templatesList = useMemo(() => allTemplates || getMergedTemplates(), [allTemplates]);
 
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,9 +108,9 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     { id: 'boho', labelAr: 'بوهو وصحراوي', labelEn: 'Boho' },
   ];
 
-  // Filter all 41 templates
+  // Filter all templates
   const filteredTemplates = useMemo(() => {
-    let list = [...TEMPLATES];
+    let list = [...templatesList];
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
@@ -122,7 +126,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
     }
 
     return list;
-  }, [searchQuery, selectedCategory, currentLang]);
+  }, [templatesList, searchQuery, selectedCategory, currentLang]);
 
   return (
     <section
@@ -137,7 +141,7 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
           <div className="inline-flex items-center gap-2 text-xs font-mono tracking-[0.3em] uppercase text-[#C9A86A]">
             <span>HAUTE COUTURE SUITES</span>
             <span aria-hidden="true">·</span>
-            <span>{TEMPLATES.length} {isRtl ? 'تصميماً ملكياً' : 'PIECES'}</span>
+            <span>{templatesList.length} {isRtl ? 'تصميماً ملكياً' : 'PIECES'}</span>
           </div>
 
           <h2

@@ -871,6 +871,16 @@ export async function deleteWebsiteReviewCloud(reviewId: string): Promise<void> 
 
 export async function saveCustomTemplateCloud(template: CustomTemplate): Promise<CustomTemplate> {
   await setDoc(doc(db, 'custom_templates', template.id), template, { merge: true });
+  try {
+    const cached: CustomTemplate[] = JSON.parse(localStorage.getItem('frida_custom_templates') || '[]');
+    const idx = cached.findIndex((t) => t.id === template.id);
+    if (idx >= 0) {
+      cached[idx] = template;
+    } else {
+      cached.unshift(template);
+    }
+    localStorage.setItem('frida_custom_templates', JSON.stringify(cached));
+  } catch {}
   return template;
 }
 
@@ -880,12 +890,46 @@ export async function getCustomTemplatesCloud(): Promise<CustomTemplate[]> {
     const snap = await getDocs(colRef);
     const list: CustomTemplate[] = [];
     snap.forEach((d) => list.push(d.data() as CustomTemplate));
+    try {
+      localStorage.setItem('frida_custom_templates', JSON.stringify(list));
+    } catch {}
     return list;
   } catch {
-    return [];
+    try {
+      return JSON.parse(localStorage.getItem('frida_custom_templates') || '[]');
+    } catch {
+      return [];
+    }
+  }
+}
+
+export function subscribeCustomTemplatesCloud(callback: (templates: CustomTemplate[]) => void): () => void {
+  try {
+    const colRef = collection(db, 'custom_templates');
+    return onSnapshot(
+      colRef,
+      (snapshot) => {
+        const list: CustomTemplate[] = [];
+        snapshot.forEach((d) => list.push(d.data() as CustomTemplate));
+        try {
+          localStorage.setItem('frida_custom_templates', JSON.stringify(list));
+        } catch {}
+        callback(list);
+      },
+      (err) => {
+        console.warn('Custom templates listener error:', err);
+      }
+    );
+  } catch {
+    return () => {};
   }
 }
 
 export async function deleteCustomTemplateCloud(templateId: string): Promise<void> {
   await deleteDoc(doc(db, 'custom_templates', templateId));
+  try {
+    const cached: CustomTemplate[] = JSON.parse(localStorage.getItem('frida_custom_templates') || '[]');
+    const filtered = cached.filter((t) => t.id !== templateId);
+    localStorage.setItem('frida_custom_templates', JSON.stringify(filtered));
+  } catch {}
 }

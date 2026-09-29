@@ -46,33 +46,33 @@ export const CinematicLayout: React.FC<TemplateLayoutProps> = ({
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.2 }}
-        className="relative rounded-3xl overflow-hidden border border-[#333] shadow-[0_30px_100px_rgba(0,0,0,0.9)] text-center min-h-[500px] flex flex-col items-center justify-end p-8 sm:p-14"
+        className="relative rounded-3xl overflow-hidden border border-[#E6A15C]/40 shadow-[0_20px_80px_rgba(230,161,92,0.15)] text-center min-h-[520px] flex flex-col items-center justify-end p-8 sm:p-14"
       >
-        {/* Full Bleed Background Image with Film Vignette */}
+        {/* Full Bleed Background Image with Warm Cinema Tint */}
         {details.coverImageUrl && (
           <img
             src={details.coverImageUrl}
             alt="Cinematic Background"
-            className="absolute inset-0 w-full h-full object-cover grayscale opacity-40 hover:grayscale-0 hover:opacity-60 transition-all duration-1000"
+            className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-90 transition-all duration-1000 scale-105 hover:scale-100"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F11] via-[#0F0F11]/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1215] via-[#1A1215]/75 to-black/30" />
 
         <div className="relative z-10 space-y-4 max-w-xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/80 border border-[#B99A65]/40 text-[10px] tracking-widest text-[#B99A65] uppercase font-mono">
-            <Film className="w-3 h-3" />
-            <span>{isRtl ? 'قصة حُب سينمائية' : 'A CINEMATIC STORY'}</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1A1215]/90 border border-[#E6A15C]/60 text-xs tracking-wider text-[#E6A15C] font-semibold shadow-lg">
+            <Heart className="w-3.5 h-3.5 text-[#E6A15C] fill-current" />
+            <span>{isRtl ? '✨ قصة حُبنا المضيئة — كادر سينمائي دافئ' : 'A WARM CINEMATIC LOVE STORY'}</span>
           </div>
 
-          <h1 className="font-playfair text-4xl sm:text-6xl font-extrabold text-[#FFFFFF] tracking-tight leading-tight drop-shadow-2xl">
+          <h1 className="font-playfair text-3xl sm:text-5xl font-extrabold text-[#F7F4EE] tracking-wide leading-snug drop-shadow-2xl">
             {details.eventTitle}
           </h1>
 
-          <p className="text-sm text-[#D4D4D8] italic font-serif leading-relaxed max-w-lg mx-auto">
+          <p className="text-sm sm:text-base text-[#E9E1D5] font-serif italic leading-relaxed max-w-lg mx-auto bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
             "{details.customMessage}"
           </p>
 
-          <div className="pt-4 border-t border-white/10 flex items-center justify-center gap-4 text-xs font-mono text-[#A1A1AA]">
+          <div className="pt-4 border-t border-[#E6A15C]/30 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-[#E6A15C]">
             <span>{details.eventDate}</span>
             <span>•</span>
             <span>{details.venueName}</span>
@@ -81,43 +81,45 @@ export const CinematicLayout: React.FC<TemplateLayoutProps> = ({
       </motion.div>
 
       {/* 2. THE CHAPTERS / SCENE PROGRESSION */}
-      <div className="bg-[#18181B] border border-[#27272A] rounded-3xl p-8 space-y-8">
+      <div className="bg-[#241A1E] border border-[#E6A15C]/30 rounded-3xl p-8 space-y-8 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#E6A15C] to-transparent" />
+
         <div className="text-center space-y-1">
-          <span className="text-[10px] tracking-[0.3em] font-mono text-[#B99A65] uppercase">
-            {isRtl ? 'الفصل الأول' : 'CHAPTER ONE'}
+          <span className="text-xs tracking-[0.25em] font-bold text-[#E6A15C] uppercase">
+            {isRtl ? '🎬 الفصل الأول — التفاصيل الملكية' : 'CHAPTER ONE — CELEBRATION DETAILS'}
           </span>
-          <h2 className="font-playfair text-2xl font-bold text-[#FAFAFA]">
+          <h2 className="font-playfair text-2xl font-bold text-[#F7F4EE]">
             {isRtl ? 'تفاصيل الأمسية والزمان' : 'The Celebration Details'}
           </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="p-6 rounded-2xl bg-[#0F0F11] border border-[#27272A] space-y-2">
-            <Calendar className="w-6 h-6 text-[#B99A65]" />
-            <h3 className="font-bold text-sm text-[#FAFAFA]">{isRtl ? 'الموعد والزمان' : 'Date & Time'}</h3>
-            <p className="text-xs text-[#A1A1AA]">{details.eventDate} @ {details.eventTime}</p>
+          <div className="p-6 rounded-2xl bg-[#1A1215] border border-[#E6A15C]/30 space-y-2 hover:border-[#E6A15C] transition-colors">
+            <Calendar className="w-6 h-6 text-[#E6A15C]" />
+            <h3 className="font-bold text-sm text-[#F7F4EE]">{isRtl ? 'الموعد والزمان' : 'Date & Time'}</h3>
+            <p className="text-xs text-[#E9E1D5]">{details.eventDate} @ {details.eventTime}</p>
             <a
               href={getGoogleCalendarUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-[11px] text-[#B99A65] underline pt-2"
+              className="inline-block text-xs font-bold text-[#E6A15C] hover:underline pt-2"
             >
-              {isRtl ? 'إضافة للتقويم' : '+ Add to Calendar'}
+              {isRtl ? '📅 إضافة للتقويم' : '+ Add to Calendar'}
             </a>
           </div>
 
-          <div className="p-6 rounded-2xl bg-[#0F0F11] border border-[#27272A] space-y-2">
-            <MapPin className="w-6 h-6 text-[#B99A65]" />
-            <h3 className="font-bold text-sm text-[#FAFAFA]">{isRtl ? 'المكان والعنوان' : 'Venue'}</h3>
-            <p className="text-xs text-[#A1A1AA]">{details.venueName}</p>
+          <div className="p-6 rounded-2xl bg-[#1A1215] border border-[#E6A15C]/30 space-y-2 hover:border-[#E6A15C] transition-colors">
+            <MapPin className="w-6 h-6 text-[#E6A15C]" />
+            <h3 className="font-bold text-sm text-[#F7F4EE]">{isRtl ? 'المكان والعنوان' : 'Venue'}</h3>
+            <p className="text-xs text-[#E9E1D5]">{details.venueName}</p>
             {details.googleMapsUrl && (
               <a
                 href={details.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-[11px] text-[#B99A65] underline pt-2"
+                className="inline-block text-xs font-bold text-[#E6A15C] hover:underline pt-2"
               >
-                {isRtl ? 'الاتجاهات والخريطة' : 'Get Directions'}
+                {isRtl ? '📍 الاتجاهات والخريطة' : 'Get Directions'}
               </a>
             )}
           </div>

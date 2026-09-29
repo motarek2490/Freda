@@ -40,7 +40,7 @@ import { saveWishCloud } from '../lib/firestoreService';
 import { resolveAudioTrackUrl } from '../lib/audioStorage';
 import { useTranslation } from '../data/translations';
 import { trackRSVPSubmitted } from '../lib/analytics';
-import { TEMPLATES } from '../data/templates';
+import { TEMPLATES, getMergedTemplates } from '../data/templates';
 import { ShareModal } from './ShareModal';
 import { CardImageModal } from './CardImageModal';
 import { DemoMusicPickerModal } from './DemoMusicPickerModal';
@@ -90,9 +90,10 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   isStandaloneView = false,
 }) => {
   // Safe Fallback Normalization to guarantee no missing fields ever crash React
+  const mergedTemplatesList = getMergedTemplates();
   const fallbackTemplate =
-    TEMPLATES.find((t) => t.id === rawInvitation?.templateId) ||
-    TEMPLATES[0];
+    mergedTemplatesList.find((t) => t.id === rawInvitation?.templateId) ||
+    mergedTemplatesList[0];
 
   const invitation: InvitationData = {
     ...rawInvitation,
@@ -278,40 +279,56 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     return () => clearInterval(interval);
   }, [invitation.eventDetails.eventDate, invitation.eventDetails.eventTime]);
 
-  // Audio setup - resolves cloud/local/remote audio tracks reliably
+  // Audio setup - resolves cloud/local/remote audio tracks reliably across mobile & desktop
   useEffect(() => {
     const rawTrackUrl = activeMusicUrl;
     if (!rawTrackUrl) {
       setAudioRef(null);
+      setIsPlayingMusic(false);
       return;
     }
 
     let isCancelled = false;
-    let audioInstance: HTMLAudioElement | null = null;
+    let createdAudio: HTMLAudioElement | null = null;
 
     resolveAudioTrackUrl(rawTrackUrl).then((playableUrl) => {
       if (isCancelled || !playableUrl) return;
-      audioInstance = new Audio(playableUrl);
-      audioInstance.preload = 'auto';
-      audioInstance.loop = true;
-      setAudioRef(audioInstance);
 
-      // If the guest has already clicked open the envelope, begin audio immediately
+      createdAudio = new Audio(playableUrl);
+      createdAudio.preload = 'auto';
+      createdAudio.loop = true;
+      setAudioRef(createdAudio);
+
       if (envelopeOpened) {
-        audioInstance
+        createdAudio
           .play()
           .then(() => setIsPlayingMusic(true))
-          .catch(() => setIsPlayingMusic(false));
+          .catch((err) => {
+            console.warn('Autoplay prevented by browser, waiting for user touch gesture:', err);
+            setIsPlayingMusic(false);
+          });
       }
     });
 
     return () => {
       isCancelled = true;
-      if (audioInstance) {
-        audioInstance.pause();
+      if (createdAudio) {
+        createdAudio.pause();
+        createdAudio.src = '';
       }
     };
-  }, [activeMusicUrl, envelopeOpened]);
+  }, [activeMusicUrl]);
+
+  // Trigger audio playback when envelope opens or when user toggles music
+  useEffect(() => {
+    if (!audioRef) return;
+
+    if (envelopeOpened && isPlayingMusic) {
+      audioRef.play().then(() => setIsPlayingMusic(true)).catch(() => setIsPlayingMusic(false));
+    } else if (!isPlayingMusic) {
+      audioRef.pause();
+    }
+  }, [envelopeOpened, isPlayingMusic, audioRef]);
 
   // Ensure the page always starts at the very top (scrollTop = 0) upon opening
   useEffect(() => {
@@ -323,28 +340,50 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     setHasCompletedScroll(false);
   }, [invitation.id]);
 
-  // Pause auto-scroll on user wheel or touch interaction so it doesn't fight the user
+  // Pause auto-scroll on user wheel or deliberate touch drag (with grace period for iPhone tap release)
   useEffect(() => {
     if (!isAutoScrolling || !envelopeOpened) return;
 
-    let fired = false;
-    const handleUserInteraction = () => {
-      if (!fired) {
-        fired = true;
-        setIsAutoScrolling(false);
+    // Grace period of 1200ms after opening envelope so finger release / tap gestures on iPhone do NOT cancel auto-scroll
+    const openTimestamp = Date.now();
+    let startY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches && e.touches[0]) {
+        startY = e.touches[0].clientY;
       }
     };
 
-    window.addEventListener('wheel', handleUserInteraction, { passive: true });
-    window.addEventListener('touchmove', handleUserInteraction, { passive: true });
+    const handleTouchMove = (e: TouchEvent) => {
+      // Ignore if within initial grace period
+      if (Date.now() - openTimestamp < 1200) return;
+
+      if (e.touches && e.touches[0]) {
+        const deltaY = Math.abs(e.touches[0].clientY - startY);
+        // Only pause if deliberate user swipe (> 12px)
+        if (deltaY > 12) {
+          setIsAutoScrolling(false);
+        }
+      }
+    };
+
+    const handleWheel = () => {
+      if (Date.now() - openTimestamp < 1200) return;
+      setIsAutoScrolling(false);
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     return () => {
-      window.removeEventListener('wheel', handleUserInteraction);
-      window.removeEventListener('touchmove', handleUserInteraction);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
     };
   }, [isAutoScrolling, envelopeOpened]);
 
-  // Handle Smooth Auto-Scrolling Motion (Takes ~60s to reach the end, resilient to layout loading)
+  // Handle Smooth Auto-Scrolling Motion (Works identically across iPhone iOS Safari & Android at 60/120fps)
   useEffect(() => {
     if (isAutoScrolling && envelopeOpened) {
       let lastTimestamp: number | null = null;
@@ -381,8 +420,9 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
             scrollContainer.scrollTop += toScroll;
           }
         } else {
-          const currentY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-          const totalHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+          const scrollEl = document.scrollingElement || document.documentElement || document.body;
+          const currentY = scrollEl.scrollTop || window.scrollY || 0;
+          const totalHeight = scrollEl.scrollHeight || Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
           const maxY = totalHeight - window.innerHeight;
 
           if (maxY > 300 && currentY >= maxY - 10) {
@@ -397,7 +437,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
           if (scrollAcc >= 1) {
             const toScroll = Math.floor(scrollAcc);
             scrollAcc -= toScroll;
-            window.scrollBy(0, toScroll);
+            scrollEl.scrollTop += toScroll;
           }
         }
 
@@ -450,7 +490,8 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
     }
     setEnvelopeOpened(true);
     setIsAutoScrolling(true);
-    if (audioRef && !isPlayingMusic) {
+    setIsPlayingMusic(true);
+    if (audioRef) {
       audioRef
         .play()
         .then(() => setIsPlayingMusic(true))

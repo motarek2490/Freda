@@ -26,6 +26,7 @@ import {
   deleteWebsiteReviewCloud,
   saveCustomTemplateCloud,
   getCustomTemplatesCloud,
+  subscribeCustomTemplatesCloud,
   deleteCustomTemplateCloud,
   getInvitationCloudBySlugOrId,
 } from '../lib/firestoreService';
@@ -125,7 +126,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     });
 
     // 4. Custom Templates
-    getCustomTemplatesCloud().then((res) => {
+    const unsubCustom = subscribeCustomTemplatesCloud((res) => {
       if (res) setCustomTemplates(res);
     });
 
@@ -146,6 +147,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
       unsubOrders();
       unsubInvitations();
       unsubSettings();
+      unsubCustom();
       unsubReviews();
       unsubMusic();
     };
@@ -233,7 +235,15 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
   // Custom Templates Actions
   const handleSaveCustomTemplate = async (template: CustomTemplate) => {
     await saveCustomTemplateCloud(template);
-    setCustomTemplates((prev) => [template, ...prev]);
+    setCustomTemplates((prev) => {
+      const idx = prev.findIndex((t) => t.id === template.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = template;
+        return updated;
+      }
+      return [template, ...prev];
+    });
   };
 
   const handleDeleteCustomTemplate = async (templateId: string) => {
