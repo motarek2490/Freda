@@ -131,20 +131,31 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 <p className="leading-relaxed flex-1">{authError}</p>
               </div>
 
-              {(authError.includes('Authorized Domains') || authError.includes('غير مضاف')) && (
-                <div className="pt-2 border-t border-amber-500/30 flex items-center justify-between gap-2">
-                  <span className="font-mono text-[11px] bg-black/40 px-2 py-1 rounded border border-amber-500/30 text-amber-300 truncate max-w-[200px]">
-                    {typeof window !== 'undefined' ? window.location.hostname : ''}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={copyCurrentDomain}
-                    className="px-2.5 py-1 rounded bg-[#B99A65] text-[#171717] font-bold text-[10px] hover:bg-[#d6bd91] transition-all cursor-pointer shrink-0"
+              {(authError.includes('Authorized Domains') || authError.includes('غير مضاف') || authError.includes('Pop-up Blocked') || authError.includes('حظر')) && (
+                <div className="pt-2 border-t border-amber-500/30 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] bg-black/40 px-2 py-1 rounded border border-amber-500/30 text-amber-300 truncate max-w-[220px]">
+                      {typeof window !== 'undefined' ? window.location.hostname : 'farid.invitationes.workers.dev'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyCurrentDomain}
+                      className="px-2.5 py-1 rounded bg-[#B99A65] text-[#171717] font-bold text-[10px] hover:bg-[#d6bd91] transition-all cursor-pointer shrink-0"
+                    >
+                      {copiedHost
+                        ? (isRtl ? 'تم النسخ ✓' : 'Copied ✓')
+                        : (isRtl ? 'نسخ النطاق' : 'Copy Domain')}
+                    </button>
+                  </div>
+                  <a
+                    href="https://console.firebase.google.com/project/frida-ed3b5/authentication/settings"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-[#B99A65] hover:underline flex items-center gap-1 font-medium mt-1"
                   >
-                    {copiedHost
-                      ? (isRtl ? 'تم النسخ ✓' : 'Copied ✓')
-                      : (isRtl ? 'نسخ النطاق' : 'Copy Domain')}
-                  </button>
+                    <span>{isRtl ? 'اضغط هنا لفتح إعدادات النطاقات في فايربيس (Authorized Domains)' : 'Click here to open Firebase Authorized Domains'}</span>
+                    <span>↗</span>
+                  </a>
                 </div>
               )}
             </div>

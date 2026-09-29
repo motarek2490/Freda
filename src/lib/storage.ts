@@ -123,6 +123,12 @@ export function deleteInvitation(id: string) {
 
 export async function fetchInvitationWithCloudFallback(slugOrId: string): Promise<InvitationData | undefined> {
   const local = getInvitationBySlugOrId(slugOrId);
+  const lower = (slugOrId || '').toLowerCase().trim();
+
+  // If it's a built-in demo or template preview, return immediately without network overhead
+  if (lower.startsWith('preview-demo-') || lower.startsWith('demo-') || lower.startsWith('preview-')) {
+    return local;
+  }
 
   const timeoutPromise = new Promise<null>((resolve) => {
     setTimeout(() => {

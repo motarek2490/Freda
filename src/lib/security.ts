@@ -79,6 +79,16 @@ export async function loginAdminWithGoogle(): Promise<{ success: boolean; user?:
     if (err.code === 'auth/popup-closed-by-user') {
       return { success: false, error: 'تم إغلاق نافذة تسجيل الدخول.' };
     }
+    if (err.code === 'auth/popup-blocked') {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+      return {
+        success: false,
+        error: `قام المتصفح بحظر نافذة تسجيل الدخول (Pop-up Blocked). يرجى الضغط على علامة الحظر في شريط العنوان بالأعلى واختيار "السماح دائماً بالنوافذ المنبثقة"، والتأكد من إضافة النطاق (${currentHost}) في Authorized Domains في Firebase Console.`,
+      };
+    }
+    if (err.code === 'auth/cancelled-popup-request') {
+      return { success: false, error: 'تم إلغاء نافذة تسجيل الدخول السابقة.' };
+    }
     if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
       const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'النطاق الحالي';
       return {

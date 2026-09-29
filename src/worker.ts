@@ -59,7 +59,11 @@ function getSecurityHeaders(siteUrl: string): Record<string, string> {
   };
 }
 
-function addSecurityHeaders(res: Response, isStaticAsset: boolean, siteUrl: string): Response {
+function addSecurityHeaders(res: Response, siteUrl: string): Response {
+  if (res.status === 304 || res.status === 204) {
+    return res;
+  }
+
   const newHeaders = new Headers(res.headers);
   const securityHeaders = getSecurityHeaders(siteUrl);
   
@@ -67,9 +71,7 @@ function addSecurityHeaders(res: Response, isStaticAsset: boolean, siteUrl: stri
     newHeaders.set(key, value);
   }
 
-  if (isStaticAsset) {
-    newHeaders.set('Cache-Control', 'public, max-age=31536000, immutable');
-  } else if (!newHeaders.has('Cache-Control')) {
+  if (!newHeaders.has('Cache-Control')) {
     newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   }
 
@@ -181,8 +183,14 @@ export default {
 
     const isStaticAsset =
       url.pathname.startsWith('/assets/') ||
+      url.pathname.startsWith('/images/') ||
       url.pathname.startsWith('/music/') ||
       url.pathname.match(/\.(png|jpg|jpeg|webp|svg|ico|woff2|woff|ttf|mp3|webmanifest)$/i) !== null;
+
+    // Fast-path: Static binary assets directly served without rewriting
+    if (isStaticAsset) {
+      return env.ASSETS.fetch(request);
+    }
 
     // 2. OpenGraph / Twitter Edge SSR for /i/:slug and /portal/:slug
     const invMatch = url.pathname.match(/^\/i\/([^\/]+)$/);
@@ -195,12 +203,12 @@ export default {
       const assetResponse = await env.ASSETS.fetch(indexReq);
 
       if (!assetResponse.ok) {
-        return addSecurityHeaders(assetResponse, false, siteUrl);
+        return addSecurityHeaders(assetResponse, siteUrl);
       }
 
       const meta = await fetchInvitationMeta(slug, siteUrl, isPortal, projectId, databaseId);
       if (!meta) {
-        return addSecurityHeaders(assetResponse, false, siteUrl);
+        return addSecurityHeaders(assetResponse, siteUrl);
       }
 
       const transformed = new HTMLRewriter()
@@ -215,16 +223,16 @@ export default {
         .on('meta[name="twitter:image"]', { element(el) { el.setAttribute('content', meta.coverImage); } })
         .transform(assetResponse);
 
-      return addSecurityHeaders(transformed, false, siteUrl);
+      return addSecurityHeaders(transformed, siteUrl);
     }
 
-    // 3. Static asset or standard SPA page fetch
+    // 3. SPA page fetch
     let response = await env.ASSETS.fetch(request);
-    if (!response.ok && !isStaticAsset) {
+    if (!response.ok) {
       const indexReq = new Request(new URL('/', request.url), request);
       response = await env.ASSETS.fetch(indexReq);
     }
     
-    return addSecurityHeaders(response, isStaticAsset, siteUrl);
+    return addSecurityHeaders(response, siteUrl);
   },
 };

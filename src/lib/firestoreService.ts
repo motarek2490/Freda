@@ -201,8 +201,13 @@ export async function getInvitationCloudBySlugOrId(slugOrId: string): Promise<In
   const clean = slugOrId.trim();
   if (!clean) return null;
 
+  const lowerKey = clean.toLowerCase();
+  // Fast path: Built-in demo invitations and templates are generated dynamically
+  if (lowerKey.startsWith('preview-demo-') || lowerKey.startsWith('demo-') || lowerKey.startsWith('preview-')) {
+    return null;
+  }
+
   try {
-    const lowerKey = clean.toLowerCase();
 
     // 1. Resolve slug first
     const slugRef = doc(db, 'slugs', lowerKey);
