@@ -155,16 +155,28 @@ async function fetchInvitationMeta(
           const eventTitle = eventDetails.eventTitle?.stringValue || title;
           const venueName = eventDetails.venueName?.stringValue || '';
           const eventDate = eventDetails.eventDate?.stringValue || '';
-          const coverImage =
+          const eventTime = eventDetails.eventTime?.stringValue || '';
+          const rawCover =
             eventDetails.coverImageUrl?.stringValue ||
             fields.coverImage?.stringValue ||
-            `${siteUrl}/og-default.jpg`;
+            fields.coverImageUrl?.stringValue ||
+            eventDetails.galleryImages?.arrayValue?.values?.[0]?.stringValue ||
+            '';
+
+          let coverImage = rawCover;
+          if (!coverImage) {
+            coverImage = `${siteUrl}/og-default.jpg`;
+          } else if (coverImage.startsWith('/')) {
+            coverImage = `${siteUrl}${coverImage}`;
+          } else if (!coverImage.startsWith('http://') && !coverImage.startsWith('https://')) {
+            coverImage = `${siteUrl}/${coverImage}`;
+          }
 
           if (isPortal) {
             return {
-              title: `بوابة إدارة الضيوف | ${eventTitle} — فريدا`,
+              title: `👑 بوابة إدارة الضيوف | ${eventTitle} — فريدا`,
               description: hostNames
-                ? `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) لدعوة ${eventTitle} الخاصة بعائلة ${hostNames}.`
+                ? `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) لدعوة ${eventTitle} الخاصة بعائلة (${hostNames}).`
                 : `بوابة إدارة الضيوف وتأكيدات الحضور (RSVP) الخاصة بدعوة ${eventTitle}.`,
               coverImage,
               url: `${siteUrl}/portal/${encodeURIComponent(cleanSlug)}`,
@@ -172,11 +184,11 @@ async function fetchInvitationMeta(
           }
 
           const desc = hostNames
-            ? `تتشرف عائلة ${hostNames} بدعوتكم لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` يوم ${eventDate}` : ''}.`
-            : `دعوة خاصة لحضور ${eventTitle}. انقر لمشاهدة تفاصيل الدعوة وتأكيد الحضور (RSVP).`;
+            ? `💌 تتشرف عائلة (${hostNames}) بدعوتكم لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` • ${eventDate}${eventTime ? ` الساعة ${eventTime}` : ''}` : ''}. انقر لفتح ظرف الدعوة وسماع المعزوفة وتأكيد الحضور.`
+            : `💌 دعوة خاصة لحضور ${eventTitle}${venueName ? ` في ${venueName}` : ''}${eventDate ? ` • ${eventDate}` : ''}. انقر لفتح ظرف الدعوة وتأكيد الحضور.`;
 
           return {
-            title: `${eventTitle} | فريدا (FRIDA)`,
+            title: `✨ دعوة خاصة: ${eventTitle} | فريدا (FRIDA)`,
             description: desc,
             coverImage,
             url: `${siteUrl}/i/${encodeURIComponent(cleanSlug)}`,
@@ -701,10 +713,19 @@ export default {
         .on('meta[property="og:title"]', { element(el) { el.setAttribute('content', meta.title); } })
         .on('meta[property="og:description"]', { element(el) { el.setAttribute('content', meta.description); } })
         .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', meta.coverImage); } })
+        .on('meta[property="og:image:secure_url"]', { element(el) { el.setAttribute('content', meta.coverImage); } })
         .on('meta[property="og:url"]', { element(el) { el.setAttribute('content', meta.url); } })
+        .on('meta[property="og:type"]', { element(el) { el.setAttribute('content', 'website'); } })
         .on('meta[name="twitter:title"]', { element(el) { el.setAttribute('content', meta.title); } })
         .on('meta[name="twitter:description"]', { element(el) { el.setAttribute('content', meta.description); } })
         .on('meta[name="twitter:image"]', { element(el) { el.setAttribute('content', meta.coverImage); } })
+        .on('head', {
+          element(el) {
+            el.append(`<meta property="og:image:secure_url" content="${meta.coverImage}" />`, { html: true });
+            el.append(`<meta property="og:site_name" content="فريدا | FRIDA" />`, { html: true });
+            el.append(`<meta property="og:image:alt" content="${meta.title}" />`, { html: true });
+          }
+        })
         .transform(assetResponse);
 
       return addSecurityHeaders(transformed, siteUrl);

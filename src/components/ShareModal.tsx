@@ -220,6 +220,57 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
         )}
 
+        {/* Live Luxury WhatsApp / Social Preview Card */}
+        <div className="bg-[#121212] border border-[#B99A65]/40 rounded-2xl p-3.5 text-right space-y-2.5 text-xs shadow-xl relative overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[#2A2722] pb-2">
+            <span className="text-[11px] font-bold text-[#B99A65] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#B99A65]" />
+              <span>{isRtl ? 'معاينة بطاقة الرابط عند إرساله للضيف (WhatsApp Card Preview):' : 'Guest WhatsApp Preview Card:'}</span>
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono">FRIDA Social Card</span>
+          </div>
+
+          <div className="bg-[#1E1E1E] rounded-xl overflow-hidden border border-[#333] shadow-md flex flex-col sm:flex-row items-center gap-3 p-2.5 hover:border-[#B99A65]/60 transition-all">
+            {/* Invitation Cover Thumbnail */}
+            <div className="w-full sm:w-28 h-28 sm:h-24 rounded-lg overflow-hidden shrink-0 border border-[#B99A65]/30 relative bg-[#0D0D0D]">
+              <img
+                src={
+                  invitation.eventDetails.coverImageUrl ||
+                  (invitation as any).coverImage ||
+                  (invitation as any).coverImageUrl ||
+                  invitation.eventDetails.galleryImages?.[0] ||
+                  '/images/samples/invitation_paper_botanical_1790456696743.jpg'
+                }
+                alt={invitation.eventDetails.eventTitle}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/images/samples/invitation_paper_botanical_1790456696743.jpg';
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <span className="absolute bottom-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/80 text-[#B99A65] border border-[#B99A65]/40">
+                فريدا
+              </span>
+            </div>
+
+            {/* Content info */}
+            <div className="flex-1 space-y-1 text-right sm:text-right w-full">
+              <h5 className="font-playfair font-bold text-xs text-[#F7F4EE] line-clamp-1">
+                ✨ {invitation.eventDetails.eventTitle || invitation.title}
+              </h5>
+              <p className="text-[11px] text-[#B99A65] line-clamp-1 font-medium">
+                {invitation.eventDetails.hostNames ? `بتشرف عائلة (${invitation.eventDetails.hostNames})` : 'دعوة زفاف ملكية فاخرة'}
+              </p>
+              <p className="text-[10px] text-[#8D8A84] line-clamp-1">
+                📅 {invitation.eventDetails.eventDate || 'التاريخ المحدد'} • 📍 {invitation.eventDetails.venueName || 'القاعة الملكية'}
+              </p>
+              <p className="text-[9px] text-[#666] truncate font-mono">
+                {activeUrl}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Link Copy Box */}
         <div className="flex items-center gap-2 p-1.5 bg-[#1F1E1B] border border-[#333] rounded-2xl">
           <input
