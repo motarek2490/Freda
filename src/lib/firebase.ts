@@ -36,7 +36,8 @@ const isNamedDb = rawDbId && rawDbId !== '(default)' && rawDbId !== 'default' &&
 
 const firestoreSettings = {
   ignoreUndefinedProperties: true,
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
 };
 
 try {
