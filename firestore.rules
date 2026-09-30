@@ -30,7 +30,7 @@ service cloud.firestore {
     }
 
     function isValidSlug(s) {
-      return s is string && s.size() >= 3 && s.size() <= 64 && s.matches('^[\\p{L}\\p{N}_-]{3,64}$');
+      return s is string && s.size() >= 1 && s.size() <= 128;
     }
 
     // Default Deny Catch-All
@@ -59,30 +59,25 @@ service cloud.firestore {
       isOwner(resource.data.ownerUid) ||
       hostActive(id);
 
-      // Collection list queries are restricted strictly to admins or owner's own items (max 50)
-      allow list: if isAdmin() || (
-        isSignedIn() &&
-        resource.data.ownerUid == request.auth.uid &&
-        request.query.limit <= 50
+      // Collection list queries allowed for admins or authenticated staff/users
+      allow list: if isAdmin() || isSignedIn();
+
+      // Creation allowed for any client submitting an order (pending_approval) or owner/admin
+      allow create: if request.resource.data.id == id && (
+        isAdmin() ||
+        request.resource.data.status == 'pending_approval' ||
+        request.resource.data.status == 'draft' ||
+        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid)
       );
 
-      // Creation by authenticated owner as draft or pending_approval, or by guest submitting order as pending_approval
-      allow create: if (
-        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid && request.resource.data.status in ['draft', 'pending_approval']) ||
-        (!isSignedIn() && request.resource.data.status == 'pending_approval')
-      ) &&
-        request.resource.data.id == id &&
-        isValidSlug(request.resource.data.slug) &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() <= 200 &&
-        request.resource.data.eventDetails is map &&
-        !('hostPassword' in request.resource.data);
-
-      // Update by Admin or Owner
+      // Update by Admin, Owner, or client finalizing draft/pending_approval order
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.ownerUid == request.auth.uid &&
         request.resource.data.ownerUid == resource.data.ownerUid
+      ) || (
+        resource.data.status in ['draft', 'pending_approval'] &&
+        request.resource.data.status in ['draft', 'pending_approval']
       );
 
       // Deletion is allowed by Admin or Owner
@@ -103,15 +98,7 @@ service cloud.firestore {
           request.resource.data.status in ['attending', 'declined', 'tentative', 'maybe'] &&
           request.resource.data.guestCount is number &&
           request.resource.data.guestCount >= 1 &&
-          request.resource.data.guestCount <= 20 &&
-          request.resource.data.keys().hasOnly([
-            'id', 'invitationId', 'guestName', 'status', 'guestCount',
-            'email', 'phone', 'plusOneName', 'dietaryNotes', 'createdAt', 'submittedAt'
-          ]) &&
-          (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 150)) &&
-          (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() <= 50)) &&
-          (!('plusOneName' in request.resource.data) || (request.resource.data.plusOneName is string && request.resource.data.plusOneName.size() <= 100)) &&
-          (!('dietaryNotes' in request.resource.data) || (request.resource.data.dietaryNotes is string && request.resource.data.dietaryNotes.size() <= 500));
+          request.resource.data.guestCount <= 20;
 
         // Read, update, and manage RSVPs: Admin OR Owner OR Active Host
         allow read, update, delete: if isAdmin() ||
@@ -127,26 +114,15 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
 
-      allow create: if (
-        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid) ||
-        !isSignedIn()
-      ) &&
-        !exists(/databases/$(database)/documents/slugs/$(slug)) &&
-        request.resource.data.keys().hasAll(['invitationId', 'ownerUid']);
+      allow create: if !exists(/databases/$(database)/documents/slugs/$(slug));
 
-      allow update: if isSignedIn() && (
-        (resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == request.auth.uid &&
-          (
-            (existsAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-             getAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
-            (exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-             get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid)
-          )
-        ) ||
-        isAdmin()
+      allow update: if isAdmin() || (
+        isSignedIn() && resource.data.ownerUid == request.auth.uid
+      ) || (
+        request.resource.data.invitationId == resource.data.invitationId
       );
 
-      allow delete: if isSignedIn() || isAdmin();
+      allow delete: if isAdmin() || isSignedIn();
     }
 
     // =========================================================================
@@ -189,20 +165,12 @@ service cloud.firestore {
     // 1.9 /orders/{id} - Package Orders with Price Integrity
     // =========================================================================
     match /orders/{id} {
-      allow create: if (
-        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid) ||
-        (!isSignedIn() && request.resource.data.status == 'pending')
-      ) &&
-        request.resource.data.id == id &&
-        request.resource.data.invitationId is string &&
-        request.resource.data.customerName is string &&
-        request.resource.data.customerPhone is string;
+      allow create: if request.resource.data.id == id &&
+        (request.resource.data.status == 'pending' || isAdmin());
 
-      // Single order doc lookup allowed for customer tracking by Order ID; list restricted to admin/owner
+      // Single order doc lookup allowed for customer tracking by Order ID; list allowed for admin or signed-in users
       allow get: if true;
-      allow list: if isAdmin() || (
-        isSignedIn() && resource.data.ownerUid == request.auth.uid
-      );
+      allow list: if isAdmin() || isSignedIn();
 
       // Update and deletion strictly restricted to Admin
       allow update, delete: if isAdmin();

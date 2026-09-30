@@ -143,19 +143,9 @@ export async function saveInvitationCloud(
     galleryImages: invitation.galleryImages,
   });
 
-  // Write main invitation document with timeout protection
+  // Write main invitation document strictly to Cloud Firestore
   const invDocRef = doc(db, 'invitations', targetInvId);
-  const saveInvPromise = setDoc(invDocRef, publicData, { merge: true });
-  const timeoutInvPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 4000));
-
-  try {
-    const res = await Promise.race([saveInvPromise, timeoutInvPromise]);
-    if (res === 'TIMEOUT') {
-      console.warn('Invitation save to Firestore timed out, proceeding with local saved state');
-    }
-  } catch (invErr) {
-    console.warn('Non-fatal cloud save error for invitation:', invErr);
-  }
+  await setDoc(invDocRef, publicData, { merge: true });
 
   // Write slug mapping doc safely
   try {
