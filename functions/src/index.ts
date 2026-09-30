@@ -377,6 +377,200 @@ export const approveOrder = onCall(
 );
 
 // =============================================================================
+// Callable: rejectOrder
+// Admin-only order rejection that marks status = 'rejected' and leaves invitation untouched
+// =============================================================================
+
+export const rejectOrder = onCall(
+  { region: FUNCTIONS_REGION, cors: true },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const token = request.auth?.token;
+    let isAdmin = Boolean(token?.admin);
+    if (!isAdmin && token?.email === 'mohammedtarek2490@gmail.com' && token?.email_verified === true) {
+      isAdmin = true;
+    }
+    if (!isAdmin && uid) {
+      const adminDoc = await db.collection('admins').doc(uid).get();
+      if (adminDoc.exists) {
+        isAdmin = true;
+      }
+    }
+
+    if (!uid || !isAdmin) {
+      throw new HttpsError('permission-denied', 'Only authorized administrators can reject orders.');
+    }
+
+    const orderId = (request.data?.orderId || '').toString().trim();
+    if (!orderId) {
+      throw new HttpsError('invalid-argument', 'orderId is required.');
+    }
+
+    const orderDoc = await db.collection('orders').doc(orderId).get();
+    if (!orderDoc.exists) {
+      throw new HttpsError('not-found', 'Order not found.');
+    }
+
+    const orderData = orderDoc.data()!;
+    if (orderData.status !== 'pending') {
+      throw new HttpsError(
+        'failed-precondition',
+        `Cannot reject an order with status "${orderData.status}". Only pending orders can be rejected.`
+      );
+    }
+
+    const rawReason = request.data?.reason;
+    const reason = typeof rawReason === 'string' && rawReason.trim().length > 0
+      ? rawReason.trim()
+      : null;
+
+    await orderDoc.ref.update({
+      status: 'rejected',
+      rejectionReason: reason,
+      rejectedAt: FieldValue.serverTimestamp(),
+      rejectedBy: uid,
+    });
+
+    return { success: true };
+  }
+);
+
+// =============================================================================
+// Callable: adminUpdateInvitationLifecycle
+// Admin-only invitation lifecycle management (extend, terminate, reactivate)
+// =============================================================================
+
+export const adminUpdateInvitationLifecycle = onCall(
+  { region: FUNCTIONS_REGION, cors: true },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const token = request.auth?.token;
+    let isAdmin = Boolean(token?.admin);
+    if (!isAdmin && token?.email === 'mohammedtarek2490@gmail.com' && token?.email_verified === true) {
+      isAdmin = true;
+    }
+    if (!isAdmin && uid) {
+      const adminDoc = await db.collection('admins').doc(uid).get();
+      if (adminDoc.exists) {
+        isAdmin = true;
+      }
+    }
+
+    if (!uid || !isAdmin) {
+      throw new HttpsError(
+        'permission-denied',
+        'Only authorized administrators can manage invitation lifecycles.'
+      );
+    }
+
+    const invitationId = (request.data?.invitationId || '').toString().trim();
+    if (!invitationId) {
+      throw new HttpsError('invalid-argument', 'invitationId is required.');
+    }
+
+    const invDoc = await db.collection('invitations').doc(invitationId).get();
+    if (!invDoc.exists) {
+      throw new HttpsError('not-found', 'Invitation not found.');
+    }
+
+    const action = (request.data?.action || '').toString().trim();
+    if (!['extend', 'terminate', 'reactivate'].includes(action)) {
+      throw new HttpsError(
+        'invalid-argument',
+        'action must be one of: "extend", "terminate", "reactivate".'
+      );
+    }
+
+    const invData = invDoc.data()!;
+    const now = Date.now();
+    let newExpiresAt: string | null = null;
+    let newStatus: string = invData.status || 'published';
+
+    if (action === 'extend') {
+      const rawDays = Number(request.data?.extendDays);
+      if (!Number.isInteger(rawDays) || rawDays <= 0 || rawDays > 365) {
+        throw new HttpsError(
+          'invalid-argument',
+          'extendDays must be a positive integer between 1 and 365.'
+        );
+      }
+
+      // Calculate new expiration: from current expiresAt if in the future, otherwise from now
+      let baseTime = now;
+      if (invData.expiresAt) {
+        const currentExpTime = new Date(invData.expiresAt).getTime();
+        if (!isNaN(currentExpTime) && currentExpTime > now) {
+          baseTime = currentExpTime;
+        }
+      }
+
+      const calculatedExp = new Date(baseTime + rawDays * 24 * 60 * 60 * 1000).toISOString();
+      newExpiresAt = calculatedExp;
+      newStatus = invData.status === 'expired' ? 'published' : (invData.status || 'published');
+
+      await invDoc.ref.update({
+        expiresAt: calculatedExp,
+        isExpired: false,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+      });
+    } else if (action === 'terminate') {
+      const nowIso = new Date().toISOString();
+      newExpiresAt = nowIso;
+      newStatus = 'expired';
+
+      await invDoc.ref.update({
+        status: 'expired',
+        isExpired: true,
+        expiresAt: nowIso,
+        expiredAt: nowIso,
+        updatedAt: nowIso,
+      });
+
+      // Revoke active host sessions for this invitation (reusing deterministic host uid convention)
+      try {
+        await auth.revokeRefreshTokens(`host_${invitationId}`);
+      } catch (err) {
+        console.warn(`[adminUpdateInvitationLifecycle] Token revocation warning for host_${invitationId}:`, err);
+      }
+    } else if (action === 'reactivate') {
+      if (invData.status !== 'expired' && !invData.isExpired) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Only expired invitations can be reactivated.'
+        );
+      }
+
+      const rawDays = Number(request.data?.extendDays);
+      if (!Number.isInteger(rawDays) || rawDays <= 0 || rawDays > 365) {
+        throw new HttpsError(
+          'invalid-argument',
+          'extendDays must be a positive integer between 1 and 365 when reactivating an invitation.'
+        );
+      }
+
+      const reactivatedExp = new Date(now + rawDays * 24 * 60 * 60 * 1000).toISOString();
+      newExpiresAt = reactivatedExp;
+      newStatus = 'published';
+
+      await invDoc.ref.update({
+        status: 'published',
+        isExpired: false,
+        expiresAt: reactivatedExp,
+        reactivatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    return {
+      success: true,
+      newExpiresAt,
+      newStatus,
+    };
+  }
+);
+
+// =============================================================================
 // Scheduled Function: expireInvitations
 // Daily cleanup of expired invitations past expiresAt date with token revocation
 // =============================================================================
