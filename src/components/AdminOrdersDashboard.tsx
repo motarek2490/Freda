@@ -226,6 +226,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
   };
 
   const handleDeleteInvitation = async (invId: string) => {
+    setInvitations((prev) => prev.filter((i) => i.id !== invId));
     try {
       await deleteInvitationCloud(invId);
     } catch (err) {

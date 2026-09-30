@@ -37,17 +37,17 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const DEFAULT_PLAN_PRICES = {
-  basic: 199,
-  royal_vip: 399,
-  diamond: 799,
+  basic: 0,
+  royal_vip: 0,
+  diamond: 0,
 } as const;
 
 export function getPlanPrice(
   planTier: 'basic' | 'royal_vip' | 'diamond',
   adminSettings?: { basicPriceEGP?: number; royalPriceEGP?: number; diamondPriceEGP?: number } | null
 ): number {
-  if (planTier === 'basic') return adminSettings?.basicPriceEGP ?? DEFAULT_PLAN_PRICES.basic;
-  if (planTier === 'diamond') return adminSettings?.diamondPriceEGP ?? DEFAULT_PLAN_PRICES.diamond;
-  return adminSettings?.royalPriceEGP ?? DEFAULT_PLAN_PRICES.royal_vip;
+  if (planTier === 'basic') return adminSettings?.basicPriceEGP ?? 0;
+  if (planTier === 'diamond') return adminSettings?.diamondPriceEGP ?? 0;
+  return adminSettings?.royalPriceEGP ?? 0;
 }
 

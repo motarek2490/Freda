@@ -14,10 +14,13 @@ import {
   subscribeAdminSettingsCloud,
   subscribeCustomTemplatesCloud,
   incrementVisitorCountCloud,
+  subscribeUserInvitationsCloud,
+  getUserInvitationsCloud,
 } from './lib/firestoreService';
 import { subscribeCloudMusicLibrary } from './data/presetMusic';
 import { signOut } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './lib/firebase';
 import {
   getStoredLanguage,
   setStoredLanguage,
@@ -185,11 +188,34 @@ export default function App() {
     updateMeta('twitter:description', appAdminSettings.ogDescription || appAdminSettings.metaDescription);
   }, [appAdminSettings]);
 
-  // Invitations State (Local dashboard management, no global table subscribe)
-  const [invitations, setInvitations] = useState<InvitationData[]>(() => getStoredInvitations());
+  // Invitations State — 100% Live Cloud Synced with Cloud Firestore (zero local storage)
+  const [invitations, setInvitations] = useState<InvitationData[]>([]);
+
+  // Real-time synchronization of user invitations from Firestore
+  useEffect(() => {
+    try {
+      localStorage.removeItem('frida_user_invitations');
+      localStorage.removeItem('frida_invitations');
+    } catch {}
+
+    const targetUid = user?.id || user?.uid || auth.currentUser?.uid;
+    if (!targetUid) {
+      setInvitations([]);
+      return;
+    }
+
+    const unsub = subscribeUserInvitationsCloud(targetUid, (cloudInvs) => {
+      setInvitations(cloudInvs);
+    });
+
+    return () => unsub();
+  }, [user?.id, user?.uid, auth.currentUser?.uid]);
 
   const refreshInvitations = () => {
-    setInvitations(getStoredInvitations());
+    const targetUid = user?.id || user?.uid || auth.currentUser?.uid;
+    if (targetUid) {
+      getUserInvitationsCloud(targetUid).then((list) => setInvitations(list));
+    }
   };
 
   // Standalone public invitation view or host portal
@@ -197,6 +223,61 @@ export default function App() {
   const [portalInvitation, setPortalInvitation] = useState<InvitationData | null>(null);
   const [activeOccasion, setActiveOccasion] = useState<OccasionType | null>(null);
   const [trackOrderId, setTrackOrderId] = useState<string>('');
+
+  // Active Cloud Sync for Standalone Invitation (instant 404 if deleted from server)
+  useEffect(() => {
+    if (!standaloneInvitation?.id) return;
+    if (standaloneInvitation.id.startsWith('preview-') || standaloneInvitation.id.startsWith('demo-')) return;
+
+    const unsub = onSnapshot(
+      doc(db, 'invitations', standaloneInvitation.id),
+      (snap) => {
+        if (!snap.exists()) {
+          // Invitation was deleted on the server!
+          setStandaloneInvitation(null);
+          setRouteState({
+            isLoading: false,
+            notFoundTargetId: standaloneInvitation.slug || standaloneInvitation.id,
+          });
+        } else {
+          setStandaloneInvitation(snap.data() as InvitationData);
+        }
+      },
+      (err) => {
+        console.warn('Standalone invitation sync warning:', err);
+      }
+    );
+
+    return () => unsub();
+  }, [standaloneInvitation?.id]);
+
+  // Active Cloud Sync for Host Portal (instantly shut down and 404 if deleted from server)
+  useEffect(() => {
+    if (!portalInvitation?.id) return;
+    if (portalInvitation.id.startsWith('preview-') || portalInvitation.id.startsWith('demo-')) return;
+
+    const unsub = onSnapshot(
+      doc(db, 'invitations', portalInvitation.id),
+      (snap) => {
+        if (!snap.exists()) {
+          // Invitation was deleted on the server!
+          setPortalInvitation(null);
+          setActiveView('home');
+          setRouteState({
+            isLoading: false,
+            notFoundTargetId: portalInvitation.slug || portalInvitation.id,
+          });
+        } else {
+          setPortalInvitation(snap.data() as InvitationData);
+        }
+      },
+      (err) => {
+        console.warn('Portal invitation sync warning:', err);
+      }
+    );
+
+    return () => unsub();
+  }, [portalInvitation?.id]);
 
   // Dedicated Route State
   const [routeState, setRouteState] = useState<{

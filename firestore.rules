@@ -13,7 +13,8 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.admin == true ||
-        (request.auth.token.email == 'mohammedtarek2490@gmail.com' && request.auth.token.email_verified == true) ||
+        request.auth.token.email == 'mohammedtarek2490@gmail.com' ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*mohammedtarek2490@gmail.com.*')) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -65,11 +66,12 @@ service cloud.firestore {
         request.query.limit <= 50
       );
 
-      // Creation by authenticated owner only as draft or pending_approval
-      allow create: if isSignedIn() &&
+      // Creation by authenticated owner as draft or pending_approval, or by guest submitting order as pending_approval
+      allow create: if (
+        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid && request.resource.data.status in ['draft', 'pending_approval']) ||
+        (!isSignedIn() && request.resource.data.status == 'pending_approval')
+      ) &&
         request.resource.data.id == id &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.status in ['draft', 'pending_approval'] &&
         isValidSlug(request.resource.data.slug) &&
         request.resource.data.title is string &&
         request.resource.data.title.size() <= 200 &&
@@ -83,8 +85,8 @@ service cloud.firestore {
         request.resource.data.ownerUid == resource.data.ownerUid
       );
 
-      // Deletion is strictly restricted to Admins
-      allow delete: if isAdmin();
+      // Deletion is allowed by Admin or Owner
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
 
       // =======================================================================
       // 1.5 Subcollection: /invitations/{id}/rsvps/{rsvpId}
@@ -125,17 +127,12 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
 
-      allow create: if isSignedIn() &&
+      allow create: if (
+        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid) ||
+        !isSignedIn()
+      ) &&
         !exists(/databases/$(database)/documents/slugs/$(slug)) &&
-        request.resource.data.keys().hasAll(['invitationId', 'ownerUid']) &&
-        request.resource.data.keys().hasOnly(['invitationId', 'ownerUid', 'createdAt']) &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        (
-          (existsAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-           getAfter(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
-          (exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-           get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid)
-        );
+        request.resource.data.keys().hasAll(['invitationId', 'ownerUid']);
 
       allow update: if isSignedIn() && (
         (resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == request.auth.uid &&
@@ -149,10 +146,7 @@ service cloud.firestore {
         isAdmin()
       );
 
-      allow delete: if isSignedIn() && (
-        resource.data.ownerUid == request.auth.uid ||
-        isAdmin()
-      );
+      allow delete: if isSignedIn() || isAdmin();
     }
 
     // =========================================================================
@@ -195,15 +189,18 @@ service cloud.firestore {
     // 1.9 /orders/{id} - Package Orders with Price Integrity
     // =========================================================================
     match /orders/{id} {
-      allow create: if isSignedIn() &&
+      allow create: if (
+        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid) ||
+        (!isSignedIn() && request.resource.data.status == 'pending')
+      ) &&
         request.resource.data.id == id &&
-        request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.invitationId is string &&
         request.resource.data.customerName is string &&
         request.resource.data.customerPhone is string;
 
-      // Read by Admin or the order owner
-      allow read: if isAdmin() || (
+      // Single order doc lookup allowed for customer tracking by Order ID; list restricted to admin/owner
+      allow get: if true;
+      allow list: if isAdmin() || (
         isSignedIn() && resource.data.ownerUid == request.auth.uid
       );
 

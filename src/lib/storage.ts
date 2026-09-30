@@ -60,27 +60,11 @@ export function setStoredUser(user: UserProfile | null) {
 }
 
 export function getStoredInvitations(): InvitationData[] {
+  // Purge any stale legacy local cache
   try {
-    const data = localStorage.getItem(INVITATIONS_KEY) || localStorage.getItem('frida_user_invitations');
-    if (data) {
-      const list = JSON.parse(data) as InvitationData[];
-      if (Array.isArray(list)) {
-        // Filter out any preview or demo invitations
-        return list.filter(
-          (item) =>
-            item &&
-            item.id &&
-            !item.id.startsWith('preview-') &&
-            !item.id.startsWith('demo-') &&
-            item.id !== 'demo-inv' &&
-            !item.slug?.startsWith('preview-') &&
-            !item.slug?.startsWith('demo-')
-        );
-      }
-    }
-  } catch {
-    return [];
-  }
+    localStorage.removeItem(INVITATIONS_KEY);
+    localStorage.removeItem('frida_user_invitations');
+  } catch {}
   return [];
 }
 
@@ -102,23 +86,7 @@ export function saveInvitation(invitation: InvitationData): InvitationData {
     invitation.hostAccessCode = 'HOST-' + Math.floor(100000 + Math.random() * 900000);
   }
 
-  const current = getStoredInvitations();
-  const index = current.findIndex((item) => item.id === invitation.id);
-  let updated: InvitationData[];
-  if (index >= 0) {
-    updated = [...current];
-    updated[index] = invitation;
-  } else {
-    updated = [invitation, ...current];
-  }
-
-  try {
-    localStorage.setItem(INVITATIONS_KEY, JSON.stringify(updated));
-  } catch (err) {
-    console.warn('LocalStorage save failed:', err);
-  }
-
-  // Persist to Cloud Firestore with isolated vault in background (always runs even if anon auth is unavailable)
+  // Persist directly to Cloud Firestore
   ensureAnonymousAuth()
     .catch(() => null)
     .then((currentUser) => {
@@ -136,27 +104,15 @@ export function saveInvitation(invitation: InvitationData): InvitationData {
 
 export function clearAllStoredMockData() {
   try {
-    const list = getStoredInvitations();
-    const cleanList = list.filter(
-      (item) =>
-        item &&
-        item.id &&
-        !item.id.startsWith('preview-') &&
-        !item.id.startsWith('demo-') &&
-        item.id !== 'demo-inv' &&
-        !item.slug?.startsWith('preview-') &&
-        !item.slug?.startsWith('demo-')
-    );
-    localStorage.setItem(INVITATIONS_KEY, JSON.stringify(cleanList));
+    localStorage.removeItem(INVITATIONS_KEY);
     localStorage.removeItem('frida_user_invitations');
   } catch {}
 }
 
 export function deleteInvitation(id: string) {
-  const current = getStoredInvitations();
-  const updated = current.filter((item) => item.id !== id);
   try {
-    localStorage.setItem(INVITATIONS_KEY, JSON.stringify(updated));
+    localStorage.removeItem(INVITATIONS_KEY);
+    localStorage.removeItem('frida_user_invitations');
   } catch {}
 
   deleteInvitationCloud(id).catch((err) => {
@@ -165,62 +121,42 @@ export function deleteInvitation(id: string) {
 }
 
 export async function fetchInvitationWithCloudFallback(slugOrId: string): Promise<InvitationData | undefined> {
-  const local = getInvitationBySlugOrId(slugOrId);
-  const lower = (slugOrId || '').toLowerCase().trim();
+  const cleanKey = (slugOrId || '').trim();
+  if (!cleanKey) return undefined;
+
+  const lower = cleanKey.toLowerCase();
 
   // If it's a built-in demo or template preview, return immediately without network overhead
   if (lower.startsWith('preview-demo-') || lower.startsWith('demo-') || lower.startsWith('preview-')) {
-    return local;
+    return getInvitationBySlugOrId(cleanKey);
   }
 
-  const timeoutPromise = new Promise<null>((resolve) => {
-    setTimeout(() => {
-      resolve(null);
-    }, 3500);
-  });
-
-  // 1. Try Cloud Firestore with a 3.5 second timeout so the client never hangs forever
+  // 1. Fetch strictly from Cloud Firestore
   try {
-    const cloudInv = await Promise.race([
-      getInvitationCloudBySlugOrId(slugOrId),
-      timeoutPromise
-    ]);
-
+    const cloudInv = await getInvitationCloudBySlugOrId(cleanKey);
     if (cloudInv) {
-      // Keep local cache updated with latest Cloud state
-      saveInvitation(cloudInv);
       return cloudInv;
     }
   } catch (e) {
     console.warn('Error retrieving cloud invitation:', e);
   }
 
-  // 2. Fallback to local storage if offline, not found in cloud, or cloud timed out
-  return local;
+  // NEVER fallback to local storage for real invitations.
+  // If it does not exist in Cloud Firestore, it was deleted!
+  return undefined;
 }
 
 export function getInvitationBySlugOrId(slugOrId: string): InvitationData | undefined {
   if (!slugOrId) return undefined;
-  const list = getStoredInvitations();
   const rawKey = slugOrId.trim();
   const lowerKey = rawKey.toLowerCase();
-
-  // 1. Direct local storage match
-  const found = list.find(
-    (item) =>
-      item.slug?.toLowerCase() === lowerKey ||
-      item.id?.toLowerCase() === lowerKey ||
-      item.slug === rawKey ||
-      item.id === rawKey
-  );
-  if (found) return found;
 
   const cleanId = lowerKey
     .replace(/^preview-demo-/, '')
     .replace(/^preview-/, '')
     .replace(/^demo-/, '');
 
-  // 2. Check VIP Demo Profiles (e.g. preview-demo-vip_1, vip_1, etc.)
+  // 1. Check VIP Demo Profiles (e.g. preview-demo-vip_1, vip_1, etc.)
   const vipProfile = EGYPTIAN_VIP_PROFILES.find(
     (p) =>
       (p.id || '').toLowerCase() === cleanId ||
@@ -234,7 +170,7 @@ export function getInvitationBySlugOrId(slugOrId: string): InvitationData | unde
     return createDemoInvitationFromProfile(vipProfile, 'ar', rawKey);
   }
 
-  // 3. Check Templates by ID, clean ID, layoutType, or themeStyle
+  // 2. Check Templates by ID, clean ID, layoutType, or themeStyle
   const tmpl = TEMPLATES.find(
     (t) =>
       (t.id || '').toLowerCase() === cleanId ||
@@ -249,7 +185,7 @@ export function getInvitationBySlugOrId(slugOrId: string): InvitationData | unde
     return createTemplatePreviewInvitation(tmpl, 'ar', rawKey);
   }
 
-  // 4. Fallback for any other preview-* or demo-* slugs to prevent 404
+  // 3. Fallback for any other preview-* or demo-* slugs to prevent crash
   if (lowerKey.startsWith('preview-') || lowerKey.startsWith('demo-') || lowerKey.startsWith('preview') || lowerKey.startsWith('demo')) {
     const fallbackTmpl = TEMPLATES[0];
     if (fallbackTmpl) {
@@ -261,50 +197,21 @@ export function getInvitationBySlugOrId(slugOrId: string): InvitationData | unde
 }
 
 export function getStoredRSVPs(invitationId?: string): RSVPResponse[] {
-  let allRsvps: RSVPResponse[] = [];
   try {
-    const data = localStorage.getItem(RSVPS_KEY) || localStorage.getItem('frida_rsvp_responses');
-    if (data) {
-      allRsvps = JSON.parse(data);
-    }
-  } catch {
-    allRsvps = [];
-  }
-
-  if (invitationId) {
-    return allRsvps.filter((r) => r.invitationId === invitationId);
-  }
-  return allRsvps;
+    localStorage.removeItem(RSVPS_KEY);
+    localStorage.removeItem('frida_rsvp_responses');
+  } catch {}
+  return [];
 }
 
 export function saveRSVP(
   rsvp: Partial<RSVPResponse> & { invitationId: string; guestName: string; status: 'attending' | 'declined' | 'maybe'; guestCount: number }
 ): RSVPResponse {
-  const all = getStoredRSVPs();
-  const existingIndex = rsvp.id ? all.findIndex((r) => r.id === rsvp.id) : -1;
-
-  let savedRsvp: RSVPResponse;
-  let updated: RSVPResponse[];
-
-  if (existingIndex >= 0) {
-    savedRsvp = {
-      ...all[existingIndex],
-      ...rsvp,
-    };
-    updated = [...all];
-    updated[existingIndex] = savedRsvp;
-  } else {
-    savedRsvp = {
-      ...rsvp,
-      id: rsvp.id || 'rsvp-' + Date.now(),
-      createdAt: rsvp.createdAt || new Date().toISOString(),
-    };
-    updated = [savedRsvp, ...all];
-  }
-
-  try {
-    localStorage.setItem(RSVPS_KEY, JSON.stringify(updated));
-  } catch {}
+  const savedRsvp: RSVPResponse = {
+    ...rsvp,
+    id: rsvp.id || 'rsvp-' + Date.now(),
+    createdAt: rsvp.createdAt || new Date().toISOString(),
+  } as RSVPResponse;
 
   saveRSVPCloud(rsvp.invitationId, savedRsvp).catch((e) => {
     console.warn('Cloud RSVP save error:', e);

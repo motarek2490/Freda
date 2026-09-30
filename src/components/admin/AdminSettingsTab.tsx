@@ -12,7 +12,6 @@ import {
   Music,
 } from 'lucide-react';
 import { AdminSettings, Language } from '../../types';
-import { DEFAULT_PLAN_PRICES } from '../../config/brand';
 
 interface AdminSettingsTabProps {
   currentLang: Language;
@@ -28,12 +27,12 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
   const isRtl = currentLang === 'ar';
 
   const [form, setForm] = useState<AdminSettings>({
-    vodafoneCashNumber: adminSettings?.vodafoneCashNumber || '01012345678',
+    vodafoneCashNumber: adminSettings?.vodafoneCashNumber || '',
     vodafoneCashHolderName: adminSettings?.vodafoneCashHolderName || 'محفظة فودافون كاش الرسمية',
-    contactWhatsapp: adminSettings?.contactWhatsapp || '201012345678',
-    basicPriceEGP: adminSettings?.basicPriceEGP || DEFAULT_PLAN_PRICES.basic,
-    royalPriceEGP: adminSettings?.royalPriceEGP || DEFAULT_PLAN_PRICES.royal_vip,
-    diamondPriceEGP: adminSettings?.diamondPriceEGP || DEFAULT_PLAN_PRICES.diamond,
+    contactWhatsapp: adminSettings?.contactWhatsapp || '',
+    basicPriceEGP: typeof adminSettings?.basicPriceEGP === 'number' ? adminSettings.basicPriceEGP : 0,
+    royalPriceEGP: typeof adminSettings?.royalPriceEGP === 'number' ? adminSettings.royalPriceEGP : 0,
+    diamondPriceEGP: typeof adminSettings?.diamondPriceEGP === 'number' ? adminSettings.diamondPriceEGP : 0,
     defaultDemoTrackUrl: adminSettings?.defaultDemoTrackUrl || '',
     defaultDemoTrackName: adminSettings?.defaultDemoTrackName || '',
     websiteBackgroundMusicUrl: adminSettings?.websiteBackgroundMusicUrl || '',

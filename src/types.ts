@@ -239,6 +239,7 @@ export interface OrderData {
   currency: string;
   planTier: 'basic' | 'royal_vip' | 'diamond';
   status: 'pending' | 'approved' | 'rejected';
+  ownerUid?: string;
   rejectionReason?: string;
   createdAt: string;
   reviewedAt?: string;
@@ -302,6 +303,7 @@ export interface RSVPResponse {
 
 export interface UserProfile {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   avatarUrl?: string;

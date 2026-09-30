@@ -16,9 +16,8 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { Language, InvitationData, OrderData, AdminSettings } from '../types';
-import { saveOrderCloud, saveInvitationCloud, getAdminSettingsCloud, DEFAULT_ADMIN_SETTINGS } from '../lib/firestoreService';
-import { saveInvitation } from '../lib/storage';
-import { ensureAnonymousAuth } from '../lib/firebase';
+import { saveOrderCloud, saveInvitationCloud, subscribeAdminSettingsCloud, DEFAULT_ADMIN_SETTINGS } from '../lib/firestoreService';
+import { auth, ensureAnonymousAuth } from '../lib/firebase';
 import { BRAND_NAME, BRAND_NAME_AR } from '../config/brand';
 import { trackBeginCheckout, trackPurchase } from '../lib/analytics';
 
@@ -55,18 +54,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<OrderData | null>(null);
 
-  // Load Admin Settings (Vodafone cash number and prices)
+  // Real-time synchronization of Admin Settings and Pricing directly from Cloud Firestore
   useEffect(() => {
-    getAdminSettingsCloud()
-      .then((settings) => {
-        if (settings) {
-          setAdminSettings(settings);
-        } else {
-          setAdminSettings(null);
-        }
-      })
-      .catch(() => setAdminSettings(null))
-      .finally(() => setLoadingSettings(false));
+    const unsubscribe = subscribeAdminSettingsCloud((settings) => {
+      setAdminSettings(settings);
+      setLoadingSettings(false);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const hasValidVodafoneNumber =
@@ -185,10 +181,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     const orderId = generateOrderId();
 
     try {
-      // 0. Ensure user has an active Firebase Auth session (essential for Firestore security rules)
-      const user = await ensureAnonymousAuth();
-      if (!user) {
-        throw new Error('Authentication session could not be established.');
+      // 0. Ensure user has an active Firebase Auth session or use guest identity
+      let effectiveUid = auth.currentUser?.uid;
+      if (!effectiveUid) {
+        try {
+          const anonUser = await ensureAnonymousAuth();
+          if (anonUser) effectiveUid = anonUser.uid;
+        } catch (e) {
+          console.warn('Anonymous auth note (proceeding as guest order):', e);
+        }
+      }
+      if (!effectiveUid) {
+        effectiveUid = `guest-${customerPhone.trim().replace(/\D/g, '') || Date.now().toString(36)}`;
       }
 
       // 1. Prepare and save invitation to Cloud Firestore directly
@@ -199,7 +203,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           status: 'pending_approval',
           planTier: selectedTier,
           hostUsername: customerPhone.trim(),
-          ownerUid: user.uid,
+          ownerUid: effectiveUid,
         };
       } else {
         targetInv = {
@@ -222,7 +226,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             address: 'القاهرة، مصر',
           },
           status: 'pending_approval',
-          ownerUid: user.uid,
+          ownerUid: effectiveUid,
           createdAt: new Date().toISOString(),
           slug: `inv-${Date.now()}`,
           planTier: selectedTier,
@@ -232,7 +236,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
       // Save invitation strictly to Cloud Firestore
       const savedInv = await saveInvitationCloud(targetInv);
-      saveInvitation(savedInv);
 
       // 2. Prepare and save order strictly to Cloud Firestore
       const finalOrder: OrderData = {

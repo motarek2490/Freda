@@ -71,15 +71,13 @@ export async function saveInvitationCloud(
 ): Promise<InvitationData> {
   let user = auth.currentUser;
   if (!user) {
-    user = await ensureAnonymousAuth();
+    try {
+      user = await ensureAnonymousAuth();
+    } catch {}
   }
-  const currentUid = user?.uid;
+  const currentUid = user?.uid || invitation.ownerUid || `guest-${invitation.hostUsername || Date.now().toString(36)}`;
 
-  if (!currentUid) {
-    throw new Error('يجب تسجيل الدخول أو بدء جلسة مؤمنة لحفظ الدعوة.');
-  }
-
-  // Ensure ownerUid matches the current active Firebase Auth user
+  // Ensure ownerUid matches the active user or invitation ownerUid
   const ownerUid = currentUid;
 
   // Generate unique invitation ID if it's a demo/template or invalid
@@ -218,6 +216,10 @@ export async function getInvitationCloudBySlugOrId(slugOrId: string): Promise<In
         const invSnap = await getDoc(doc(db, 'invitations', invId));
         if (invSnap.exists()) {
           return invSnap.data() as InvitationData;
+        } else {
+          // Orphan slug pointing to deleted invitation: delete it from Firestore
+          deleteDoc(slugRef).catch(() => {});
+          return null;
         }
       }
     }
@@ -334,13 +336,127 @@ export function subscribeInvitationsCloud(callback: (invitations: InvitationData
   }
 }
 
-export async function deleteInvitationCloud(invitationId: string, slug?: string): Promise<void> {
-  const batch = writeBatch(db);
-  batch.delete(doc(db, 'invitations', invitationId));
-  if (slug) {
-    batch.delete(doc(db, 'slugs', slug.toLowerCase().trim()));
+export function subscribeUserInvitationsCloud(
+  ownerUid: string,
+  callback: (invitations: InvitationData[]) => void
+): () => void {
+  if (!ownerUid) {
+    callback([]);
+    return () => {};
   }
-  await batch.commit();
+  try {
+    const q = query(
+      collection(db, 'invitations'),
+      where('ownerUid', '==', ownerUid),
+      limit(50)
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: InvitationData[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data() as InvitationData;
+          if (data && data.id && !data.id.startsWith('preview-') && !data.id.startsWith('demo-')) {
+            list.push(data);
+          }
+        });
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        callback(list);
+      },
+      (err) => {
+        console.warn('User invitations subscription warning:', err);
+        callback([]);
+      }
+    );
+  } catch {
+    callback([]);
+    return () => {};
+  }
+}
+
+export async function deleteInvitationCloud(invitationId: string, slug?: string): Promise<void> {
+  const cleanId = (invitationId || '').trim();
+  if (!cleanId) return;
+
+  try {
+    let finalSlug = slug ? slug.toLowerCase().trim() : '';
+    let resolvedDocId = cleanId;
+
+    // 1. Resolve if cleanId is actually a slug
+    try {
+      const slugDoc = await getDoc(doc(db, 'slugs', cleanId.toLowerCase()));
+      if (slugDoc.exists()) {
+        finalSlug = cleanId.toLowerCase();
+        const data = slugDoc.data();
+        if (data?.invitationId) {
+          resolvedDocId = data.invitationId;
+        }
+      }
+    } catch {}
+
+    // 2. Fetch document to resolve its slug if not yet resolved
+    try {
+      const snap = await getDoc(doc(db, 'invitations', resolvedDocId));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data?.slug) {
+          finalSlug = data.slug.toLowerCase().trim();
+        }
+      }
+    } catch {}
+
+    // 3. Delete subcollection RSVPs while parent doc still exists
+    try {
+      const rsvpsSnap = await getDocs(collection(db, 'invitations', resolvedDocId, 'rsvps'));
+      const deleteRsvpPromises: Promise<any>[] = [];
+      rsvpsSnap.forEach((d) => deleteRsvpPromises.push(deleteDoc(d.ref)));
+      await Promise.all(deleteRsvpPromises);
+    } catch {}
+
+    // 4. Delete associated orders from /orders/
+    try {
+      const ordersQ = query(collection(db, 'orders'), where('invitationId', '==', resolvedDocId));
+      const ordersSnap = await getDocs(ordersQ);
+      const deletePromises: Promise<any>[] = [];
+      ordersSnap.forEach((d) => deletePromises.push(deleteDoc(d.ref)));
+      await Promise.all(deletePromises);
+    } catch {}
+
+    // 5. Delete slug entries from /slugs/
+    if (finalSlug) {
+      try {
+        await deleteDoc(doc(db, 'slugs', finalSlug));
+      } catch {}
+    }
+    if (resolvedDocId.toLowerCase() !== finalSlug) {
+      try {
+        await deleteDoc(doc(db, 'slugs', resolvedDocId.toLowerCase()));
+      } catch {}
+    }
+    if (cleanId.toLowerCase() !== finalSlug && cleanId.toLowerCase() !== resolvedDocId.toLowerCase()) {
+      try {
+        await deleteDoc(doc(db, 'slugs', cleanId.toLowerCase()));
+      } catch {}
+    }
+
+    // 6. Delete document from /invitations/
+    await deleteDoc(doc(db, 'invitations', resolvedDocId));
+    if (resolvedDocId !== cleanId) {
+      try {
+        await deleteDoc(doc(db, 'invitations', cleanId));
+      } catch {}
+    }
+
+    // 7. Purge local storage
+    try {
+      localStorage.removeItem('frida_invitations');
+      localStorage.removeItem('frida_user_invitations');
+      localStorage.removeItem('frida_orders');
+    } catch {}
+  } catch (err) {
+    console.error('deleteInvitationCloud error:', err);
+    throw err;
+  }
 }
 
 // ---------------- RSVPS ----------------
@@ -470,9 +586,11 @@ export async function deleteWishCloud(wishId: string): Promise<void> {
 export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
   let user = auth.currentUser;
   if (!user) {
-    user = await ensureAnonymousAuth();
+    try {
+      user = await ensureAnonymousAuth();
+    } catch {}
   }
-  const currentUid = user?.uid || `anon-${Date.now()}`;
+  const currentUid = user?.uid || order.ownerUid || `guest-${order.customerPhone || Date.now().toString(36)}`;
 
   const orderId = order.id && order.id.startsWith('ORD-')
     ? order.id
@@ -482,7 +600,7 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
     id: orderId,
     invitationId: order.invitationId,
     planTier: order.planTier || 'royal_vip',
-    amount: Number(order.amount) || 399,
+    amount: typeof order.amount === 'number' && !isNaN(order.amount) ? order.amount : 0,
     currency: 'EGP',
     customerName: sanitizeText(order.customerName, 100),
     customerPhone: sanitizeText(order.customerPhone, 30),
@@ -706,21 +824,6 @@ export async function authenticateClientCredentialsCloud(
       } catch {}
     }
 
-    // 1c. Check local device storage cached invitations
-    try {
-      const stored = localStorage.getItem('frida_user_invitations') || localStorage.getItem('frida_invitations');
-      if (stored) {
-        const parsed = JSON.parse(stored) as InvitationData[];
-        if (Array.isArray(parsed)) {
-          for (const item of parsed) {
-            if (item && item.id && !candidateInvs.some((x) => x.id === item.id)) {
-              candidateInvs.push(item);
-            }
-          }
-        }
-      }
-    } catch {}
-
     // Evaluate candidate invitations against provided credentials
     for (const inv of candidateInvs) {
       if (inv.isExpired || inv.status === 'expired') {
@@ -785,10 +888,10 @@ export async function authenticateClientCredentialsCloud(
 export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   vodafoneCashNumber: '',
   vodafoneCashHolderName: 'محفظة فريدا الرسمية (Vodafone Cash)',
-  contactWhatsapp: '201012345678',
-  basicPriceEGP: 199,
-  royalPriceEGP: 399,
-  diamondPriceEGP: 799,
+  contactWhatsapp: '',
+  basicPriceEGP: 0,
+  royalPriceEGP: 0,
+  diamondPriceEGP: 0,
   defaultDemoTrackUrl: '',
   defaultDemoTrackName: '',
   websiteBackgroundMusicUrl: '',

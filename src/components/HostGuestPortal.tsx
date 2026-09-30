@@ -196,20 +196,25 @@ export const HostGuestPortal: React.FC<HostGuestPortalProps> = ({
   // Refresh invitation data from cloud to ensure latest wishes list
   useEffect(() => {
     getInvitationCloud(invitation.id).then((cloudInv) => {
-      if (cloudInv) setInvitation(cloudInv);
+      if (cloudInv) {
+        setInvitation(cloudInv);
+      } else {
+        // Invitation was deleted from the server
+        onBack();
+      }
     });
   }, [invitation.id]);
 
   // Subscribe to Cloud Firestore updates for RSVPs
   useEffect(() => {
     getRSVPsCloud(invitation.id).then((cloudList) => {
-      if (cloudList && cloudList.length > 0) {
+      if (cloudList) {
         setRsvps(cloudList);
       }
     });
 
     const unsubscribe = subscribeRSVPsCloud(invitation.id, (newList) => {
-      if (newList && newList.length > 0) {
+      if (newList) {
         setRsvps(newList);
       }
     });
