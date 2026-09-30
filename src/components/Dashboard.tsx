@@ -17,14 +17,20 @@ import {
   Crown,
   Image as ImageIcon,
   ShieldCheck,
+  LogOut,
+  KeyRound,
+  Lock,
 } from 'lucide-react';
-import { InvitationData, Language, RSVPResponse } from '../types';
+import { InvitationData, Language, RSVPResponse, UserProfile } from '../types';
 import { deleteInvitation, getStoredRSVPs } from '../lib/storage';
 import { useTranslation } from '../data/translations';
 
 interface DashboardProps {
   invitations: InvitationData[];
   currentLang: Language;
+  user?: UserProfile | null;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
   onStartCreate: () => void;
   onEditInvitation: (invitation: InvitationData) => void;
   onPreviewInvitation: (invitation: InvitationData) => void;
@@ -38,6 +44,9 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({
   invitations,
   currentLang,
+  user,
+  onOpenAuth,
+  onLogout,
   onStartCreate,
   onEditInvitation,
   onPreviewInvitation,
@@ -70,6 +79,63 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return rsvps.filter((r) => r.status === 'attending').reduce((acc, curr) => acc + (curr.guestCount || 1), 0);
   };
 
+  const cleanInvitations = invitations.filter(
+    (inv) =>
+      inv &&
+      inv.id &&
+      !inv.id.startsWith('preview-') &&
+      !inv.id.startsWith('demo-') &&
+      inv.id !== 'demo-inv' &&
+      !inv.slug?.startsWith('preview-') &&
+      !inv.slug?.startsWith('demo-')
+  );
+
+  // AUTH GATE: If user is not authenticated, require login first
+  if (!user) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 bg-[#171717] text-[#F7F4EE] flex items-center justify-center p-4">
+        <div className="w-full max-w-lg bg-[#1F1E1B] border border-[#B99A65]/40 rounded-3xl p-8 sm:p-10 shadow-[0_0_50px_rgba(185,154,101,0.15)] text-center space-y-6 animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#B99A65]/20 to-[#B99A65]/5 border border-[#B99A65] flex items-center justify-center text-[#B99A65] mx-auto shadow-xl">
+            <KeyRound className="w-8 h-8 text-[#B99A65]" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full bg-[#B99A65]/15 border border-[#B99A65]/30 text-[#B99A65] text-[10px] font-bold uppercase tracking-wider">
+              🔒 {isRtl ? 'بوابة المضيف الملكية مخصصة للعملاء' : 'Protected Host VIP Portal'}
+            </span>
+            <h2 className="font-playfair text-2xl sm:text-3xl font-bold text-[#F7F4EE]">
+              {isRtl ? 'تسجيل الدخول لبوابة المضيف' : 'Host VIP Authentication Required'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#8D8A84] max-w-md mx-auto leading-relaxed">
+              {isRtl
+                ? 'لوحة إدارة الدعوات والتحكم بالضيوف مخصصة لأصحاب الدعوات المفعلة. يرجى تسجيل الدخول برقم الهاتف واسم المستخدم للوصول لدعوتك.'
+                : 'Access to the invitations management dashboard requires host authentication. Please sign in with your credentials.'}
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
+            {onOpenAuth && (
+              <button
+                onClick={onOpenAuth}
+                className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#B99A65] via-[#d6bd91] to-[#B99A65] text-[#171717] font-bold text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(185,154,101,0.4)] transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4" />
+                <span>{isRtl ? 'تسجيل الدخول الآن 🔑' : 'Sign In Now 🔑'}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onStartCreate}
+              className="py-3.5 px-6 rounded-2xl bg-[#171717] border border-[#333] hover:border-[#B99A65] text-[#E9E1D5] hover:text-[#B99A65] font-bold text-xs transition-colors cursor-pointer"
+            >
+              {isRtl ? 'إنشاء دعوة جديدة' : 'Create New Suite'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pt-28 pb-20 bg-[#171717] text-[#F7F4EE]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,8 +144,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-8 border-b border-[#333]">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1f1e1b] border border-[#B99A65]/30 text-[#B99A65] text-xs font-semibold uppercase tracking-widest mb-2">
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>{t.nav.dashboard}</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#B99A65]" />
+              <span>{user.name || (isRtl ? 'المضيف الملكي' : 'Royal Host')}</span>
             </div>
             <h1 className="font-playfair text-3xl sm:text-4xl font-bold">
               {t.dashboard.title}
@@ -89,19 +155,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={onStartCreate}
-            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#B99A65] via-[#d6bd91] to-[#B99A65] text-[#171717] font-bold text-xs uppercase tracking-wider hover:shadow-[0_0_20px_rgba(185,154,101,0.4)] flex items-center gap-2 cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>{t.dashboard.createNew}</span>
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/40 text-red-300 hover:bg-red-900/40 transition-colors font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title={isRtl ? 'تسجيل الخروج من الحساب' : 'Sign out'}
+              >
+                <LogOut className="w-4 h-4 text-red-400" />
+                <span>{isRtl ? 'تسجيل الخروج' : 'Sign Out'}</span>
+              </button>
+            )}
+
+            {invitations.length > 0 && (
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('frida_user_invitations');
+                    localStorage.removeItem('frida_invitations');
+                    onRefreshList();
+                  } catch {}
+                }}
+                className="px-4 py-3 rounded-2xl bg-[#1F1E1B] border border-[#333] hover:border-[#B99A65] text-[#8D8A84] hover:text-[#F7F4EE] font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title={isRtl ? 'حذف كافة المعاينات والبيانات المؤقتة من الجهاز' : 'Clear local cached invitations'}
+              >
+                <Trash2 className="w-4 h-4 text-amber-400" />
+                <span>{isRtl ? 'تنظيف القائمة' : 'Clear Cache'}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onStartCreate}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#B99A65] via-[#d6bd91] to-[#B99A65] text-[#171717] font-bold text-xs uppercase tracking-wider hover:shadow-[0_0_20px_rgba(185,154,101,0.4)] flex items-center gap-2 cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>{t.dashboard.createNew}</span>
+            </button>
+          </div>
         </div>
 
         {/* Invitation Cards List */}
-        {invitations.length > 0 ? (
+        {cleanInvitations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {invitations.map((inv) => {
+            {cleanInvitations.map((inv) => {
               const rsvps = getStoredRSVPs(inv.id);
               const attendingCount = calculateTotalAttending(rsvps);
 

@@ -226,22 +226,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ currentLang, onClose, onSu
             >
               <span>{isRtl ? 'الدعم الفني 💬' : 'Contact Support 💬'}</span>
             </button>
-
-            {onOpenAdmin && (
-              <>
-                <span className="text-[#444]">•</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenAdmin();
-                  }}
-                  className="text-[#B99A65] hover:text-[#d6bd91] hover:underline inline-flex items-center gap-1 cursor-pointer font-bold"
-                >
-                  <span>{isRtl ? 'تسجيل دخول الإدارة (Admin) 🛡️' : 'Admin Login 🛡️'}</span>
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>

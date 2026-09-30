@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, LayoutDashboard, Search, Sparkles } from 'lucide-react';
+import { Menu, X, User, LayoutDashboard, Search, Sparkles, LogOut } from 'lucide-react';
 import { Language, UserProfile } from '../types';
 import { useTranslation } from '../data/translations';
 import { BackgroundMusicPlayer } from './BackgroundMusicPlayer';
@@ -11,6 +11,7 @@ interface NavbarProps {
   user: UserProfile | null;
   onOpenAuth: () => void;
   onOpenDashboard: () => void;
+  onLogout?: () => void;
   onStartCreate: () => void;
   onNavigateSection: (sectionId: string) => void;
   onOpenAdmin?: () => void;
@@ -26,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   onOpenAuth,
   onOpenDashboard,
+  onLogout,
   onStartCreate,
   onNavigateSection,
   onOpenAdmin,
@@ -186,15 +188,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {currentLang === 'en' ? 'العربية' : 'EN'}
               </button>
 
-              {/* User Dashboard / Sign In */}
+              {/* User Dashboard / Sign In / Logout */}
               {user ? (
-                <button
-                  onClick={onOpenDashboard}
-                  className="hidden md:flex items-center gap-1.5 text-xs text-[#D9C8A5] hover:text-[#F4EFE7] transition-colors cursor-pointer px-2 py-1"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5 text-[#C9A86A]" />
-                  <span className="max-w-[80px] truncate">{user.name?.split(' ')[0]}</span>
-                </button>
+                <div className="hidden md:flex items-center gap-2">
+                  <button
+                    onClick={onOpenDashboard}
+                    className="flex items-center gap-1.5 text-xs text-[#D9C8A5] hover:text-[#F4EFE7] transition-colors cursor-pointer px-2 py-1 bg-[#1A1917] border border-[#C9A86A]/30 rounded-full"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-[#C9A86A]" />
+                    <span className="max-w-[80px] truncate">{user.name?.split(' ')[0]}</span>
+                  </button>
+                  {onLogout && (
+                    <button
+                      onClick={onLogout}
+                      className="p-1.5 rounded-full bg-[#1A1917] border border-red-500/30 text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
+                      title={isRtl ? 'تسجيل الخروج' : 'Sign Out'}
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={onOpenAuth}
@@ -351,15 +364,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {currentLang === 'en' ? 'التحويل للغة العربية' : 'Switch to English'}
               </button>
               {user ? (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenDashboard();
-                  }}
-                  className="underline cursor-pointer hover:text-[#C9A86A] transition-colors"
-                >
-                  {t.nav.dashboard}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenDashboard();
+                    }}
+                    className="underline cursor-pointer hover:text-[#C9A86A] transition-colors"
+                  >
+                    {t.nav.dashboard}
+                  </button>
+                  {onLogout && (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="text-red-400 hover:text-red-300 underline cursor-pointer transition-colors flex items-center gap-1"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>{isRtl ? 'تسجيل الخروج' : 'Sign Out'}</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={() => {

@@ -63,7 +63,20 @@ export function getStoredInvitations(): InvitationData[] {
   try {
     const data = localStorage.getItem(INVITATIONS_KEY) || localStorage.getItem('frida_user_invitations');
     if (data) {
-      return JSON.parse(data);
+      const list = JSON.parse(data) as InvitationData[];
+      if (Array.isArray(list)) {
+        // Filter out any preview or demo invitations
+        return list.filter(
+          (item) =>
+            item &&
+            item.id &&
+            !item.id.startsWith('preview-') &&
+            !item.id.startsWith('demo-') &&
+            item.id !== 'demo-inv' &&
+            !item.slug?.startsWith('preview-') &&
+            !item.slug?.startsWith('demo-')
+        );
+      }
     }
   } catch {
     return [];
@@ -72,6 +85,18 @@ export function getStoredInvitations(): InvitationData[] {
 }
 
 export function saveInvitation(invitation: InvitationData): InvitationData {
+  if (
+    !invitation ||
+    !invitation.id ||
+    invitation.id.startsWith('preview-') ||
+    invitation.id.startsWith('demo-') ||
+    invitation.id === 'demo-inv' ||
+    invitation.slug?.startsWith('preview-') ||
+    invitation.slug?.startsWith('demo-')
+  ) {
+    return invitation;
+  }
+
   // Ensure access code exists
   if (!invitation.hostAccessCode) {
     invitation.hostAccessCode = 'HOST-' + Math.floor(100000 + Math.random() * 900000);
@@ -107,6 +132,24 @@ export function saveInvitation(invitation: InvitationData): InvitationData {
     });
 
   return invitation;
+}
+
+export function clearAllStoredMockData() {
+  try {
+    const list = getStoredInvitations();
+    const cleanList = list.filter(
+      (item) =>
+        item &&
+        item.id &&
+        !item.id.startsWith('preview-') &&
+        !item.id.startsWith('demo-') &&
+        item.id !== 'demo-inv' &&
+        !item.slug?.startsWith('preview-') &&
+        !item.slug?.startsWith('demo-')
+    );
+    localStorage.setItem(INVITATIONS_KEY, JSON.stringify(cleanList));
+    localStorage.removeItem('frida_user_invitations');
+  } catch {}
 }
 
 export function deleteInvitation(id: string) {

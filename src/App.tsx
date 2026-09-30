@@ -15,10 +15,13 @@ import {
   subscribeCustomTemplatesCloud,
 } from './lib/firestoreService';
 import { subscribeCloudMusicLibrary } from './data/presetMusic';
+import { signOut } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import {
   getStoredLanguage,
   setStoredLanguage,
   getStoredUser,
+  setStoredUser,
   getStoredInvitations,
   fetchInvitationWithCloudFallback,
   saveInvitation,
@@ -378,6 +381,17 @@ export default function App() {
     setShowBuilderModal(true);
   };
 
+  const handleLogout = async () => {
+    setStoredUser(null);
+    setUser(null);
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+    setActiveView('home');
+  };
+
   const handleEditInvitation = (invitation: InvitationData) => {
     setSelectedInvitationForEdit(invitation);
     const tmpl = TEMPLATES.find((t) => t.id === invitation.templateId) || TEMPLATES[0];
@@ -640,6 +654,7 @@ export default function App() {
         user={user}
         onOpenAuth={() => setShowAuthModal(true)}
         onOpenDashboard={() => setActiveView('dashboard')}
+        onLogout={handleLogout}
         onStartCreate={() => handleStartCreate()}
         onNavigateSection={handleNavigateSection}
         onOpenAdmin={() => setShowAdminModal(true)}
@@ -660,6 +675,9 @@ export default function App() {
           <Dashboard
             invitations={invitations}
             currentLang={currentLang}
+            user={user}
+            onOpenAuth={() => setShowAuthModal(true)}
+            onLogout={handleLogout}
             onStartCreate={() => handleStartCreate()}
             onEditInvitation={handleEditInvitation}
             onPreviewInvitation={handlePreviewInvitation}

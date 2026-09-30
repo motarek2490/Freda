@@ -334,17 +334,6 @@ export const Footer: React.FC<FooterProps> = ({
                   {isRtl ? 'دفع مؤمن عبر فودافون كاش & إنستاباي' : 'Vodafone Cash & InstaPay Secured'}
                 </span>
               </li>
-              {onOpenAdmin && (
-                <li>
-                  <button
-                    onClick={onOpenAdmin}
-                    className="hover:text-[#C9A86A] transition-colors cursor-pointer text-start flex items-center gap-1.5"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-[#C9A86A]" />
-                    <span>{isRtl ? 'بوابة الإدارة المركزية' : 'Admin Portal'}</span>
-                  </button>
-                </li>
-              )}
             </ul>
           </div>
 
