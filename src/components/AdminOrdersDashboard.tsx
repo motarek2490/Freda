@@ -24,6 +24,7 @@ import {
   deleteOrderCloud,
   subscribeWebsiteReviewsCloud,
   deleteWebsiteReviewCloud,
+  updateReviewApprovalCloud,
   saveCustomTemplateCloud,
   getCustomTemplatesCloud,
   subscribeCustomTemplatesCloud,
@@ -328,6 +329,10 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     await deleteWebsiteReviewCloud(reviewId);
   };
 
+  const handleToggleReviewApproval = async (reviewId: string, approved: boolean) => {
+    await updateReviewApprovalCloud(reviewId, approved);
+  };
+
   // If not authenticated, render Login Modal
   if (!isAuthenticated) {
     return (
@@ -417,6 +422,7 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
             currentLang={currentLang}
             reviews={reviews}
             onDeleteReview={handleDeleteReview}
+            onToggleApproval={handleToggleReviewApproval}
           />
         )}
 

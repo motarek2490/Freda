@@ -13,6 +13,7 @@ import {
   getAdminSettingsCloud,
   subscribeAdminSettingsCloud,
   subscribeCustomTemplatesCloud,
+  incrementVisitorCountCloud,
 } from './lib/firestoreService';
 import { subscribeCloudMusicLibrary } from './data/presetMusic';
 import { signOut } from 'firebase/auth';
@@ -118,6 +119,9 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Increment visitor counter on session start
+    incrementVisitorCountCloud().catch(() => {});
+
     // 1. Real-time Admin Settings subscription across all devices
     const unsubSettings = subscribeAdminSettingsCloud((res) => {
       if (res) setAppAdminSettings(res);

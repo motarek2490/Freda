@@ -7,6 +7,9 @@ import {
   MessageSquare,
   AlertCircle,
   Loader2,
+  CheckCircle,
+  EyeOff,
+  Eye,
 } from 'lucide-react';
 import { WebsiteReview, Language } from '../../types';
 
@@ -14,17 +17,20 @@ interface AdminReviewsTabProps {
   currentLang: Language;
   reviews: WebsiteReview[];
   onDeleteReview: (reviewId: string) => Promise<void>;
+  onToggleApproval?: (reviewId: string, approved: boolean) => Promise<void>;
 }
 
 export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({
   currentLang,
   reviews,
   onDeleteReview,
+  onToggleApproval,
 }) => {
   const isRtl = currentLang === 'ar';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const filteredReviews = reviews.filter((r) => {
     if (!searchQuery.trim()) return true;
@@ -32,7 +38,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({
     return (
       (r.customerName || '').toLowerCase().includes(q) ||
       (r.comment || '').toLowerCase().includes(q) ||
-      (r.eventType || '').toLowerCase().includes(q)
+      (r.designTitle || '').toLowerCase().includes(q)
     );
   });
 
@@ -44,6 +50,18 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({
       console.warn('Error deleting review:', err);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggle = async (id: string, currentStatus: boolean) => {
+    if (!onToggleApproval) return;
+    setTogglingId(id);
+    try {
+      await onToggleApproval(id, !currentStatus);
+    } catch (err) {
+      console.warn('Error toggling review approval:', err);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -81,54 +99,85 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReviews.map((r, idx) => (
-            <div
-              key={r.id ? `rev-${r.id}-${idx}` : `rev-item-${idx}`}
-              className="bg-[#1F1E1B] rounded-2xl p-5 border border-[#2E2C28] space-y-3"
-            >
-              {/* Header: Name & Stars */}
-              <div className="flex items-center justify-between gap-2">
-                <h5 className="font-bold text-sm text-[#F7F4EE] line-clamp-1">{r.customerName}</h5>
+          {filteredReviews.map((r, idx) => {
+            const isApproved = r.approved === true;
+            return (
+              <div
+                key={r.id ? `rev-${r.id}-${idx}` : `rev-item-${idx}`}
+                className={`bg-[#1F1E1B] rounded-2xl p-5 border ${
+                  isApproved ? 'border-emerald-500/30' : 'border-amber-500/30'
+                } space-y-3 relative overflow-hidden`}
+              >
+                {/* Status Badge */}
+                <div className="flex items-center justify-between gap-2">
+                  <h5 className="font-bold text-sm text-[#F7F4EE] line-clamp-1">{r.customerName}</h5>
+                  {isApproved ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>{isRtl ? 'معتمد' : 'Approved'}</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-300 text-[10px] font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{isRtl ? 'قيد المراجعة' : 'Pending'}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Stars */}
                 <div className="flex items-center gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={`star-${i}`}
                       className={`w-3.5 h-3.5 ${
-                        i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'
+                        i < (r.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'
                       }`}
                     />
                   ))}
                 </div>
-              </div>
 
-              {/* Event type & Date */}
-              <div className="flex items-center justify-between text-[11px] text-[#8D8A84]">
-                <span>{r.eventType || (isRtl ? 'حفل زفاف ملكي' : 'Wedding')}</span>
-                <span>{new Date(r.createdAt).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US')}</span>
-              </div>
+                {/* Comment */}
+                <p className="text-xs text-[#D8D4CC] leading-relaxed bg-[#171717] p-3 rounded-xl border border-[#262420]">
+                  "{r.comment}"
+                </p>
 
-              {/* Comment */}
-              <p className="text-xs text-[#D8D4CC] leading-relaxed bg-[#171717] p-3 rounded-xl border border-[#262420]">
-                "{r.comment}"
-              </p>
+                {/* Actions: Toggle Approval & Delete */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#2A2722]">
+                  <button
+                    onClick={() => handleToggle(r.id, isApproved)}
+                    disabled={togglingId === r.id}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
+                      isApproved
+                        ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                        : 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
+                    }`}
+                  >
+                    {togglingId === r.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isApproved ? (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isApproved ? (isRtl ? 'إخفاء من الموقع' : 'Hide') : (isRtl ? 'اعتماد ونشر' : 'Approve')}</span>
+                  </button>
 
-              {/* Delete */}
-              <div className="flex justify-end pt-2 border-t border-[#2A2722]">
-                <button
-                  onClick={() => handleDelete(r.id)}
-                  disabled={deletingId === r.id}
-                  className="p-1.5 rounded-lg bg-red-950/30 text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {deletingId === r.id ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isRtl ? 'حذف' : 'Delete'}</span>
-                </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    disabled={deletingId === r.id}
+                    className="p-1.5 rounded-lg bg-red-950/30 text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === r.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isRtl ? 'حذف' : 'Delete'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -495,45 +495,23 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
     invitationSnapshot: order.invitationSnapshot ? stripUndefined(order.invitationSnapshot) : undefined,
   });
 
-  // 1. Save to localStorage immediately as reliable cache
-  try {
-    const storedOrders = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-    localStorage.setItem('frida_orders', JSON.stringify([cleanOrder, ...storedOrders.filter((o: any) => o.id !== orderId)]));
-  } catch {}
-
-  // 2. Save to Cloud Firestore
-  try {
-    await setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
-  } catch (err: any) {
-    console.warn('Cloud order save warning:', err);
-  }
+  // Save strictly to Cloud Firestore
+  await setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
 
   return cleanOrder as OrderData;
 }
 
 export async function getOrdersCloud(): Promise<OrderData[]> {
-  const cloudList: OrderData[] = [];
   try {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(100));
     const snap = await getDocs(q);
+    const cloudList: OrderData[] = [];
     snap.forEach((d) => cloudList.push(d.data() as OrderData));
+    return cloudList;
   } catch (err) {
     console.warn('Error fetching cloud orders:', err);
+    return [];
   }
-
-  // Merge with local orders cache
-  try {
-    const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-    if (Array.isArray(local)) {
-      for (const ord of local) {
-        if (ord && ord.id && !cloudList.some((x) => x.id === ord.id)) {
-          cloudList.push(ord);
-        }
-      }
-    }
-  } catch {}
-
-  return cloudList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export function subscribeOrdersCloud(callback: (orders: OrderData[]) => void): () => void {
@@ -544,28 +522,11 @@ export function subscribeOrdersCloud(callback: (orders: OrderData[]) => void): (
       (snapshot) => {
         const cloudList: OrderData[] = [];
         snapshot.forEach((d) => cloudList.push(d.data() as OrderData));
-
-        // Merge with local orders cache
-        try {
-          const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-          if (Array.isArray(local)) {
-            for (const ord of local) {
-              if (ord && ord.id && !cloudList.some((x) => x.id === ord.id)) {
-                cloudList.push(ord);
-              }
-            }
-          }
-        } catch {}
-
-        callback(cloudList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        callback(cloudList);
       },
       (err) => {
         console.warn('Orders listener error:', err);
-        // Fallback to local storage on listener error
-        try {
-          const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-          callback(local);
-        } catch {}
+        callback([]);
       }
     );
   } catch {
@@ -583,16 +544,6 @@ export async function getOrderCloudById(orderId: string): Promise<OrderData | nu
   } catch (err) {
     console.warn('Error fetching order by ID from cloud:', err);
   }
-
-  // Fallback to local storage
-  try {
-    const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-    if (Array.isArray(local)) {
-      const found = local.find((o: OrderData) => o && o.id?.toLowerCase() === cleanId.toLowerCase());
-      if (found) return found;
-    }
-  } catch {}
-
   return null;
 }
 
@@ -1035,4 +986,41 @@ export async function deleteCustomTemplateCloud(templateId: string): Promise<voi
     const filtered = cached.filter((t) => t.id !== templateId);
     localStorage.setItem('frida_custom_templates', JSON.stringify(filtered));
   } catch {}
+}
+
+export async function incrementVisitorCountCloud(): Promise<number> {
+  try {
+    const statRef = doc(db, 'settings', 'visitor_stats');
+    const snap = await getDoc(statRef);
+    let current = 1240;
+    if (snap.exists()) {
+      current = (snap.data()?.totalVisitors || 1240) + 1;
+    } else {
+      current = 1245;
+    }
+    await setDoc(statRef, { totalVisitors: current, updatedAt: new Date().toISOString() }, { merge: true });
+    return current;
+  } catch {
+    return 1245;
+  }
+}
+
+export function subscribeVisitorStatsCloud(callback: (count: number) => void): () => void {
+  try {
+    const statRef = doc(db, 'settings', 'visitor_stats');
+    return onSnapshot(
+      statRef,
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data()?.totalVisitors || 1245);
+        } else {
+          callback(1245);
+        }
+      },
+      () => callback(1245)
+    );
+  } catch {
+    callback(1245);
+    return () => {};
+  }
 }

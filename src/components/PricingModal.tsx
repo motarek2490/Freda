@@ -185,16 +185,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     const orderId = generateOrderId();
 
     try {
-      // 0. Ensure user has an active Firebase Auth session (with short timeout so it never blocks)
-      let user: any = null;
-      try {
-        user = await Promise.race([
-          ensureAnonymousAuth(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
-        ]);
-      } catch {}
+      // 0. Ensure user has an active Firebase Auth session (essential for Firestore security rules)
+      const user = await ensureAnonymousAuth();
+      if (!user) {
+        throw new Error('Authentication session could not be established.');
+      }
 
-      // 1. Prepare and save invitation to local storage & cloud
+      // 1. Prepare and save invitation to Cloud Firestore directly
       let targetInv: InvitationData;
       if (invitation) {
         targetInv = {
@@ -202,7 +199,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           status: 'pending_approval',
           planTier: selectedTier,
           hostUsername: customerPhone.trim(),
-          ownerUid: user?.uid || invitation.ownerUid || `anon-${Date.now()}`,
+          ownerUid: user.uid,
         };
       } else {
         targetInv = {
@@ -225,7 +222,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             address: 'القاهرة، مصر',
           },
           status: 'pending_approval',
-          ownerUid: user?.uid || `anon-${Date.now()}`,
+          ownerUid: user.uid,
           createdAt: new Date().toISOString(),
           slug: `inv-${Date.now()}`,
           planTier: selectedTier,
@@ -233,24 +230,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         };
       }
 
-      // Save invitation locally first
-      saveInvitation(targetInv);
+      // Save invitation strictly to Cloud Firestore
+      const savedInv = await saveInvitationCloud(targetInv);
+      saveInvitation(savedInv);
 
-      // Attempt cloud sync for invitation (non-blocking)
-      try {
-        await Promise.race([
-          saveInvitationCloud(targetInv),
-          new Promise((resolve) => setTimeout(resolve, 2500))
-        ]);
-      } catch (cloudErr) {
-        console.warn('Cloud invitation sync deferred:', cloudErr);
-      }
-
-      // 2. Prepare order data
+      // 2. Prepare and save order strictly to Cloud Firestore
       const finalOrder: OrderData = {
         id: orderId,
-        invitationId: targetInv.id,
-        invitationTitle: targetInv.title || targetInv.eventDetails?.eventTitle || 'دعوة خاصة',
+        invitationId: savedInv.id,
+        invitationTitle: savedInv.title || savedInv.eventDetails?.eventTitle || 'دعوة خاصة',
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         vodafoneCashSender: vodafoneCashSender.trim(),
@@ -261,55 +249,28 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         planTier: selectedTier,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        invitationSnapshot: JSON.parse(JSON.stringify(targetInv)),
+        invitationSnapshot: JSON.parse(JSON.stringify(savedInv)),
       };
 
-      // Save order locally in localStorage immediately
-      try {
-        const storedOrders = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-        localStorage.setItem('frida_orders', JSON.stringify([finalOrder, ...storedOrders]));
-      } catch {}
+      await saveOrderCloud(finalOrder);
 
-      // Attempt cloud order sync (non-blocking)
-      try {
-        await Promise.race([
-          saveOrderCloud(finalOrder),
-          new Promise((resolve) => setTimeout(resolve, 2500))
-        ]);
-      } catch (orderCloudErr) {
-        console.warn('Cloud order sync deferred, stored locally:', orderCloudErr);
-      }
-
-      // Trigger analytics purchase event (Zero-PII)
+      // Trigger analytics purchase event
       try {
         trackPurchase(orderId, selectedTier, currentPlan.price);
       } catch {}
 
-      // Successfully saved and confirmed
+      // Successfully saved
       setOrderSuccess(finalOrder);
       if (onOrderSubmitted) {
         onOrderSubmitted(finalOrder);
       }
     } catch (err: any) {
-      console.error('Error submitting order (fallback triggered):', err);
-      // Even in case of any unexpected exception, ensure order success state is displayed with local fallback
-      const fallbackOrder: OrderData = {
-        id: orderId,
-        invitationId: invitation?.id || `inv-${Date.now()}`,
-        invitationTitle: invitation?.title || 'دعوة خاصة',
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
-        vodafoneCashSender: vodafoneCashSender.trim(),
-        amount: currentPlan.price,
-        currency: 'EGP',
-        planTier: selectedTier,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      };
-      setOrderSuccess(fallbackOrder);
-      if (onOrderSubmitted) {
-        onOrderSubmitted(fallbackOrder);
-      }
+      console.error('Error submitting order to cloud:', err);
+      setSubmissionError(
+        isRtl
+          ? `تعذر إرسال الطلب حالياً نتيجة خطأ في الاتصال بالخادم: ${err.message || 'يرجى المحاولة مرة أخرى أو التواصل معنا عبر واتساب مباشرة.'}`
+          : `Could not submit your order due to a network error: ${err.message || 'Please try again or reach out to us directly on WhatsApp.'}`
+      );
     } finally {
       setIsSubmitting(false);
     }

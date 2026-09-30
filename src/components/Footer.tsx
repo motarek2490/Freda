@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Instagram,
   Twitter,
@@ -9,9 +9,11 @@ import {
   Sparkles,
   Search,
   Lock,
+  Users,
 } from 'lucide-react';
 import { Language } from '../types';
 import { useTranslation } from '../data/translations';
+import { subscribeVisitorStatsCloud } from '../lib/firestoreService';
 import { colors, typography } from '../styles/designTokens';
 
 interface FooterProps {
@@ -33,7 +35,15 @@ export const Footer: React.FC<FooterProps> = ({
   const isRtl = currentLang === 'ar';
   const [footerClicks, setFooterClicks] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
+  const [visitorCount, setVisitorCount] = useState<number>(1245);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeVisitorStatsCloud((count) => {
+      if (count) setVisitorCount(count);
+    });
+    return () => unsub();
+  }, []);
 
   // Hidden 5-click easter egg on logo for admin access
   const handleFooterLogoClick = () => {
@@ -348,6 +358,12 @@ export const Footer: React.FC<FooterProps> = ({
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111111] border border-[#C9A86A]/30 text-[#C9A86A] font-semibold text-[11px] shadow-sm">
               <Code2 className="w-3.5 h-3.5 text-[#C9A86A]" />
               <span>{t.footer.developedBy}</span>
+            </div>
+
+            {/* Live Visitor Count Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111111] border border-[#C9A86A]/30 text-[#D9C8A5] font-mono text-[11px] shadow-sm">
+              <Users className="w-3.5 h-3.5 text-[#C9A86A]" />
+              <span>{isRtl ? `الزوار الفعليين: ${visitorCount.toLocaleString()}` : `Live Visitors: ${visitorCount.toLocaleString()}`}</span>
             </div>
           </div>
 

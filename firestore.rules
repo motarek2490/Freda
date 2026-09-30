@@ -197,22 +197,10 @@ service cloud.firestore {
     match /orders/{id} {
       allow create: if isSignedIn() &&
         request.resource.data.id == id &&
-        id.matches('^ORD-[a-zA-Z0-9_-]+$') &&
-        request.resource.data.status == 'pending' &&
         request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
-        request.resource.data.amount is number &&
-        request.resource.data.amount in [199, 399, 799] &&
+        request.resource.data.invitationId is string &&
         request.resource.data.customerName is string &&
-        request.resource.data.customerName.size() >= 2 &&
-        request.resource.data.customerName.size() <= 100 &&
-        request.resource.data.customerPhone is string &&
-        request.resource.data.customerPhone.size() >= 3 &&
-        request.resource.data.customerPhone.size() <= 50 &&
-        request.resource.data.vodafoneCashSender is string &&
-        request.resource.data.vodafoneCashSender.size() >= 3 &&
-        request.resource.data.vodafoneCashSender.size() <= 50 &&
-        request.resource.data.invitationId is string;
+        request.resource.data.customerPhone is string;
 
       // Read by Admin or the order owner
       allow read: if isAdmin() || (
@@ -236,8 +224,8 @@ service cloud.firestore {
     }
 
     match /settings/{id} {
-      allow read: if id == 'public_config' || isAdmin();
-      allow write: if isAdmin();
+      allow read: if id == 'public_config' || id == 'visitor_stats' || isAdmin();
+      allow write: if id == 'visitor_stats' || isAdmin();
     }
 
     match /music_library/{id} {
@@ -257,22 +245,8 @@ service cloud.firestore {
     }
 
     match /reviews/{id} {
-      allow read: if resource.data.approved == true || isAdmin();
-      allow create: if request.resource.data.approved == false &&
-        request.resource.data.rating is number &&
-        request.resource.data.rating >= 1 &&
-        request.resource.data.rating <= 5 &&
-        (
-          (request.resource.data.keys().contains('customerName') && request.resource.data.customerName is string && request.resource.data.customerName.size() >= 2 && request.resource.data.customerName.size() <= 100) ||
-          (request.resource.data.keys().contains('name') && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100)
-        ) &&
-        request.resource.data.comment is string &&
-        request.resource.data.comment.size() >= 3 &&
-        request.resource.data.comment.size() <= 800 &&
-        request.resource.data.keys().hasOnly([
-          'id', 'name', 'customerName', 'rating', 'comment', 'approved', 'createdAt',
-          'templateId', 'avatarUrl', 'role', 'eventType', 'designTitle', 'invitationTitle'
-        ]);
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if isAdmin();
     }
 
