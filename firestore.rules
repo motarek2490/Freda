@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================================================================
-    // GLOBAL SECURITY HELPERS (Zero-Trust ABAC)
+    // GLOBAL SECURITY HELPERS
     // =========================================================================
 
     function isSignedIn() {
@@ -13,8 +13,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.admin == true ||
-        request.auth.token.email == 'mohammedtarek2490@gmail.com' ||
-        (request.auth.token.email != null && request.auth.token.email.matches('.*mohammedtarek2490@gmail.com.*')) ||
+        (request.auth.token.email == 'mohammedtarek2490@gmail.com' && request.auth.token.email_verified == true) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -30,16 +29,15 @@ service cloud.firestore {
     }
 
     function isValidSlug(s) {
-      return s is string && s.size() >= 1 && s.size() <= 128;
+      return s is string && s.matches('^[\\p{L}\\p{N}_-]{3,64}$');
     }
 
-    // Default Deny Catch-All
     match /{document=**} {
       allow read, write: if false;
     }
 
     // =========================================================================
-    // 1.2 /admins/{id} - System Administrators Collection
+    // /admins/{id}
     // =========================================================================
     match /admins/{id} {
       allow read: if isAdmin();
@@ -47,47 +45,47 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 1.3 /invitations/{id} - Core Public/Client Invitations
+    // /invitations/{id}
     // =========================================================================
     match /invitations/{id} {
-      // Single doc public view (only published & non-expired invitations are publicly accessible)
       allow get: if (
         resource.data.status == 'published' &&
         resource.data.isExpired != true
-      ) ||
-      isAdmin() ||
-      isOwner(resource.data.ownerUid) ||
-      hostActive(id);
+      ) || isAdmin() || isOwner(resource.data.ownerUid) || hostActive(id);
 
-      // Collection list queries allowed for admins or authenticated staff/users
-      allow list: if isAdmin() || isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
 
-      // Creation allowed for any client submitting an order (pending_approval) or owner/admin
-      allow create: if request.resource.data.id == id && (
-        isAdmin() ||
-        request.resource.data.status == 'pending_approval' ||
-        request.resource.data.status == 'draft' ||
-        (isSignedIn() && request.resource.data.ownerUid == request.auth.uid)
-      );
+      allow create: if isSignedIn() &&
+        request.resource.data.id == id &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status in ['draft', 'pending_approval'] &&
+        isValidSlug(request.resource.data.slug) &&
+        !('hostPassword' in request.resource.data) &&
+        !('hostAccessCode' in request.resource.data) &&
+        !('hostUsername' in request.resource.data) &&
+        !('customerPhone' in request.resource.data) &&
+        !('planTier' in request.resource.data) &&
+        !('expiresAt' in request.resource.data);
 
-      // Update by Admin, Owner, or client finalizing draft/pending_approval order
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.ownerUid == resource.data.ownerUid
-      ) || (
-        resource.data.status in ['draft', 'pending_approval'] &&
-        request.resource.data.status in ['draft', 'pending_approval']
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'eventDetails', 'customColors', 'customFont',
+          'themeStyle', 'language', 'layoutType', 'templateId',
+          'updatedAt', 'status', 'slug', 'musicTrackUrl', 'musicTrackName',
+          'guestCount', 'galleryImages'
+        ]) &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (resource.data.status == 'draft' && request.resource.data.status == 'pending_approval')
+        )
       );
 
-      // Deletion is allowed by Admin or Owner
       allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
 
-      // =======================================================================
-      // 1.5 Subcollection: /invitations/{id}/rsvps/{rsvpId}
-      // =======================================================================
       match /rsvps/{rsvpId} {
-        // Public guests can create an RSVP only on published, active invitations
         allow create: if exists(/databases/$(database)/documents/invitations/$(id)) &&
           get(/databases/$(database)/documents/invitations/$(id)).data.status == 'published' &&
           request.resource.data.id == rsvpId &&
@@ -100,7 +98,6 @@ service cloud.firestore {
           request.resource.data.guestCount >= 1 &&
           request.resource.data.guestCount <= 20;
 
-        // Read, update, and manage RSVPs: Admin OR Owner OR Active Host
         allow read, update, delete: if isAdmin() ||
           (isSignedIn() && get(/databases/$(database)/documents/invitations/$(id)).data.ownerUid == request.auth.uid) ||
           hostActive(id);
@@ -108,25 +105,29 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 1.4 /slugs/{slug} - Clean Slug Routing (No alias docs, atomic ownership)
+    // /slugs/{slug}
     // =========================================================================
     match /slugs/{slug} {
       allow get: if true;
       allow list: if false;
 
-      allow create: if !exists(/databases/$(database)/documents/slugs/$(slug));
+      allow create: if isSignedIn() &&
+        !exists(/databases/$(database)/documents/slugs/$(slug)) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid;
 
       allow update: if isAdmin() || (
-        isSignedIn() && resource.data.ownerUid == request.auth.uid
-      ) || (
-        request.resource.data.invitationId == resource.data.invitationId
+        isSignedIn() &&
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid
       );
 
-      allow delete: if isAdmin() || isSignedIn();
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
     }
 
     // =========================================================================
-    // 1.6 /wishes/{wishId} - Guest Wishes & Congratulatory Messages
+    // /wishes/{wishId}
     // =========================================================================
     match /wishes/{wishId} {
       allow create: if exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
@@ -143,7 +144,6 @@ service cloud.firestore {
           'id', 'invitationId', 'authorName', 'message', 'relationship', 'approved', 'createdAt'
         ]);
 
-      // Public reads only approved messages; Admin / Owner / Host see all
       allow read: if resource.data.approved == true ||
         isAdmin() ||
         (isSignedIn() && get(/databases/$(database)/documents/invitations/$(resource.data.invitationId)).data.ownerUid == request.auth.uid) ||
@@ -155,29 +155,45 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 1.8 /invitation_private/{id} - Server Only Credentials Vault
+    // /invitation_private/{id}
     // =========================================================================
     match /invitation_private/{id} {
       allow read, write: if false;
     }
 
     // =========================================================================
-    // 1.9 /orders/{id} - Package Orders with Price Integrity
+    // /orders/{id}
     // =========================================================================
     match /orders/{id} {
-      allow create: if request.resource.data.id == id &&
-        (request.resource.data.status == 'pending' || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.id == id &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
+        request.resource.data.amount is number &&
+        request.resource.data.amount <= 100000 &&
+        (
+          !exists(/databases/$(database)/documents/settings/public_config) ||
+          request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data[
+            request.resource.data.planTier == 'basic' ? 'basicPriceEGP' :
+            request.resource.data.planTier == 'diamond' ? 'diamondPriceEGP' : 'royalPriceEGP'
+          ] ||
+          request.resource.data.amount in [199, 399, 799]
+        ) &&
+        request.resource.data.customerName is string && request.resource.data.customerName.size() >= 2 && request.resource.data.customerName.size() <= 100 &&
+        request.resource.data.customerPhone is string && request.resource.data.customerPhone.size() >= 6 && request.resource.data.customerPhone.size() <= 30 &&
+        request.resource.data.vodafoneCashSender is string && request.resource.data.vodafoneCashSender.size() >= 6 && request.resource.data.vodafoneCashSender.size() <= 30 &&
+        exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
+        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid;
 
-      // Single order doc lookup allowed for customer tracking by Order ID; list allowed for admin or signed-in users
-      allow get: if true;
-      allow list: if isAdmin() || isSignedIn();
+      allow get: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
 
-      // Update and deletion strictly restricted to Admin
       allow update, delete: if isAdmin();
     }
 
     // =========================================================================
-    // 1.10 Settings, Music Library, Templates, Reviews, Rate Limits
+    // Settings, Music, Templates, Reviews, Rate Limits
     // =========================================================================
     match /settings/public_config {
       allow read: if true;
@@ -188,20 +204,19 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    match /settings/{id} {
-      allow read: if id == 'public_config' || id == 'visitor_stats' || isAdmin();
-      allow write: if id == 'visitor_stats' || isAdmin();
+    match /settings/visitor_stats {
+      allow read: if true;
+      allow write: if true;
     }
 
     match /music_library/{id} {
       allow read: if true;
-      allow write: if isAdmin() || isSignedIn();
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     match /cloud_audio_files/{id} {
       allow read: if true;
-      allow write, delete: if isAdmin() || isSignedIn();
+      allow write, delete: if isAdmin();
     }
 
     match /custom_templates/{id} {
@@ -210,8 +225,16 @@ service cloud.firestore {
     }
 
     match /reviews/{id} {
-      allow read: if true;
-      allow create: if true;
+      allow read: if resource.data.approved == true || isAdmin();
+
+      allow create: if request.resource.data.approved == false &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.customerName is string &&
+        request.resource.data.customerName.size() >= 2 && request.resource.data.customerName.size() <= 100 &&
+        request.resource.data.comment is string &&
+        request.resource.data.comment.size() >= 3 && request.resource.data.comment.size() <= 800;
+
       allow update, delete: if isAdmin();
     }
 
