@@ -227,14 +227,14 @@ export const BackgroundMusicPlayer: React.FC<BackgroundMusicPlayerProps> = ({
           </div>
 
           {/* Label Text */}
-          <span className="hidden sm:inline-block text-[11px] font-medium tracking-wide">
+          <span className="text-[10px] sm:text-[11px] font-medium tracking-wide">
             {isPlaying
               ? isRtl
-                ? 'موسيقى الموقع'
-                : 'Site Music'
+                ? 'موسيقى'
+                : 'Music'
               : isRtl
-              ? 'تشغيل الموسيقى'
-              : 'Play Music'}
+              ? 'تشغيل'
+              : 'Play'}
           </span>
 
           {/* Glowing pulse dot when active */}

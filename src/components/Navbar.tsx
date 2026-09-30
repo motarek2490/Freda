@@ -167,8 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Right: Actions, Audio, Language, Create */}
             <div className="flex items-center gap-3 sm:gap-4">
               
-              {/* Ambient Audio Player */}
-              <div className="hidden sm:block">
+              {/* Ambient Audio Player (Visible on both Mobile and Desktop) */}
+              <div className="flex items-center">
                 <BackgroundMusicPlayer
                   currentLang={currentLang}
                   isSuppressed={isAudioSuppressed}
@@ -323,6 +323,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Bottom Drawer Actions */}
           <div className="space-y-4 pt-4 border-t border-[#C9A86A]/20">
+            {/* Mobile Drawer Ambient Music Control */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#141414] border border-[#C9A86A]/30">
+              <span className="text-xs font-semibold text-[#D9C8A5]">
+                {isRtl ? '🎵 موسيقى الموقع الملكية:' : '🎵 Site Background Music:'}
+              </span>
+              <BackgroundMusicPlayer
+                currentLang={currentLang}
+                isSuppressed={isAudioSuppressed}
+                trackUrl={bgTrackUrl}
+                trackName={bgTrackName}
+              />
+            </div>
+
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
