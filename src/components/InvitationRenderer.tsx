@@ -797,25 +797,29 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
             </button>
           )}
 
-          {/* Static Card Image View */}
-          <button
-            onClick={() => setShowCardModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#171717]/80 backdrop-blur-md border border-[#333] hover:border-[#B99A65] text-xs font-semibold text-[#E9E1D5] hover:text-[#B99A65] transition-all cursor-pointer shadow-lg"
-            title={isRtl ? 'كرت صورة ثابت للواتساب والطباعة' : 'Static Card Graphic'}
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-[#B99A65]" />
-            <span className="hidden sm:inline">{isRtl ? 'كرت صورة' : 'Card'}</span>
-          </button>
+          {/* Static Card Image View - Hidden on live standalone guest views */}
+          {(!isStandaloneView || isDemoInvitation) && (
+            <button
+              onClick={() => setShowCardModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#171717]/80 backdrop-blur-md border border-[#333] hover:border-[#B99A65] text-xs font-semibold text-[#E9E1D5] hover:text-[#B99A65] transition-all cursor-pointer shadow-lg"
+              title={isRtl ? 'كرت صورة ثابت للواتساب والطباعة' : 'Static Card Graphic'}
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-[#B99A65]" />
+              <span className="hidden sm:inline">{isRtl ? 'كرت صورة' : 'Card'}</span>
+            </button>
+          )}
 
-          {/* Share Invitation Link Button */}
-          <button
-            onClick={() => setShowShareModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#171717]/90 backdrop-blur-md border border-[#B99A65] text-xs font-bold text-[#B99A65] hover:bg-[#B99A65] hover:text-[#171717] transition-all cursor-pointer shadow-lg"
-            title={isRtl ? 'مشاركة ونسخ رابط الدعوة' : 'Share & Copy Invitation Link'}
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>{isRtl ? 'مشاركة الرابط 🔗' : 'Share Link 🔗'}</span>
-          </button>
+          {/* Share Invitation Link Button - Hidden on live standalone guest views */}
+          {(!isStandaloneView || isDemoInvitation) && (
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#171717]/90 backdrop-blur-md border border-[#B99A65] text-xs font-bold text-[#B99A65] hover:bg-[#B99A65] hover:text-[#171717] transition-all cursor-pointer shadow-lg"
+              title={isRtl ? 'مشاركة ونسخ رابط الدعوة' : 'Share & Copy Invitation Link'}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>{isRtl ? 'مشاركة الرابط 🔗' : 'Share Link 🔗'}</span>
+            </button>
+          )}
         </div>
       </div>
 
