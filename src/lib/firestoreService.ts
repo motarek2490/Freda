@@ -478,7 +478,6 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
     ? order.id
     : `ORD-${crypto.randomUUID()}`;
 
-  // Sanitize and ensure no plaintext hostCredentials or passwords exist
   const cleanOrder: Record<string, any> = stripUndefined({
     id: orderId,
     invitationId: order.invitationId,
@@ -496,38 +495,45 @@ export async function saveOrderCloud(order: OrderData): Promise<OrderData> {
     invitationSnapshot: order.invitationSnapshot ? stripUndefined(order.invitationSnapshot) : undefined,
   });
 
-  const savePromise = setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
-  const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 4000));
-
-  try {
-    const result = await Promise.race([savePromise, timeoutPromise]);
-    if (result === 'TIMEOUT') {
-      console.warn('Order save to Firestore timed out, proceeding with local fallback');
-    }
-  } catch (err: any) {
-    console.warn('Failed to save order in cloud, proceeding with order object:', err);
-  }
-
-  // Backup to localStorage
+  // 1. Save to localStorage immediately as reliable cache
   try {
     const storedOrders = JSON.parse(localStorage.getItem('frida_orders') || '[]');
-    localStorage.setItem('frida_orders', JSON.stringify([cleanOrder, ...storedOrders]));
+    localStorage.setItem('frida_orders', JSON.stringify([cleanOrder, ...storedOrders.filter((o: any) => o.id !== orderId)]));
   } catch {}
+
+  // 2. Save to Cloud Firestore
+  try {
+    await setDoc(doc(db, 'orders', orderId), cleanOrder, { merge: true });
+  } catch (err: any) {
+    console.warn('Cloud order save warning:', err);
+  }
 
   return cleanOrder as OrderData;
 }
 
 export async function getOrdersCloud(): Promise<OrderData[]> {
+  const cloudList: OrderData[] = [];
   try {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(100));
     const snap = await getDocs(q);
-    const list: OrderData[] = [];
-    snap.forEach((d) => list.push(d.data() as OrderData));
-    return list;
+    snap.forEach((d) => cloudList.push(d.data() as OrderData));
   } catch (err) {
-    console.warn('Error fetching orders:', err);
-    return [];
+    console.warn('Error fetching cloud orders:', err);
   }
+
+  // Merge with local orders cache
+  try {
+    const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
+    if (Array.isArray(local)) {
+      for (const ord of local) {
+        if (ord && ord.id && !cloudList.some((x) => x.id === ord.id)) {
+          cloudList.push(ord);
+        }
+      }
+    }
+  } catch {}
+
+  return cloudList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export function subscribeOrdersCloud(callback: (orders: OrderData[]) => void): () => void {
@@ -536,12 +542,30 @@ export function subscribeOrdersCloud(callback: (orders: OrderData[]) => void): (
     return onSnapshot(
       q,
       (snapshot) => {
-        const list: OrderData[] = [];
-        snapshot.forEach((d) => list.push(d.data() as OrderData));
-        callback(list);
+        const cloudList: OrderData[] = [];
+        snapshot.forEach((d) => cloudList.push(d.data() as OrderData));
+
+        // Merge with local orders cache
+        try {
+          const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
+          if (Array.isArray(local)) {
+            for (const ord of local) {
+              if (ord && ord.id && !cloudList.some((x) => x.id === ord.id)) {
+                cloudList.push(ord);
+              }
+            }
+          }
+        } catch {}
+
+        callback(cloudList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       },
       (err) => {
         console.warn('Orders listener error:', err);
+        // Fallback to local storage on listener error
+        try {
+          const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
+          callback(local);
+        } catch {}
       }
     );
   } catch {
@@ -550,16 +574,26 @@ export function subscribeOrdersCloud(callback: (orders: OrderData[]) => void): (
 }
 
 export async function getOrderCloudById(orderId: string): Promise<OrderData | null> {
+  const cleanId = orderId.trim();
   try {
-    const snap = await getDoc(doc(db, 'orders', orderId));
+    const snap = await getDoc(doc(db, 'orders', cleanId));
     if (snap.exists()) {
       return snap.data() as OrderData;
     }
-    return null;
   } catch (err) {
-    console.warn('Error fetching order by ID:', err);
-    return null;
+    console.warn('Error fetching order by ID from cloud:', err);
   }
+
+  // Fallback to local storage
+  try {
+    const local = JSON.parse(localStorage.getItem('frida_orders') || '[]');
+    if (Array.isArray(local)) {
+      const found = local.find((o: OrderData) => o && o.id?.toLowerCase() === cleanId.toLowerCase());
+      if (found) return found;
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function deleteOrderCloud(orderId: string): Promise<void> {
