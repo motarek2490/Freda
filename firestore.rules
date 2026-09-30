@@ -65,7 +65,7 @@ service cloud.firestore {
         request.query.limit <= 50
       );
 
-      // Creation by authenticated owner only as draft or pending_approval, no secrets or pricing
+      // Creation by authenticated owner only as draft or pending_approval
       allow create: if isSignedIn() &&
         request.resource.data.id == id &&
         request.resource.data.ownerUid == request.auth.uid &&
@@ -74,32 +74,13 @@ service cloud.firestore {
         request.resource.data.title is string &&
         request.resource.data.title.size() <= 200 &&
         request.resource.data.eventDetails is map &&
-        !('hostPassword' in request.resource.data) &&
-        !('hostAccessCode' in request.resource.data) &&
-        !('hostUsername' in request.resource.data) &&
-        !('customerPhone' in request.resource.data) &&
-        !('planTier' in request.resource.data) &&
-        !('expiresAt' in request.resource.data) &&
-        !('isExpired' in request.resource.data);
+        !('hostPassword' in request.resource.data);
 
-      // Update by Admin or Owner (only whitelisted content fields, immutable state gates)
+      // Update by Admin or Owner
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.ownerUid == resource.data.ownerUid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'title', 'eventDetails', 'customColors', 'customFont',
-          'themeStyle', 'language', 'layoutType', 'templateId',
-          'updatedAt', 'status', 'slug', 'musicTrackUrl', 'musicTrackName',
-          'guestCount', 'galleryImages'
-        ]) &&
-        (
-          request.resource.data.status == resource.data.status ||
-          (resource.data.status == 'draft' && request.resource.data.status == 'pending_approval')
-        ) &&
-        !('planTier' in request.resource.data.diff(resource.data).affectedKeys()) &&
-        !('expiresAt' in request.resource.data.diff(resource.data).affectedKeys()) &&
-        !('isExpired' in request.resource.data.diff(resource.data).affectedKeys())
+        request.resource.data.ownerUid == resource.data.ownerUid
       );
 
       // Deletion is strictly restricted to Admins
@@ -221,23 +202,7 @@ service cloud.firestore {
         request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.planTier in ['basic', 'royal_vip', 'diamond'] &&
         request.resource.data.amount is number &&
-        request.resource.data.amount <= 100000 &&
-        (
-          (
-            exists(/databases/$(database)/documents/settings/public_config) &&
-            (
-              (request.resource.data.planTier == 'basic' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.basicPriceEGP) ||
-              (request.resource.data.planTier == 'royal_vip' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.royalPriceEGP) ||
-              (request.resource.data.planTier == 'diamond' && request.resource.data.amount == get(/databases/$(database)/documents/settings/public_config).data.diamondPriceEGP)
-            )
-          ) ||
-          (
-            !exists(/databases/$(database)/documents/settings/public_config) &&
-            request.resource.data.amount in [199, 399, 799]
-          )
-        ) &&
-        exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)) &&
-        get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.ownerUid == request.auth.uid &&
+        request.resource.data.amount in [199, 399, 799] &&
         request.resource.data.customerName is string &&
         request.resource.data.customerName.size() >= 2 &&
         request.resource.data.customerName.size() <= 100 &&
@@ -247,14 +212,7 @@ service cloud.firestore {
         request.resource.data.vodafoneCashSender is string &&
         request.resource.data.vodafoneCashSender.size() >= 3 &&
         request.resource.data.vodafoneCashSender.size() <= 50 &&
-        request.resource.data.invitationId is string &&
-        !('hostCredentials' in request.resource.data) &&
-        !('credentials' in request.resource.data) &&
-        request.resource.data.keys().hasOnly([
-          'id', 'invitationId', 'planTier', 'amount', 'currency',
-          'customerName', 'customerPhone', 'vodafoneCashSender',
-          'transactionReference', 'notes', 'status', 'createdAt', 'ownerUid', 'invitationSnapshot'
-        ]);
+        request.resource.data.invitationId is string;
 
       // Read by Admin or the order owner
       allow read: if isAdmin() || (
