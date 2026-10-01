@@ -48,7 +48,8 @@ export async function uploadAudioToR2(
     throw new Error('Authentication required for audio upload');
   }
 
-  const token = await currentUser.getIdToken();
+  // Force-refresh so a just-granted admin claim is picked up immediately.
+  const token = await currentUser.getIdToken(true);
   const formData = new FormData();
   const fileName = options.fileName || `${options.trackId || 'audio'}.mp3`;
   formData.append('file', blob, fileName);
@@ -107,6 +108,10 @@ export async function uploadAudioToR2(
       xhr.ontimeout = () => {
         reject(new Error('Audio upload timed out'));
       };
+
+      // Without an explicit timeout, a stalled server response (e.g. a slow
+      // admin-check lookup) leaves the UI spinning forever with no feedback.
+      xhr.timeout = 60000; // 60s — generous for large files, but bounded.
 
       xhr.send(formData);
     } else {
@@ -177,16 +182,25 @@ export async function deleteAudioFromR2(urlOrKey: string): Promise<boolean> {
     const currentUser = auth.currentUser;
     if (!currentUser) return false;
 
-    const token = await currentUser.getIdToken();
+    // Force-refresh the token so a just-granted admin custom claim (set via
+    // scripts/set-admin-claim.ts) is picked up immediately, instead of
+    // waiting for the cached token to expire naturally (up to 1 hour).
+    const token = await currentUser.getIdToken(true);
     const baseUrl = getAudioApiBaseUrl();
     const endpoint = `${baseUrl}/api/audio/${encodeURIComponent(key)}`;
+
+    // A stalled server response would otherwise leave the caller awaiting
+    // forever with no feedback — bound it with an explicit timeout.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s
 
     const res = await fetch(endpoint, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
     return res.ok;
   } catch (err) {
