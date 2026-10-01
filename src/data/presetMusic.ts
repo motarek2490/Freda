@@ -263,52 +263,56 @@ export async function saveTrackToCloudLibrary(track: MusicTrack | SongDocument):
  * Deletes a song from Firestore and cleans up its Firebase Storage assets if present.
  */
 export async function deleteTrackFromCloudLibrary(trackIdOrUrl: string): Promise<boolean> {
-  try {
-    const existing = cachedCloudTracks.find(
-      (t) => t.id === trackIdOrUrl || t.url === trackIdOrUrl || t.audioUrl === trackIdOrUrl
-    );
-    cachedCloudTracks = cachedCloudTracks.filter(
-      (t) => t.id !== trackIdOrUrl && t.url !== trackIdOrUrl && t.audioUrl !== trackIdOrUrl
-    );
-    deleteCustomUploadedTrack(trackIdOrUrl);
+  const existing = cachedCloudTracks.find(
+    (t) => t.id === trackIdOrUrl || t.url === trackIdOrUrl || t.audioUrl === trackIdOrUrl
+  );
+  cachedCloudTracks = cachedCloudTracks.filter(
+    (t) => t.id !== trackIdOrUrl && t.url !== trackIdOrUrl && t.audioUrl !== trackIdOrUrl
+  );
+  deleteCustomUploadedTrack(trackIdOrUrl);
 
-    // Fire-and-forget background removal from Cloudflare R2 & legacy storage (never blocks UI)
-    const deleteAudioFileBackground = (url?: string) => {
-      if (!url) return;
-      deleteAudioFromR2(url).catch(() => {});
-      if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
-        deleteObject(storageRef(storage, url)).catch(() => {});
-      }
-    };
+  const docId = existing?.id || trackIdOrUrl;
 
-    if (existing) {
-      deleteAudioFileBackground(existing.previewUrl);
-      if (existing.audioUrl && existing.audioUrl !== existing.previewUrl) {
-        deleteAudioFileBackground(existing.audioUrl);
-      }
-      if (existing.url && existing.url !== existing.audioUrl && existing.url !== existing.previewUrl) {
-        deleteAudioFileBackground(existing.url);
-      }
-    } else {
-      deleteAudioFileBackground(trackIdOrUrl);
-    }
-
-    if (existing?.id || trackIdOrUrl) {
-      const docId = existing?.id || trackIdOrUrl;
-      await deleteDoc(doc(db, 'music_library', docId));
-      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_full`)).catch(() => {});
-      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_prev`)).catch(() => {});
-      deleteDoc(doc(db, 'cloud_audio_files', `${docId}_audio`)).catch(() => {});
-      deleteAudioFromIDB(`${docId}_full`).catch(() => {});
-      deleteAudioFromIDB(`${docId}_preview`).catch(() => {});
-      deleteAudioFromIDB(`${docId}_audio`).catch(() => {});
-    }
-    return true;
-  } catch (err) {
-    console.warn('Failed to delete track from cloud library:', err);
-    deleteCustomUploadedTrack(trackIdOrUrl);
-    return false;
+  // The core deletion MUST succeed or throw — it must NOT be swallowed here,
+  // otherwise a real permission error (e.g. the admin's custom claim not yet
+  // applied) looks to the caller exactly like a successful deletion, and the
+  // track silently stays on the server while the UI claims it's gone.
+  if (docId) {
+    await deleteDoc(doc(db, 'music_library', docId));
   }
+
+  // Everything below is best-effort cleanup only — safe to swallow, since the
+  // record of truth (the music_library document) is already gone by now.
+  const deleteAudioFileBackground = (url?: string) => {
+    if (!url) return;
+    deleteAudioFromR2(url).catch(() => {});
+    if (url.includes('firebasestorage.googleapis.com') || url.startsWith('gs://')) {
+      deleteObject(storageRef(storage, url)).catch(() => {});
+    }
+  };
+
+  if (existing) {
+    deleteAudioFileBackground(existing.previewUrl);
+    if (existing.audioUrl && existing.audioUrl !== existing.previewUrl) {
+      deleteAudioFileBackground(existing.audioUrl);
+    }
+    if (existing.url && existing.url !== existing.audioUrl && existing.url !== existing.previewUrl) {
+      deleteAudioFileBackground(existing.url);
+    }
+  } else {
+    deleteAudioFileBackground(trackIdOrUrl);
+  }
+
+  if (docId) {
+    deleteDoc(doc(db, 'cloud_audio_files', `${docId}_full`)).catch(() => {});
+    deleteDoc(doc(db, 'cloud_audio_files', `${docId}_prev`)).catch(() => {});
+    deleteDoc(doc(db, 'cloud_audio_files', `${docId}_audio`)).catch(() => {});
+    deleteAudioFromIDB(`${docId}_full`).catch(() => {});
+    deleteAudioFromIDB(`${docId}_preview`).catch(() => {});
+    deleteAudioFromIDB(`${docId}_audio`).catch(() => {});
+  }
+
+  return true;
 }
 
 /**
