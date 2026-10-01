@@ -306,6 +306,13 @@ export const AdminMusicTab: React.FC<AdminMusicTabProps> = ({
       await onDeleteTrack(toDelete.id || '', toDelete.url || toDelete.audioUrl);
     } catch (err: any) {
       console.warn('Error deleting track in background:', err);
+      // The optimistic success message above was wrong — correct it so the
+      // admin isn't left believing a deletion that actually failed.
+      setUploadFeedback(
+        isRtl
+          ? `⚠️ لم يتم حذف "${getTrackDisplayName(toDelete, 'ar')}" فعليًا — حدث خطأ، يرجى إعادة المحاولة.`
+          : `⚠️ Failed to delete "${getTrackDisplayName(toDelete, 'en')}" — please retry.`
+      );
     }
   };
 
