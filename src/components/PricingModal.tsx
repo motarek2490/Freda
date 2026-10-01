@@ -181,28 +181,39 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     const orderId = generateOrderId();
 
     try {
-      // 0. Ensure user has an active Firebase Auth session or use guest identity
+      // 0. Ensure user has an active Firebase Auth session (anonymous sign-in
+      // is required here — the Firestore rules only accept a write whose
+      // ownerUid matches a real request.auth.uid, so a fabricated guest id
+      // can never pass and would otherwise fail with a confusing
+      // "Missing or insufficient permissions" error).
       let effectiveUid = auth.currentUser?.uid;
       if (!effectiveUid) {
         try {
           const anonUser = await ensureAnonymousAuth();
           if (anonUser) effectiveUid = anonUser.uid;
         } catch (e) {
-          console.warn('Anonymous auth note (proceeding as guest order):', e);
+          console.warn('Anonymous auth failed:', e);
         }
       }
       if (!effectiveUid) {
-        effectiveUid = `guest-${customerPhone.trim().replace(/\D/g, '') || Date.now().toString(36)}`;
+        setSubmissionError(
+          'تعذر إنشاء جلسة آمنة لإرسال الطلب. تأكد من اتصالك بالإنترنت وحاول مرة أخرى، ولو استمرت المشكلة تواصل معنا مباشرة عبر واتساب.'
+        );
+        setIsSubmitting(false);
+        return;
       }
 
       // 1. Prepare and save invitation to Cloud Firestore directly
+      // NOTE: hostUsername and planTier must NOT be set here — the create
+      // rule explicitly forbids them on a customer-created invitation (they
+      // are only assigned server-side by the approveOrder Cloud Function
+      // once an admin verifies and approves payment). Setting them here
+      // makes the whole saveInvitationCloud call fail permission checks.
       let targetInv: InvitationData;
       if (invitation) {
         targetInv = {
           ...invitation,
           status: 'pending_approval',
-          planTier: selectedTier,
-          hostUsername: customerPhone.trim(),
           ownerUid: effectiveUid,
         };
       } else {
@@ -229,8 +240,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           ownerUid: effectiveUid,
           createdAt: new Date().toISOString(),
           slug: `inv-${Date.now()}`,
-          planTier: selectedTier,
-          hostUsername: customerPhone.trim(),
         };
       }
 
@@ -251,6 +260,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         currency: 'EGP',
         planTier: selectedTier,
         status: 'pending',
+        ownerUid: effectiveUid,
         createdAt: new Date().toISOString(),
         invitationSnapshot: JSON.parse(JSON.stringify(savedInv)),
       };
