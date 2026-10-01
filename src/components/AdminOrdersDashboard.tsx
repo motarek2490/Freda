@@ -268,15 +268,19 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
     setAdminTracks((prev) => prev.filter((t) => t.id !== trackId && (!trackUrl || t.url !== trackUrl)));
 
     // 2. Delete from Cloud Firestore / local cache / IndexedDB
+    let deleteError: unknown = null;
     try {
       if (trackId || trackUrl) {
         await deleteTrackFromCloudLibrary(trackId || trackUrl || '');
       }
     } catch (err) {
       console.warn('Error in deleteTrackFromCloudLibrary:', err);
+      deleteError = err;
     }
 
-    // 3. Hide or blacklist in adminSettings so preset/system tracks are permanently removed
+    // 3. Hide or blacklist in adminSettings so preset/system tracks are
+    // permanently removed from listings even if the hard delete above
+    // failed (e.g. a bundled preset track with no music_library document).
     try {
       const currentSettings = adminSettings || DEFAULT_ADMIN_SETTINGS;
       const currentHidden = currentSettings.hiddenTrackIds || [];
@@ -291,6 +295,14 @@ export const AdminOrdersDashboard: React.FC<AdminOrdersDashboardProps> = ({
       if (onSettingsUpdated) onSettingsUpdated(updated);
     } catch (settingsErr) {
       console.warn('Error updating adminSettings for deleted track:', settingsErr);
+    }
+
+    // Re-throw the real deletion error (if any) now that the local-hide
+    // fallback has run, so the caller (AdminMusicTab) can tell the admin the
+    // server-side file/record was NOT actually removed, instead of silently
+    // looking successful.
+    if (deleteError) {
+      throw deleteError;
     }
   };
 
