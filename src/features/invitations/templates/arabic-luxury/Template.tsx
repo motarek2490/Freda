@@ -12,13 +12,33 @@ import {
   ExternalLink,
   Maximize2,
   UserCheck,
-  CheckCircle2,
-  Award,
 } from 'lucide-react';
 import { TemplateLayoutProps } from '../../model/templateContract';
 import { formatTime12Hour } from '../../../../lib/dateUtils';
+import { Hero } from './components/Hero';
+import { Countdown } from './components/Countdown';
+import { ActionButton } from './components/ActionButton';
+import './styles.css';
 
-export const ArabicLuxuryLayout: React.FC<TemplateLayoutProps> = ({
+// ─── Scroll Reveal Wrapper ───
+const Reveal: React.FC<{
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}> = ({ children, delay = 0, className = '' }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 28, filter: 'blur(4px)' }}
+    whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+    viewport={{ once: true, margin: '-60px' }}
+    transition={{ duration: 0.9, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
+// ─── Main Template ───
+export const RomanticCanvasLayout: React.FC<TemplateLayoutProps> = ({
   invitation,
   isRtl,
   t,
@@ -39,336 +59,356 @@ export const ArabicLuxuryLayout: React.FC<TemplateLayoutProps> = ({
   getGoogleCalendarUrl,
 }) => {
   const details = invitation.eventDetails;
+  const accent = customColors?.accent || '#C9A46A';
+  const text = customColors?.text || '#F7F1E8';
+  const cardBg = customColors?.cardBg || '#171412';
 
   return (
-    <div className="space-y-16 py-6 font-sans-body">
-      {/* 1. TRADITIONAL ARABESQUE ROYAL ARCH CARTOUCHE */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.1 }}
-        className="relative bg-[#1A1612] border-2 border-[#C5A059] rounded-t-[120px] rounded-b-3xl p-8 sm:p-14 shadow-[0_30px_90px_rgba(0,0,0,0.85)] overflow-hidden text-center"
-        style={{
-          background: 'linear-gradient(180deg, #1C1813 0%, #120F0C 100%)',
-          borderColor: customColors.accent || '#C5A059',
-        }}
-      >
-        {/* Subtle Arabesque Pattern Background Overlay */}
-        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:16px_16px]" />
+    <div
+      className="template-romantic-canvas"
+      dir={isRtl ? 'rtl' : 'ltr'}
+      style={{
+        backgroundColor: customColors?.bg || '#11100F',
+        color: text,
+      }}
+    >
+      {/* Film Grain Overlay */}
+      <div className="frida-grain" />
 
-        {/* Intricate Corner Gold Lace Details */}
-        <div className="absolute top-4 left-4 text-[#C5A059] text-xs font-serif select-none">❖ ✦ ❖</div>
-        <div className="absolute top-4 right-4 text-[#C5A059] text-xs font-serif select-none">❖ ✦ ❖</div>
-        <div className="absolute bottom-4 left-4 text-[#C5A059] text-xs font-serif select-none">✦ ❖ ✦</div>
-        <div className="absolute bottom-4 right-4 text-[#C5A059] text-xs font-serif select-none">✦ ❖ ✦</div>
+      {/* ═══════════════════════════════════════════
+          1. HERO — Living Romantic Canvas
+          ═══════════════════════════════════════════ */}
+      <Hero
+        groomName={details.groomName || ''}
+        brideName={details.brideName || ''}
+        eventTitle={details.eventTitle || ''}
+        customMessage={details.customMessage || ''}
+        eventDate={details.eventDate || ''}
+        eventTime={details.eventTime || ''}
+        isRtl={isRtl}
+        accentColor={accent}
+        hostNames={details.hostNames}
+      />
 
-        {/* Traditional Basmalah / Opening Calligraphy Banner */}
-        <div className="max-w-md mx-auto mb-6 pt-4">
-          <div className="inline-flex items-center justify-center px-6 py-2 rounded-full border border-[#C5A059]/40 bg-[#C5A059]/10 text-[#C5A059] text-sm font-arabic-calligraphy tracking-wider mb-3">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-          </div>
-          <p className="text-xs sm:text-sm text-[#D4AF37] font-arabic-calligraphy leading-relaxed">
-            "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً"
-          </p>
-        </div>
-
-        {/* Host Families Formal Greeting */}
-        <div className="my-6">
-          <span className="text-[11px] tracking-[0.3em] uppercase font-bold text-[#C5A059] block mb-2">
-            {isRtl ? 'دعوة كريمة ومباركة من' : 'Cordially Invited By'}
-          </span>
-          <h2 className="font-playfair text-xl sm:text-2xl font-bold text-[#F7F4EE]">
-            {details.hostNames}
-          </h2>
-        </div>
-
-        {/* Royal Arch Frame for the Main Couple */}
-        <div className="relative my-8 p-6 sm:p-8 rounded-3xl border border-[#C5A059]/40 bg-[#241E17]/80 backdrop-blur-sm">
-          <div className="w-12 h-12 rounded-full bg-[#C5A059]/20 border border-[#C5A059] flex items-center justify-center mx-auto mb-4 text-[#C5A059]">
-            <Sparkles className="w-6 h-6" />
-          </div>
-
-          <h1
-            className={`text-2xl sm:text-4xl font-extrabold text-[#F7F4EE] leading-snug mb-3 ${
-              isRtl ? 'font-arabic-calligraphy' : 'font-playfair'
-            }`}
-          >
-            {details.eventTitle}
-          </h1>
-
-          <p className="text-xs sm:text-sm text-[#E6DCBF]/80 max-w-xl mx-auto leading-relaxed">
-            {details.customMessage}
-          </p>
-
-          {/* Groom & Bride Pedigree Cards */}
-          {(details.groomName || details.brideName) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 pt-6 border-t border-[#C5A059]/30">
-              {details.groomName && (
-                <div className="p-5 rounded-2xl bg-[#1A1612] border border-[#C5A059]/30 text-center space-y-2">
-                  <img
-                    src={details.groomAvatarUrl || '/images/samples/groom_portrait.jpg'}
-                    alt={details.groomName}
-                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/samples/groom_portrait.jpg';
-                    }}
-                  />
-                  <span className="text-[10px] text-[#C5A059] uppercase tracking-widest font-bold block">
-                    {isRtl ? 'العريس' : 'The Groom'}
-                  </span>
-                  <h3 className="font-bold text-lg text-[#F7F4EE]">{details.groomName}</h3>
-                  {details.groomParents && (
-                    <p className="text-xs text-[#A89F91] italic">{details.groomParents}</p>
-                  )}
-                </div>
-              )}
-
-              {details.brideName && (
-                <div className="p-5 rounded-2xl bg-[#1A1612] border border-[#C5A059]/30 text-center space-y-2">
-                  <img
-                    src={details.brideAvatarUrl || '/images/samples/bride_portrait.jpg'}
-                    alt={details.brideName}
-                    className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-[#C5A059] shadow-md"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/samples/bride_portrait.jpg';
-                    }}
-                  />
-                  <span className="text-[10px] text-[#C5A059] uppercase tracking-widest font-bold block">
-                    {isRtl ? 'العروس' : 'The Bride'}
-                  </span>
-                  <h3 className="font-bold text-lg text-[#F7F4EE]">{details.brideName}</h3>
-                  {details.brideParents && (
-                    <p className="text-xs text-[#A89F91] italic">{details.brideParents}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Cover Photo */}
-        {details.coverImageUrl && (
-          <div
-            onClick={() => setActiveLightboxImg(details.coverImageUrl!)}
-            className="rounded-2xl overflow-hidden border-2 border-[#C5A059]/40 max-h-80 shadow-2xl cursor-pointer group relative"
-          >
-            <img
-              src={details.coverImageUrl}
-              alt="Cover"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+      {/* ═══════════════════════════════════════════
+          2. COUNTDOWN
+          ═══════════════════════════════════════════ */}
+      <Reveal>
+        <section className="frida-section">
+          <div className="frida-section-card" style={{ background: `linear-gradient(135deg, ${cardBg}dd, ${cardBg}f2)` }}>
+            <p className="frida-eyebrow" style={{ color: accent }}>
+              {isRtl ? 'العد التنازلي' : 'Countdown'}
+            </p>
+            <h2 className="frida-section-title">
+              {isRtl ? 'الأيام المتبقية على بهجتنا' : 'Until the Celebration'}
+            </h2>
+            <Countdown
+              days={timeLeft.days}
+              hours={timeLeft.hours}
+              minutes={timeLeft.minutes}
+              seconds={timeLeft.seconds}
+              isRtl={isRtl}
+              accentColor={accent}
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs gap-2 font-semibold">
-              <Maximize2 className="w-4 h-4" />
-              <span>{isRtl ? 'تكبير صورة المناسبة' : 'Enlarge Cover Image'}</span>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* 2. GOLDEN DATE COIN & COUNTDOWN */}
-      <div className="bg-[#1C1813] border border-[#C5A059]/40 rounded-3xl p-8 text-center space-y-6 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C5A059]/10 border border-[#C5A059]/40 text-[#C5A059] text-xs font-bold">
-          <Calendar className="w-4 h-4" />
-          <span>{details.eventDate} • {formatTime12Hour(details.eventTime, isRtl)}</span>
-        </div>
-
-        <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
-          {isRtl ? 'الأيام المتبقية على بهجتنا الكبرى' : 'Countdown to the Sacred Celebration'}
-        </h3>
-
-        <div className="grid grid-cols-4 gap-3 max-w-md mx-auto" dir="ltr">
-          {[
-            { label: isRtl ? 'أيام' : 'Days', val: timeLeft.days },
-            { label: isRtl ? 'ساعات' : 'Hours', val: timeLeft.hours },
-            { label: isRtl ? 'دقائق' : 'Mins', val: timeLeft.minutes },
-            { label: isRtl ? 'ثواني' : 'Secs', val: timeLeft.seconds },
-          ].map((item, idx) => (
-            <div key={idx} className="p-3.5 rounded-2xl bg-[#241E17] border border-[#C5A059]/30">
-              <span className="block font-playfair font-extrabold text-2xl text-[#C5A059]">
-                {String(item.val).padStart(2, '0')}
-              </span>
-              <span className="text-[9px] uppercase tracking-wider text-[#A89F91]">{item.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-4 border-t border-[#332A20] flex flex-wrap items-center justify-center gap-4">
-          <a
-            href={getGoogleCalendarUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 rounded-full bg-[#C5A059] text-[#120F0C] font-extrabold text-xs hover:bg-[#d8b56f] transition-all flex items-center gap-2 shadow-md"
-          >
-            <Calendar className="w-4 h-4" />
-            <span>{isRtl ? 'إضافة إلى تقويم Google' : 'Save to Google Calendar'}</span>
-          </a>
-
-          {details.rsvpDeadline && (
-            <span className="text-xs text-[#A89F91] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
-              {isRtl ? `آخر موعد للرد: ${details.rsvpDeadline}` : `RSVP Deadline: ${details.rsvpDeadline}`}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* 3. VENUE LOCATION & HOSPITALITY */}
-      <div className="bg-[#1A1612] border border-[#C5A059]/40 rounded-3xl p-8 space-y-6 text-center shadow-xl">
-        <div className="w-12 h-12 rounded-full bg-[#C5A059]/20 border border-[#C5A059] flex items-center justify-center mx-auto text-[#C5A059]">
-          <MapPin className="w-6 h-6" />
-        </div>
-
-        <div>
-          <span className="text-[10px] tracking-[0.3em] uppercase font-bold text-[#C5A059] block">
-            {isRtl ? 'قاعة الحفل وموقع الضيافة' : 'Venue & Hall'}
-          </span>
-          <h2 className="font-playfair text-2xl sm:text-3xl font-bold text-[#F7F4EE] mt-1">
-            {details.venueName}
-          </h2>
-          <p className="text-xs text-[#A89F91] mt-1 max-w-md mx-auto">{details.address}</p>
-        </div>
-
-        {details.googleMapsUrl && (
-          <a
-            href={details.googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#C5A059]/20 border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#120F0C] font-bold text-xs uppercase tracking-wider transition-all"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>{isRtl ? 'عرض الموقع الدقيق على الخريطة' : 'Open Location in Google Maps'}</span>
-          </a>
-        )}
-
-        {details.dressCode && (
-          <div className="pt-4 border-t border-[#332A20] flex items-center justify-center gap-2 text-xs text-[#E6DCBF]">
-            <Shirt className="w-4 h-4 text-[#C5A059]" />
-            <span>
-              <strong>{isRtl ? 'الزي المعتمد:' : 'Dress Code:'}</strong> {details.dressCode}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* 4. HOSPITALITY TIMELINE / PROGRAMME */}
-      {details.enableSchedule && details.scheduleTimeline && details.scheduleTimeline.length > 0 && (
-        <div className="bg-[#1C1813] border border-[#C5A059]/40 rounded-3xl p-8 space-y-6">
-          <h3 className="font-playfair text-xl font-bold text-[#F7F4EE] text-center">
-            {isRtl ? 'مراسم وبرنامج الحفل' : 'Celebration Schedule'}
-          </h3>
-
-          <div className="space-y-4 max-w-xl mx-auto">
-            {details.scheduleTimeline.map((item, idx) => (
-              <div
-                key={item.id || idx}
-                className="p-4 rounded-2xl bg-[#241E17] border border-[#C5A059]/20 flex items-start gap-4"
+            <div className="frida-divider" />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <a
+                href={getGoogleCalendarUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="frida-btn-primary"
+                style={{ borderColor: `${accent}40`, color: accent, fontSize: '0.65rem', padding: '0.7rem 1.5rem' }}
               >
-                <div className="px-3 py-1.5 rounded-xl bg-[#C5A059]/20 border border-[#C5A059] text-[#C5A059] font-mono text-xs font-bold">
-                  {formatTime12Hour(item.time, isRtl)}
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-[#F7F4EE]">{item.title}</h4>
-                  <p className="text-xs text-[#A89F91] mt-0.5">{item.description}</p>
-                </div>
-              </div>
-            ))}
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{isRtl ? 'إضافة للتقويم' : 'Save to Calendar'}</span>
+              </a>
+              {details.rsvpDeadline && (
+                <span className="frida-detail-row" style={{ fontSize: '0.7rem' }}>
+                  <Clock className="w-3.5 h-3.5" style={{ color: accent }} />
+                  {isRtl ? `آخر موعد: ${details.rsvpDeadline}` : `Deadline: ${details.rsvpDeadline}`}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
+      </Reveal>
+
+      {/* ═══════════════════════════════════════════
+          3. VENUE
+          ═══════════════════════════════════════════ */}
+      {details.venueName && (
+        <Reveal delay={0.1}>
+          <section className="frida-section">
+            <div className="frida-section-card" style={{ background: `linear-gradient(135deg, ${cardBg}dd, ${cardBg}f2)` }}>
+              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                <MapPin className="w-5 h-5 mx-auto" style={{ color: accent }} />
+              </div>
+              <p className="frida-eyebrow" style={{ color: accent }}>
+                {isRtl ? 'الموقع' : 'Venue'}
+              </p>
+              <h2 className="frida-section-title">{details.venueName}</h2>
+              {details.address && (
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', color: `${text}80`, marginBottom: '1.25rem' }}>
+                  {details.address}
+                </p>
+              )}
+              <div className="frida-detail-row" style={{ marginBottom: '1rem' }}>
+                <Calendar className="w-4 h-4" style={{ color: accent }} />
+                <span>{details.eventDate}</span>
+                <span style={{ color: `${text}30`, margin: '0 0.3rem' }}>·</span>
+                <Clock className="w-4 h-4" style={{ color: accent }} />
+                <span>{formatTime12Hour(details.eventTime, isRtl)}</span>
+              </div>
+              {details.googleMapsUrl && (
+                <div style={{ textAlign: 'center' }}>
+                  <a
+                    href={details.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="frida-btn-primary"
+                    style={{ borderColor: `${accent}40`, color: accent, fontSize: '0.65rem' }}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>{isRtl ? 'عرض على الخريطة' : 'Open in Maps'}</span>
+                  </a>
+                </div>
+              )}
+              {details.dressCode && (
+                <>
+                  <div className="frida-divider" />
+                  <div className="frida-detail-row">
+                    <Shirt className="w-4 h-4" style={{ color: accent }} />
+                    <span>
+                      <strong>{isRtl ? 'الزي:' : 'Dress Code:'}</strong> {details.dressCode}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        </Reveal>
       )}
 
-      {/* 5. BANK GIFT REGISTRY */}
-      {details.enableGiftRegistry && (
-        <div className="bg-[#1A1612] border border-[#C5A059]/40 rounded-3xl p-8 text-center space-y-4">
-          <Gift className="w-8 h-8 text-[#C5A059] mx-auto" />
-          <h3 className="font-playfair text-xl font-bold text-[#F7F4EE]">
-            {isRtl ? 'هدية العروسين والتهنئة' : 'Gift Registry & Wishes'}
-          </h3>
-          <p className="text-xs text-[#A89F91] max-w-md mx-auto">
-            {isRtl
-              ? 'مشاركتكم فرحتنا هي الهدية الأغلى. ولمن أراد التفضل بتقديم تهنئة رقمية مسبقة عبر الحسابات البنكية:'
-              : 'Your presence brings us joy. For those who wish to extend a gift through bank transfer:'}
-          </p>
-          <button
-            onClick={onOpenBank}
-            className="px-6 py-3 rounded-2xl bg-[#241E17] border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#120F0C] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
-          >
-            {isRtl ? 'بيانات التحويل البنكي ورمز QR' : 'View Bank Transfer Info & QR'}
-          </button>
-        </div>
+      {/* ═══════════════════════════════════════════
+          4. TIMELINE / SCHEDULE
+          ═══════════════════════════════════════════ */}
+      {details.enableSchedule && details.scheduleTimeline && details.scheduleTimeline.length > 0 && (
+        <Reveal delay={0.1}>
+          <section className="frida-section">
+            <div className="frida-section-card" style={{ background: `linear-gradient(135deg, ${cardBg}dd, ${cardBg}f2)` }}>
+              <p className="frida-eyebrow" style={{ color: accent }}>
+                {isRtl ? 'البرنامج' : 'Programme'}
+              </p>
+              <h2 className="frida-section-title">
+                {isRtl ? 'مراسم الحفل' : 'Celebration Schedule'}
+              </h2>
+              <div style={{ maxWidth: '28rem', margin: '0 auto' }}>
+                {details.scheduleTimeline.map((item, idx) => (
+                  <div key={item.id || idx} className="frida-timeline-item">
+                    <span className="frida-timeline-time" style={{ borderColor: `${accent}30`, color: accent }}>
+                      {formatTime12Hour(item.time, isRtl)}
+                    </span>
+                    <div>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: text }}>
+                        {item.title}
+                      </h4>
+                      {item.description && (
+                        <p style={{ fontSize: '0.75rem', color: `${text}60`, marginTop: '0.2rem' }}>
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </Reveal>
       )}
 
-      {/* 6. GUESTBOOK WISHES */}
-      {details.enableGuestbook && (
-        <div className="bg-[#1C1813] border border-[#C5A059]/40 rounded-3xl p-8 space-y-6">
-          <h3 className="font-playfair text-xl font-bold text-[#F7F4EE] text-center">
-            {isRtl ? 'سجل دعوات وتهاني الضيوف' : 'Guestbook & Warm Wishes'}
-          </h3>
-
-          <form onSubmit={onAddWish} className="p-4 rounded-2xl bg-[#241E17] border border-[#332A20] space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                type="text"
-                required
-                value={newWishAuthor}
-                onChange={(e) => setNewWishAuthor(e.target.value)}
-                placeholder={isRtl ? 'الاسم الكريم...' : 'Your Name...'}
-                className="w-full bg-[#1A1612] border border-[#332A20] rounded-xl p-3 text-xs text-[#F7F4EE] focus:border-[#C5A059]"
+      {/* ═══════════════════════════════════════════
+          5. COVER IMAGE / GALLERY
+          ═══════════════════════════════════════════ */}
+      {details.coverImageUrl && (
+        <Reveal delay={0.1}>
+          <section className="frida-section">
+            <div
+              onClick={() => setActiveLightboxImg(details.coverImageUrl!)}
+              style={{
+                borderRadius: '1.25rem',
+                overflow: 'hidden',
+                border: `1px solid ${accent}25`,
+                cursor: 'pointer',
+                position: 'relative',
+                maxHeight: '20rem',
+              }}
+            >
+              <img
+                src={details.coverImageUrl}
+                alt="Cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
-              <input
-                type="text"
-                value={newWishRelation}
-                onChange={(e) => setNewWishRelation(e.target.value)}
-                placeholder={isRtl ? 'صلة القرابة (صديق، قريب...)...' : 'Relation (Friend, Cousin...)...'}
-                className="w-full bg-[#1A1612] border border-[#332A20] rounded-xl p-3 text-xs text-[#F7F4EE] focus:border-[#C5A059]"
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  padding: '1rem',
+                }}
+              >
+                <span style={{ color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  {isRtl ? 'تكبير' : 'Enlarge'}
+                </span>
+              </div>
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          6. GIFT REGISTRY
+          ═══════════════════════════════════════════ */}
+      {details.enableGiftRegistry && (
+        <Reveal delay={0.1}>
+          <section className="frida-section">
+            <div className="frida-section-card" style={{ background: `linear-gradient(135deg, ${cardBg}dd, ${cardBg}f2)`, textAlign: 'center' }}>
+              <Gift className="w-6 h-6 mx-auto" style={{ color: accent, marginBottom: '0.75rem' }} />
+              <p className="frida-eyebrow" style={{ color: accent }}>
+                {isRtl ? 'الهدايا' : 'Gift Registry'}
+              </p>
+              <h2 className="frida-section-title">
+                {isRtl ? 'هدية العروسين' : 'Gift & Wishes'}
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: `${text}70`, maxWidth: '24rem', margin: '0 auto 1.5rem', lineHeight: 1.7 }}>
+                {isRtl
+                  ? 'مشاركتكم فرحتنا هي الهدية الأغلى. ولمن أراد التفضل بتقديم تهنئة رقمية:'
+                  : 'Your presence is the greatest gift. For those wishing to extend a digital blessing:'}
+              </p>
+              <ActionButton
+                label={isRtl ? 'بيانات التحويل البنكي' : 'Bank Transfer Info'}
+                onClick={onOpenBank}
+                icon={Gift}
+                variant="outline"
               />
             </div>
-            <textarea
-              required
-              rows={2}
-              value={newWishMessage}
-              onChange={(e) => setNewWishMessage(e.target.value)}
-              placeholder={isRtl ? 'اكتب تبريكاتك ودعواتك للعروسين بالبركة...' : 'Write your prayer and blessing...'}
-              className="w-full bg-[#1A1612] border border-[#332A20] rounded-xl p-3 text-xs text-[#F7F4EE] focus:border-[#C5A059]"
-            />
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-[#C5A059] text-[#120F0C] font-bold text-xs uppercase tracking-wider hover:bg-[#d8b56f] transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-              <span>{isRtl ? 'إرسال التهنئة المباركة' : 'Post Your Blessings'}</span>
-            </button>
-            {wishSuccess && (
-              <p className="text-xs text-emerald-400 text-center font-semibold">
-                {isRtl ? 'جزاك الله خيراً، تم إرسال تبريكك بنجاح!' : 'Your blessing was recorded!'}
-              </p>
-            )}
-          </form>
-
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {wishes.map((w) => (
-              <div key={w.id} className="p-4 rounded-xl bg-[#241E17] border border-[#332A20] space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#C5A059]">{w.authorName}</span>
-                  <span className="text-[10px] text-[#A89F91]">{w.relationship}</span>
-                </div>
-                <p className="text-xs text-[#E6DCBF] italic">{w.message}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+          </section>
+        </Reveal>
       )}
 
-      {/* 7. RSVP CALLOUT */}
+      {/* ═══════════════════════════════════════════
+          7. GUESTBOOK
+          ═══════════════════════════════════════════ */}
+      {details.enableGuestbook && (
+        <Reveal delay={0.1}>
+          <section className="frida-section">
+            <div className="frida-section-card" style={{ background: `linear-gradient(135deg, ${cardBg}dd, ${cardBg}f2)` }}>
+              <p className="frida-eyebrow" style={{ color: accent, textAlign: 'center' }}>
+                {isRtl ? 'سجل التهاني' : 'Guestbook'}
+              </p>
+              <h2 className="frida-section-title">
+                {isRtl ? 'دعواتكم وتهانيكم' : 'Warm Wishes'}
+              </h2>
+
+              {/* Wish Form */}
+              <form onSubmit={onAddWish} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    required
+                    value={newWishAuthor}
+                    onChange={(e) => setNewWishAuthor(e.target.value)}
+                    placeholder={isRtl ? 'الاسم الكريم...' : 'Your Name...'}
+                    className="frida-input"
+                  />
+                  <input
+                    type="text"
+                    value={newWishRelation}
+                    onChange={(e) => setNewWishRelation(e.target.value)}
+                    placeholder={isRtl ? 'صلة القرابة...' : 'Relation...'}
+                    className="frida-input"
+                  />
+                </div>
+                <textarea
+                  required
+                  rows={2}
+                  value={newWishMessage}
+                  onChange={(e) => setNewWishMessage(e.target.value)}
+                  placeholder={isRtl ? 'اكتب تبريكاتك للعروسين...' : 'Write your blessing...'}
+                  className="frida-input"
+                  style={{ resize: 'vertical' }}
+                />
+                <button
+                  type="submit"
+                  className="frida-btn-primary frida-btn-gold"
+                  style={{ width: '100%', fontSize: '0.7rem' }}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isRtl ? 'إرسال التهنئة' : 'Post Blessing'}</span>
+                </button>
+                {wishSuccess && (
+                  <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#6ee7b7', fontWeight: 600 }}>
+                    {isRtl ? 'جزاك الله خيراً، تم إرسال تبريكك!' : 'Your blessing was recorded!'}
+                  </p>
+                )}
+              </form>
+
+              {/* Wishes List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '16rem', overflowY: 'auto' }}>
+                {wishes.map((w) => (
+                  <div key={w.id} className="frida-wish-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: accent }}>
+                        {w.authorName}
+                      </span>
+                      <span style={{ fontSize: '0.6rem', color: `${text}50` }}>
+                        {w.relationship}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: `${text}90`, fontStyle: 'italic', lineHeight: 1.6 }}>
+                      {w.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          8. RSVP
+          ═══════════════════════════════════════════ */}
       {details.enableRSVP && (
-        <div className="text-center pt-4">
-          <button
-            onClick={onOpenRsvp}
-            className="w-full sm:w-auto px-12 py-5 rounded-full bg-gradient-to-r from-[#C5A059] via-[#d8b56f] to-[#C5A059] text-[#120F0C] font-extrabold text-sm uppercase tracking-widest shadow-[0_10px_40px_rgba(197,160,89,0.5)] hover:scale-105 transition-all cursor-pointer flex items-center justify-center gap-3 mx-auto"
-          >
-            <UserCheck className="w-5 h-5" />
-            <span>{isRtl ? 'تأكيد الحضور والمشاركة (RSVP)' : 'Confirm Your Attendance (RSVP)'}</span>
-          </button>
-        </div>
+        <Reveal delay={0.15}>
+          <section className="frida-section" style={{ textAlign: 'center', paddingBottom: '6rem' }}>
+            <div className="frida-divider" style={{ marginBottom: '2rem' }} />
+            <p className="frida-eyebrow" style={{ color: accent }}>
+              {isRtl ? 'نتشرف بحضوركم' : 'We Await Your Presence'}
+            </p>
+            <h2
+              className="frida-section-title"
+              style={{ fontSize: '1.5rem', marginBottom: '2rem' }}
+            >
+              {isRtl ? 'هل سنراكم هناك؟' : 'Will You Join Us?'}
+            </h2>
+            <ActionButton
+              label={isRtl ? 'تأكيد الحضور' : 'Confirm Attendance'}
+              onClick={onOpenRsvp}
+              icon={UserCheck}
+              variant="gold"
+            />
+            <div style={{ marginTop: '2rem' }}>
+              <Heart
+                className="w-4 h-4 mx-auto"
+                style={{ color: accent, opacity: 0.3 }}
+              />
+            </div>
+          </section>
+        </Reveal>
       )}
     </div>
   );
