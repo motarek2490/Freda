@@ -1,0 +1,5 @@
+/* Isolated styles for Royal Gold (royal) */
+.template-royal {
+  isolation: isolate;
+  position: relative;
+}

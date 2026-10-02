@@ -47,8 +47,10 @@ import { DemoMusicPickerModal } from './DemoMusicPickerModal';
 import { PendingApprovalScreen } from './PendingApprovalScreen';
 import { ExpiredInvitationScreen } from './ExpiredInvitationScreen';
 import { ThemeEnvelopeScreen } from './ThemeEnvelopeScreen';
-import { TemplateLayoutProps } from './InvitationLayouts';
-import { renderDynamicLayout, LayoutLoadingFallback, LayoutErrorBoundary } from './InvitationLayouts/lazyLayouts';
+import { normalizeInvitation } from '../features/invitations/model/normalization';
+import { InvitationEngine, LayoutLoadingFallback } from '../features/invitations/engine/InvitationEngine';
+import { TemplateErrorBoundary } from '../features/invitations/engine/TemplateErrorBoundary';
+import { TemplateLayoutProps } from '../features/invitations/model/templateContract';
 import { generateQrCodeDataUrl } from '../lib/qrHelper';
 
 const ClientQrCode: React.FC<{ urlOrData: string; alt?: string; className?: string }> = ({ urlOrData, alt = 'QR Code', className }) => {
@@ -89,31 +91,8 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   onBackToApp,
   isStandaloneView = false,
 }) => {
-  // Safe Fallback Normalization to guarantee no missing fields ever crash React
-  const mergedTemplatesList = getMergedTemplates();
-  const fallbackTemplate =
-    mergedTemplatesList.find((t) => t.id === rawInvitation?.templateId) ||
-    mergedTemplatesList[0];
-
-  const invitation: InvitationData = {
-    ...rawInvitation,
-    id: rawInvitation?.id || 'inv-preview',
-    templateId: rawInvitation?.templateId || fallbackTemplate.id,
-    layoutType: rawInvitation?.layoutType || fallbackTemplate.layoutType || 'royal',
-    title: rawInvitation?.title || fallbackTemplate.title.ar || 'دعوة زفاف ملكية',
-    language: rawInvitation?.language || userLang || 'ar',
-    themeStyle: rawInvitation?.themeStyle || fallbackTemplate.themeStyle,
-    customColors: rawInvitation?.customColors || fallbackTemplate.defaultColors,
-    customFont: rawInvitation?.customFont || fallbackTemplate.defaultFont || 'font-playfair',
-    eventDetails: {
-      ...fallbackTemplate.defaultData,
-      ...(rawInvitation?.eventDetails || {}),
-      wishesList: rawInvitation?.eventDetails?.wishesList || [],
-    },
-    status: rawInvitation?.status || 'published',
-    createdAt: rawInvitation?.createdAt || new Date().toISOString(),
-    slug: rawInvitation?.slug || rawInvitation?.id || 'invitation',
-  };
+  // Canonical Normalization guarantees no malformed Firestore doc or missing field crashes React
+  const invitation = normalizeInvitation(rawInvitation, userLang);
 
   const lang = invitation.language || userLang || 'en';
   const t = useTranslation(lang);
@@ -694,13 +673,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
         ? 'minimalist'
         : 'royal');
 
-    return (
-      <LayoutErrorBoundary fallbackProps={layoutProps}>
-        <React.Suspense fallback={<LayoutLoadingFallback />}>
-          {renderDynamicLayout(rawLayout, layoutProps)}
-        </React.Suspense>
-      </LayoutErrorBoundary>
-    );
+    return <InvitationEngine layoutType={rawLayout} props={layoutProps} />;
   };
 
   return (

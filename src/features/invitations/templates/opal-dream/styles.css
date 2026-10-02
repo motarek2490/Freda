@@ -1,0 +1,5 @@
+/* Isolated styles for Opal Dream (opal-dream) */
+.template-opal-dream {
+  isolation: isolate;
+  position: relative;
+}

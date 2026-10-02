@@ -1,0 +1,5 @@
+/* Isolated styles for Fresh Citrus (fresh-citrus) */
+.template-fresh-citrus {
+  isolation: isolate;
+  position: relative;
+}

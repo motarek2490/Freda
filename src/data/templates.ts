@@ -9,8 +9,8 @@ export const TEMPLATES: Template[] = [
     layoutType: 'butterflyRomance',
     openingStyle: 'envelope-butterfly',
     title: {
-      en: 'Butterfly Romance (Soft Petal Veil)',
-      ar: 'فراشة العمر (رومانسية رقيقة) 🦋✨',
+      en: 'Farida & Habib (Whispering Butterflies)',
+      ar: '«فريدة & حبيب» (همس الفراشات) 🦋✨',
     },
     description: {
       en: '4-way debossed floral envelope opening with a persistent gold-veined butterfly, ivory editorial card, and dual-tone script calligraphy.',
@@ -79,8 +79,8 @@ export const TEMPLATES: Template[] = [
     id: '4237b9ea-0fba-4a61-bb58-51f5c8dc74a7',
     layoutType: 'cinematic',
     title: {
-      en: 'Cinematic Movie (Film El Omr)',
-      ar: 'كادر سينمائي (فيلم العمر) 🎬✨',
+      en: 'Sahar & Kareem (Cinematic Romance)',
+      ar: '«سحر & كريم» (كادر العمر الرومانسي) 🎬✨',
     },
     description: {
       en: 'Cinematic layout centered around stunning photography with dynamic lighting, smooth parallax, and gold details.',
@@ -149,8 +149,8 @@ export const TEMPLATES: Template[] = [
     id: 'f1e729be-a6d6-43ad-8e63-f1c8d62157a6',
     layoutType: 'royal',
     title: {
-      en: 'King & Queen (1001 Nights)',
-      ar: 'الملك والملكة (ألف ليلة وليلة) 👑',
+      en: 'Noor & Wateen (Eternal Royal Vow)',
+      ar: '«نور & وتين» (العهد الملكي الخالد) 👑',
     },
     description: {
       en: 'Signature royal palace aesthetic with ornate golden filigree, realistic wax seal, and palace grandeur.',
@@ -219,8 +219,8 @@ export const TEMPLATES: Template[] = [
     id: '06fa4b53-cfc2-48de-8766-c2c3a5d94cb9',
     layoutType: 'minimalist',
     title: {
-      en: 'Zamalek Elegance (Old Money Chic)',
-      ar: 'أناقة الزمالك (Old Money Chic) ☕',
+      en: 'Layla & Fouad (Quiet Elegance)',
+      ar: '«ليلى & فؤاد» (رقي الأناقة الهادئة) ☕',
     },
     description: {
       en: 'Timeless luxury with understated typography, crisp proportions, and high-society charm.',
@@ -289,8 +289,8 @@ export const TEMPLATES: Template[] = [
     id: '70f410be-da60-44d3-9637-52fe53ec96ea',
     layoutType: 'burgundy',
     title: {
-      en: 'Royal Burgundy (Quiet Luxury)',
-      ar: 'بورجوندي فخم (شياكة هادئة) 🍷',
+      en: 'Maryam & Yehia (Burgundy Velvet Romance)',
+      ar: '«مريم & يحيى» (شغف المخمل البورغندي) 🍷',
     },
     description: {
       en: 'Deep wine burgundy accents, crisp minimalist typography, and modern high-end elegance.',
@@ -359,8 +359,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-arabic-luxury-001',
     layoutType: 'arabic',
     title: {
-      en: 'Sultana (Regal Arabesque)',
-      ar: 'سلطانة (أرابيسك ملكي) 🕌',
+      en: 'Balqees & Ghaith (Oriental Luxury & Grace)',
+      ar: '«بلقيس & غيث» (أصالة الفخامة الشرقية) 🕌',
     },
     description: {
       en: 'Authentic oriental arches with golden arabesque patterns and majestic Arabic calligraphy.',
@@ -415,8 +415,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-golden-baroque-001',
     layoutType: 'baroque',
     title: {
-      en: 'Pasha Palace (Pure Gold)',
-      ar: 'قصر الباشا (الذهب الخالص) 🏛️',
+      en: 'Sultana & The Prince (Antique Gold)',
+      ar: '«سلطانة & الأمير» (بريق الذهب العتيق) 🏛️',
     },
     description: {
       en: 'Opulent baroque gold frames and antique grandeur designed for high-society wedding galas.',
@@ -471,8 +471,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-editorial-noir-001',
     layoutType: 'editorialNoir',
     title: {
-      en: 'Vogue Edition (Magazine Cover)',
-      ar: 'غلاف مجلة (Vogue العرسان) 🖤✨',
+      en: 'Reem & Adham (Vogue Editorial Allure)',
+      ar: '«ريم & أدهم» (الافتتاحية العصرية الفاتنة) 🖤✨',
     },
     description: {
       en: 'High-contrast fashion editorial noir aesthetic with sleek typography and runway allure.',
@@ -527,8 +527,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-vintage-lace-001',
     layoutType: 'lace',
     title: {
-      en: 'White Nostalgia (Golden Age Romance)',
-      ar: 'نوستالجيا الأبيض (زمن الفن الجميل) 🕊️',
+      en: 'Abla & Antar (White Lace Nostalgia)',
+      ar: '«عبلة & عنتر» (حنين الدانتيل الأبيض) 🕊️',
     },
     description: {
       en: 'Antique lace borders, nostalgic ivory textures, and timeless romantic heritage.',
@@ -583,8 +583,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-celestial-eclipse-001',
     layoutType: 'celestialEclipse',
     title: {
-      en: 'Lunar Eclipse (Badr El Tamam)',
-      ar: 'كسوف القمر (ليلة بدر التمام) 🌙',
+      en: 'Qamar & Samaa (Celestial Eclipse)',
+      ar: '«قمر & سماء» (عناق الكسوف والنجوم) 🌙',
     },
     description: {
       en: 'Mystical celestial auroras, shimmering lunar halos, and cosmic golden starlight.',
@@ -639,8 +639,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-starlit-night-001',
     layoutType: 'starlit',
     title: {
-      en: 'Starlit Gala (Alf Negma)',
-      ar: 'سهرة تحت النجوم (ألف نجمة) ✨',
+      en: 'Najma & Waddah (A Thousand Starlit Nights)',
+      ar: '«نجمة & وضاح» (ليلة الألف نجمة) ✨',
     },
     description: {
       en: 'Twinkling midnight stars with ambient shimmer and open-sky romantic evening elegance.',
@@ -695,8 +695,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-autumn-rustic-001',
     layoutType: 'autumn',
     title: {
-      en: 'Autumn Romance (Candlelight Glow)',
-      ar: 'دفء الخريف (أجواء الشموع) 🍂',
+      en: 'Abeer & Tarek (Warm Autumn Romance)',
+      ar: '«عبير & طارق» (دفء الشموع والخريف) 🍂',
     },
     description: {
       en: 'Rich amber woods, candlelit cozy warmth, and golden autumn romantic aesthetics.',
@@ -751,8 +751,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-ocean-pearl-001',
     layoutType: 'ocean',
     title: {
-      en: 'Coastal Waves (North Coast Pearl)',
-      ar: 'أمواج الساحل (لؤلؤة البحر) 🌊',
+      en: 'Dorra & Bahr (Coastal Pearl Dream)',
+      ar: '«درة & بحر» (لؤلؤة الشاطئ الفيروزية) 🌊',
     },
     description: {
       en: 'Mediterranean sea breeze, iridescent pearl tones, and coastal beachfront wedding splendor.',
@@ -807,8 +807,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-emerald-garden-001',
     layoutType: 'emerald',
     title: {
-      en: 'Green Eden (Emerald Garden)',
-      ar: 'جنة خضراء (حديقة الزمرد) 🌿',
+      en: 'Rawda & Anas (Emerald Garden Eden)',
+      ar: '«روضة & أنس» (جنة الزمرد الخضراء) 🌿',
     },
     description: {
       en: 'Royal emerald green richness with gold leaf accents crafted for open-air luxury villa celebrations.',
@@ -867,8 +867,8 @@ export const TEMPLATES: Template[] = [
     id: 'bc70c686-eb91-4f6d-a33e-39be9b927ee1',
     layoutType: 'royalArabicEditorial',
     title: {
-      en: 'First Step (Rings & Joy)',
-      ar: 'أول خطوة (دبل وفرحة) 💍',
+      en: 'Shahd & Hossam (First Promise & Rings)',
+      ar: '«شهد & حسام» (أول خطوة ودبلة العمر) 💍',
     },
     description: {
       en: 'Delicate and refined engagement invitation with soft luxury tones, ornate calligraphy, and editorial balance.',
@@ -937,8 +937,8 @@ export const TEMPLATES: Template[] = [
     id: '271fc8ac-1fc3-4f70-8bc1-c620f5e28785',
     layoutType: 'baroque',
     title: {
-      en: 'Our Big Celebration (Night of Rings)',
-      ar: 'فرحتنا الكبيرة (ليلة الدبل) ✨',
+      en: 'Hiyam & Seif (Royal Editorial Grandeur)',
+      ar: '«هيام & سيف» (الفخامة التحريرية الملكية) 👑',
     },
     description: {
       en: 'High-end baroque motifs and golden radiance crafted specifically for upscale engagement ceremonies.',
@@ -1006,8 +1006,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-rose-velvet-001',
     layoutType: 'roseVelvet',
     title: {
-      en: 'Rose Velvet (Velvet Romance)',
-      ar: 'شربات الورد (رومانسية مخملية) 🌹',
+      en: 'Jouri & Waseem (Velvet Rose Romance)',
+      ar: '«جوري & وسيم» (شذى الورد المخملي) 🌹',
     },
     description: {
       en: 'Passionate dark ruby velvet with blooming red roses and warm candlelit intimacy.',
@@ -1062,8 +1062,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-interactive-story-001',
     layoutType: 'interactive',
     title: {
-      en: 'Our Story (From Day One)',
-      ar: 'حكايتنا من أول يوم (Love Story) 📖',
+      en: 'Habiba & Omar (Our Love Story from Day One)',
+      ar: '«حبيبة & عمر» (حكايتنا التفاعلية من أول يوم) 📖',
     },
     description: {
       en: 'Interactive timeline storytelling layout presenting the journey of love from first sight to marriage.',
@@ -1118,8 +1118,8 @@ export const TEMPLATES: Template[] = [
     id: 'e84feb17-f6d8-491c-a762-5a63892f4587',
     layoutType: 'boho',
     title: {
-      en: 'Gouna Sunset (Boho Vibe)',
-      ar: 'غروب الجونة (Boho Vibe) 🌅',
+      en: 'Salma & Marwan (Warm Sunset Boho)',
+      ar: '«سلمى & مروان» (سحر الغروب والبوهو الدافئ) 🌅',
     },
     description: {
       en: 'Earthy terracotta warmth, desert sands, and bohemian romance under a canopy of starlit serenity.',
@@ -1188,8 +1188,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-crystal-glow-001',
     layoutType: 'crystal',
     title: {
-      en: 'Diamond Radiance (Shabka Glow)',
-      ar: 'بريق الألماس (شبكة العمر) 💎',
+      en: 'Balsam & Maged (Pure Crystal Radiance)',
+      ar: '«بلسم & ماجد» (توهج الكريستال النقي) 💎',
     },
     description: {
       en: 'Dazzling crystal shimmer, diamond refraction gradients, and glamorous engagement prestige.',
@@ -1248,8 +1248,8 @@ export const TEMPLATES: Template[] = [
     id: 'f3fb40a8-b846-4926-a77c-98146d038591',
     layoutType: 'cherry',
     title: {
-      en: 'Delicate Veil (Pastel Blossom)',
-      ar: 'طرحة رقيقة (ورد الباستيل) 🌸',
+      en: 'Yasmine & Adel (Pastel Floral Veil)',
+      ar: '«ياسمين & عادل» (طرحة الزهور والباستيل) 🌸',
     },
     description: {
       en: 'Soft pastel cherry blossoms and dreamy blush floral aesthetics for romantic events.',
@@ -1317,8 +1317,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-lavender-fields-001',
     layoutType: 'lavenderFields',
     title: {
-      en: 'Lavender Breeze (Serene Romance)',
-      ar: 'نسيم لافندر (هدوء وراحة) 💜',
+      en: 'Mays & Rayan (Serene Lavender Romance)',
+      ar: '«ميس & ريان» (أطياف اللافندر الرقيقة) 💜',
     },
     description: {
       en: 'Dreamy purple lavender botanical aesthetics with calm countryside garden romance.',
@@ -1373,8 +1373,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-sunflower-meadow-001',
     layoutType: 'sunflowerMeadow',
     title: {
-      en: 'Sun & Joy (Sunflower Meadow)',
-      ar: 'شمس وضحكة (دوار الشمس) 🌻',
+      en: 'Doha & Eyad (Sunflower Meadow Joy)',
+      ar: '«ضحى & إياد» (بهجة مرج دوار الشمس) 🌻',
     },
     description: {
       en: 'Warm bright sunflowers, cheerful yellow glow, and joyful morning wedding vibes.',
@@ -1428,8 +1428,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-jasmine-night-001',
     layoutType: 'jasmineNight',
     title: {
-      en: 'Jasmine Aroma (Cairo Nights)',
-      ar: 'عطر الياسمين (ليالي القاهرة) 🤍',
+      en: 'Foutoun & Ziad (Enchanted Jasmine Nights)',
+      ar: '«فتون & زياد» (ليالي الياسمين والهدوء) 🤍',
     },
     description: {
       en: 'Fragrant white jasmine flowers with dark twilight velvet romance.',
@@ -1483,8 +1483,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-fresh-citrus-001',
     layoutType: 'citrus',
     title: {
-      en: 'Summer Joy (Lemon Fresh)',
-      ar: 'صيف وبهجة (انتعاش الليمون) 🍋',
+      en: 'Hala & Basel (Italian Summer Romance)',
+      ar: '«حلا & باسل» (انتعاش الصيف الإيطالي) 🍋',
     },
     description: {
       en: 'Sun-drenched citrus orchard romance with vibrant Mediterranean lemon accents.',
@@ -1538,8 +1538,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-wisteria-dream-001',
     layoutType: 'wisteriaDream',
     title: {
-      en: 'Violet Dream (Wisteria Flowers)',
-      ar: 'حلم البنفسج (زهور الويستيريا) 🪻',
+      en: 'Orjowan & Nadeem (Wisteria Dream Romance)',
+      ar: '«أرجوان & نديم» (حلم أزهار الويستيريا) 🪻',
     },
     description: {
       en: 'Cascading violet wisteria blossoms with poetic fantasy and enchanting beauty.',
@@ -1597,8 +1597,8 @@ export const TEMPLATES: Template[] = [
     id: 'a95cc797-b43e-4e37-8cb0-9237408449dc',
     layoutType: 'confetti',
     title: {
-      en: 'The Big Night (Party of the Year)',
-      ar: 'الليلة الكبيرة (حفلة العمر) 🥳🎈',
+      en: 'Farah & Taymour (Celebration Confetti)',
+      ar: '«فرح & تيمور» (بهجة الاحتفال والكونفيتي) 🥳🎈',
     },
     description: {
       en: 'Joyous and vibrant celebration with flying confetti, dynamic sound effects, and party timeline.',
@@ -1661,8 +1661,8 @@ export const TEMPLATES: Template[] = [
     id: '86f0a022-6acc-4b2c-9d12-fe749fa3c572',
     layoutType: 'opalDream',
     title: {
-      en: 'Blessed Newborn (Nawart Denyetna)',
-      ar: 'نوّر دنيتنا (سبوع وبركة) 👶✨',
+      en: 'Baby Ghaith (Cradle of Sweet Blessings)',
+      ar: '«غيث الصغير» (مهد البراءة والبركة) 👶✨',
     },
     description: {
       en: 'Adorable newborn baby shower and aqiqah design with dreamy pastel opals and nursery joy.',
@@ -1724,8 +1724,8 @@ export const TEMPLATES: Template[] = [
     id: 'tmpl-playful-celebration-001',
     layoutType: 'playful',
     title: {
-      en: 'Happy Milestones (Oqbal Endoko)',
-      ar: 'عقبال عندكم (فرحة وضحكة) 🎊',
+      en: 'Wisam (Graduation Glory & Triumph)',
+      ar: '«وسام النجاح» (فرحة التخرج ومجد الإنجاز) 🎓🎊',
     },
     description: {
       en: 'Dynamic upbeat celebratory layout for graduation parties, corporate milestones, and happy anniversaries.',

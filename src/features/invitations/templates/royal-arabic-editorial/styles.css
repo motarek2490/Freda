@@ -1,0 +1,5 @@
+/* Isolated styles for Royal Arabic Editorial (royal-arabic-editorial) */
+.template-royal-arabic-editorial {
+  isolation: isolate;
+  position: relative;
+}

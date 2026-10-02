@@ -1,0 +1,5 @@
+/* Isolated styles for Lavender Fields (lavender-fields) */
+.template-lavender-fields {
+  isolation: isolate;
+  position: relative;
+}

@@ -1,0 +1,5 @@
+/* Isolated styles for Butterfly Romance (butterfly-romance) */
+.template-butterfly-romance {
+  isolation: isolate;
+  position: relative;
+}

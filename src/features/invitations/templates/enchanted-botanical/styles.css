@@ -1,0 +1,5 @@
+/* Isolated styles for Enchanted Botanical (enchanted-botanical) */
+.template-enchanted-botanical {
+  isolation: isolate;
+  position: relative;
+}

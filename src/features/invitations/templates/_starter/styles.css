@@ -1,0 +1,5 @@
+/* Scoped styles for Starter Template */
+.starter-template-container {
+  position: relative;
+  isolation: isolate;
+}

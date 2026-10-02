@@ -1,0 +1,5 @@
+/* Isolated styles for Ocean Pearl (ocean-pearl) */
+.template-ocean-pearl {
+  isolation: isolate;
+  position: relative;
+}

@@ -1,0 +1,5 @@
+/* Isolated styles for Cherry Bloom (cherry-bloom) */
+.template-cherry-bloom {
+  isolation: isolate;
+  position: relative;
+}

@@ -1,0 +1,5 @@
+/* Isolated styles for Playful Celebration (playful-celebration) */
+.template-playful-celebration {
+  isolation: isolate;
+  position: relative;
+}

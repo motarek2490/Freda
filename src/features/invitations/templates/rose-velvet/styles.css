@@ -1,0 +1,5 @@
+/* Isolated styles for Rose Velvet (rose-velvet) */
+.template-rose-velvet {
+  isolation: isolate;
+  position: relative;
+}

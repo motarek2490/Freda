@@ -1,0 +1,5 @@
+/* Isolated styles for Midnight Confetti (midnight-confetti) */
+.template-midnight-confetti {
+  isolation: isolate;
+  position: relative;
+}

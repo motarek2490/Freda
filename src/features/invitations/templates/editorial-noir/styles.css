@@ -1,0 +1,5 @@
+/* Isolated styles for Editorial Noir (editorial-noir) */
+.template-editorial-noir {
+  isolation: isolate;
+  position: relative;
+}

@@ -1,0 +1,5 @@
+/* Isolated styles for Burgundy Modern (burgundy-minimalist) */
+.template-burgundy-minimalist {
+  isolation: isolate;
+  position: relative;
+}

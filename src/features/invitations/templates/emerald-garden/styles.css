@@ -1,0 +1,5 @@
+/* Isolated styles for Emerald Garden (emerald-garden) */
+.template-emerald-garden {
+  isolation: isolate;
+  position: relative;
+}

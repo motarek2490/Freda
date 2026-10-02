@@ -1,0 +1,5 @@
+/* Isolated styles for Minimalist Modern (minimalist) */
+.template-minimalist {
+  isolation: isolate;
+  position: relative;
+}

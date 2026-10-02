@@ -1,0 +1,5 @@
+/* Isolated styles for Sunflower Meadow (sunflower-meadow) */
+.template-sunflower-meadow {
+  isolation: isolate;
+  position: relative;
+}

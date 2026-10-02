@@ -1,0 +1,5 @@
+/* Isolated styles for Vintage Lace (vintage-lace) */
+.template-vintage-lace {
+  isolation: isolate;
+  position: relative;
+}

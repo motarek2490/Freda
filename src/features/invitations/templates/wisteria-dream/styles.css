@@ -1,0 +1,5 @@
+/* Isolated styles for Wisteria Dream (wisteria-dream) */
+.template-wisteria-dream {
+  isolation: isolate;
+  position: relative;
+}

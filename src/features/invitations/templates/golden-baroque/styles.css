@@ -1,0 +1,5 @@
+/* Isolated styles for Golden Baroque (golden-baroque) */
+.template-golden-baroque {
+  isolation: isolate;
+  position: relative;
+}

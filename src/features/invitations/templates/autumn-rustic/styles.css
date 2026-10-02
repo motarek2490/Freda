@@ -1,0 +1,5 @@
+/* Isolated styles for Autumn Rustic (autumn-rustic) */
+.template-autumn-rustic {
+  isolation: isolate;
+  position: relative;
+}

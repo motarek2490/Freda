@@ -1,0 +1,5 @@
+/* Isolated styles for Starlit Night (starlit-night) */
+.template-starlit-night {
+  isolation: isolate;
+  position: relative;
+}

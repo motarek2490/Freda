@@ -1,0 +1,5 @@
+/* Isolated styles for Boho Terracotta (boho-terracotta) */
+.template-boho-terracotta {
+  isolation: isolate;
+  position: relative;
+}

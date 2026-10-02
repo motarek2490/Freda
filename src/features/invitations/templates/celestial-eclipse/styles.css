@@ -1,0 +1,5 @@
+/* Isolated styles for Celestial Eclipse (celestial-eclipse) */
+.template-celestial-eclipse {
+  isolation: isolate;
+  position: relative;
+}

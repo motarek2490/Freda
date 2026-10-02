@@ -1,0 +1,5 @@
+/* Isolated styles for Interactive Story (interactive-story) */
+.template-interactive-story {
+  isolation: isolate;
+  position: relative;
+}

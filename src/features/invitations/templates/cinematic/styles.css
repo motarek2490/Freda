@@ -1,0 +1,5 @@
+/* Isolated styles for Cinematic Film (cinematic) */
+.template-cinematic {
+  isolation: isolate;
+  position: relative;
+}

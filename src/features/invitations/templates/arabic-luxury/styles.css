@@ -1,0 +1,5 @@
+/* Isolated styles for Arabic Luxury (arabic-luxury) */
+.template-arabic-luxury {
+  isolation: isolate;
+  position: relative;
+}
