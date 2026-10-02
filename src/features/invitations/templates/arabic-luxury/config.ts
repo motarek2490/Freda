@@ -1,12 +1,12 @@
 import { TemplateConfig } from '../../model/templateContract';
 
 export const config: TemplateConfig = {
-  id: 'romantic-canvas',
+  id: 'arabic-luxury',
   name: {
-    ar: '«لوحة الحب الحية» (فخامة سينمائية)',
-    en: 'Living Romantic Canvas (Cinematic Luxury)',
+    ar: '«الفخامة العربية الحية» (لوحة رومانسية سينمائية)',
+    en: 'Arabic Luxury Canvas (Cinematic Romantic)',
   },
-  version: '1.0.0',
+  version: '2.0.0',
   layoutType: 'arabic',
   category: 'weddings',
   themeStyle: 'luxury',
