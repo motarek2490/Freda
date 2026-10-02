@@ -41,8 +41,8 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = canvas.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
+    const w = rect.width || canvas.parentElement?.clientWidth || 600;
+    const h = rect.height || canvas.parentElement?.clientHeight || 500;
 
     canvas.width = w * dpr;
     canvas.height = h * dpr;

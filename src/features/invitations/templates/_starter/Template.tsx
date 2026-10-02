@@ -1,7 +1,10 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Calendar, Clock, MapPin, Heart, Sparkles } from 'lucide-react';
+import { Calendar, Clock, MapPin, Gift, Send, UserCheck } from 'lucide-react';
 import { InvitationTemplateProps } from '../../model/templateContract';
+import { Hero } from './components/Hero';
+import { Countdown } from './components/Countdown';
+import { ActionButton } from './components/ActionButton';
+import './styles.css';
 
 export const StarterTemplate: React.FC<InvitationTemplateProps> = ({
   invitation,
@@ -10,96 +13,99 @@ export const StarterTemplate: React.FC<InvitationTemplateProps> = ({
   t,
   customColors,
   timeLeft,
+  wishes,
   onOpenRsvp,
+  onOpenBank,
+  onAddWish,
+  newWishAuthor,
+  setNewWishAuthor,
+  newWishRelation,
+  setNewWishRelation,
+  newWishMessage,
+  setNewWishMessage,
+  wishSuccess,
   getGoogleCalendarUrl,
 }) => {
   const details = invitation.eventDetails;
+  const accent = customColors?.accent || '#C9A46A';
+  const text = customColors?.text || '#F7F1E8';
+  const cardBg = customColors?.cardBg || '#171412';
 
   return (
-    <div className="starter-template-container w-full max-w-2xl mx-auto space-y-12">
-      {/* Hero Header */}
-      <div
-        className="p-8 sm:p-12 rounded-3xl text-center space-y-6 border shadow-2xl relative overflow-hidden"
-        style={{
-          backgroundColor: customColors.cardBg,
-          borderColor: `${customColors.accent}40`,
-        }}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="space-y-4"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest border"
-               style={{ color: customColors.accent, borderColor: `${customColors.accent}60` }}>
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{details.eventTitle || 'Wedding Celebration'}</span>
-          </div>
+    <div
+      className="template-starter"
+      dir={isRtl ? 'rtl' : 'ltr'}
+      style={{
+        backgroundColor: customColors?.bg || '#11100F',
+        color: text,
+      }}
+    >
+      {/* 1. HERO SECTION */}
+      <Hero
+        groomName={details.groomName || ''}
+        brideName={details.brideName || ''}
+        eventTitle={details.eventTitle || ''}
+        customMessage={details.customMessage || ''}
+        eventDate={details.eventDate || ''}
+        eventTime={details.eventTime || ''}
+        isRtl={isRtl}
+        accentColor={accent}
+        textColor={text}
+        cardBgColor={cardBg}
+        hostNames={details.hostNames}
+      />
 
-          <h1 className="text-3xl sm:text-5xl font-bold font-serif tracking-tight"
-              style={{ color: customColors.text }}>
-            {details.groomName && details.brideName
-              ? `${details.groomName} & ${details.brideName}`
-              : details.eventTitle}
-          </h1>
-
-          <p className="text-sm sm:text-base opacity-80 max-w-md mx-auto leading-relaxed">
-            {details.mainMessage || details.customMessage || (isRtl ? 'يسعدنا ويشرفنا دعوتكم لحضور حفلنا ومشاركتنا أجمل اللحظات' : 'We are honored to invite you to celebrate with us.')}
-          </p>
-        </motion.div>
-
-        {/* Date & Time Badge */}
-        <div className="grid grid-cols-2 gap-4 pt-6 border-t" style={{ borderColor: `${customColors.accent}20` }}>
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <Calendar className="w-4 h-4" style={{ color: customColors.accent }} />
-            <span>{details.eventDate}</span>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <Clock className="w-4 h-4" style={{ color: customColors.accent }} />
-            <span>{details.eventTime}</span>
+      {/* 2. COUNTDOWN */}
+      <section className="starter-section">
+        <div className="starter-card" style={{ backgroundColor: cardBg, borderColor: `${accent}30` }}>
+          <h3 className="text-xs font-bold tracking-widest uppercase text-center mb-4" style={{ color: accent }}>
+            {isRtl ? 'العد التنازلي للحفل' : 'Countdown to Celebration'}
+          </h3>
+          <Countdown
+            days={timeLeft.days}
+            hours={timeLeft.hours}
+            minutes={timeLeft.minutes}
+            seconds={timeLeft.seconds}
+            isRtl={isRtl}
+            accentColor={accent}
+          />
+          <div className="pt-4 mt-4 border-t flex justify-center gap-3" style={{ borderColor: `${accent}20` }}>
+            <a
+              href={getGoogleCalendarUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs flex items-center gap-1.5 font-semibold hover:underline"
+              style={{ color: accent }}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{isRtl ? 'حفظ في التقويم' : 'Save to Calendar'}</span>
+            </a>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Countdown Section */}
-      <div
-        className="p-6 rounded-2xl border text-center space-y-4"
-        style={{ backgroundColor: customColors.cardBg, borderColor: `${customColors.accent}30` }}
-      >
-        <h3 className="text-xs font-bold tracking-widest uppercase" style={{ color: customColors.accent }}>
-          {isRtl ? 'العد التنازلي للحفل' : 'Countdown to Celebration'}
-        </h3>
-        <div className="grid grid-cols-4 gap-2 text-center">
-          {[
-            { label: isRtl ? 'يوم' : 'Days', value: timeLeft.days },
-            { label: isRtl ? 'ساعة' : 'Hours', value: timeLeft.hours },
-            { label: isRtl ? 'دقيقة' : 'Mins', value: timeLeft.minutes },
-            { label: isRtl ? 'ثانية' : 'Secs', value: timeLeft.seconds },
-          ].map((item, idx) => (
-            <div key={idx} className="p-3 rounded-xl bg-black/30 border border-white/5">
-              <span className="block text-2xl font-bold font-mono" style={{ color: customColors.accent }}>
-                {item.value}
-              </span>
-              <span className="text-[10px] opacity-70">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 3. VENUE DETAILS */}
+      {details.venueName && (
+        <section className="starter-section">
+          <div className="starter-card text-center space-y-3" style={{ backgroundColor: cardBg, borderColor: `${accent}30` }}>
+            <MapPin className="w-5 h-5 mx-auto" style={{ color: accent }} />
+            <h2 className="text-xl font-bold font-serif">{details.venueName}</h2>
+            {details.address && <p className="text-xs opacity-70">{details.address}</p>}
+          </div>
+        </section>
+      )}
 
-      {/* Action RSVP Button */}
-      <div className="text-center pt-4">
-        <button
-          onClick={onOpenRsvp}
-          className="w-full max-w-sm py-4 rounded-2xl font-bold text-sm tracking-wider uppercase transition-all shadow-xl hover:scale-[1.02] cursor-pointer"
-          style={{
-            backgroundColor: customColors.accent,
-            color: '#171717',
-          }}
-        >
-          {isRtl ? 'تأكيد الحضور (RSVP)' : 'Confirm Attendance (RSVP)'}
-        </button>
-      </div>
+      {/* 4. RSVP ACTION */}
+      {details.enableRSVP && (
+        <section className="starter-section text-center pt-4">
+          <ActionButton
+            label={isRtl ? 'تأكيد الحضور (RSVP)' : 'Confirm Attendance (RSVP)'}
+            onClick={onOpenRsvp}
+            icon={UserCheck}
+            variant="gold"
+          />
+        </section>
+      )}
     </div>
   );
 };

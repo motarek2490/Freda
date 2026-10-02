@@ -15,6 +15,7 @@ export const templateRegistry: Record<
   cinematic: () => import('../templates/cinematic'),
   arabic: () => import('../templates/arabic-luxury'),
   'arabic-luxury': () => import('../templates/arabic-luxury'),
+  'romantic-canvas': () => import('../templates/arabic-luxury'),
   floral: () => import('../templates/floral-botanical'),
   'floral-botanical': () => import('../templates/floral-botanical'),
   boho: () => import('../templates/boho-terracotta'),
