@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Copy, Check, Sparkles, Printer } from 'lucide-react';
+import { X, Copy, Check, Sparkles, Printer, Heart } from 'lucide-react';
 import { InvitationData, Language, TemplateLayoutType } from '../types';
 import { generateQrCodeDataUrl } from '../lib/qrHelper';
 
@@ -352,10 +352,30 @@ const renderCardDecorations = (layoutType: string, accentColor: string) => {
   if (norm.includes('arabic')) {
     return (
       <>
-        <div className="absolute top-2 left-2 text-amber-400 opacity-80 text-xs font-bold">☪</div>
-        <div className="absolute top-2 right-2 text-amber-400 opacity-80 text-xs font-bold">☪</div>
-        <div className="absolute bottom-2 left-2 text-amber-400 opacity-80 text-xs">🕌</div>
-        <div className="absolute bottom-2 right-2 text-amber-400 opacity-80 text-xs">🕌</div>
+        {/* Top-Left Royal Gold Arabesque Corner */}
+        <div className="absolute top-2.5 left-2.5 w-8 h-8 pointer-events-none text-[#C9A46A] opacity-90 drop-shadow-[0_0_6px_rgba(201,164,106,0.5)]">
+          <svg viewBox="0 0 40 40" className="w-full h-full fill-current">
+            <path d="M0 0 v20 c4 -8, 12 -16, 20 -20 h-20 Z M4 4 h12 v4 h-8 v8 h-4 v-12 Z" />
+          </svg>
+        </div>
+        {/* Top-Right Royal Gold Arabesque Corner */}
+        <div className="absolute top-2.5 right-2.5 w-8 h-8 pointer-events-none text-[#C9A46A] opacity-90 drop-shadow-[0_0_6px_rgba(201,164,106,0.5)] scale-x-[-1]">
+          <svg viewBox="0 0 40 40" className="w-full h-full fill-current">
+            <path d="M0 0 v20 c4 -8, 12 -16, 20 -20 h-20 Z M4 4 h12 v4 h-8 v8 h-4 v-12 Z" />
+          </svg>
+        </div>
+        {/* Bottom-Left Royal Gold Arabesque Corner */}
+        <div className="absolute bottom-2.5 left-2.5 w-8 h-8 pointer-events-none text-[#C9A46A] opacity-90 drop-shadow-[0_0_6px_rgba(201,164,106,0.5)] scale-y-[-1]">
+          <svg viewBox="0 0 40 40" className="w-full h-full fill-current">
+            <path d="M0 0 v20 c4 -8, 12 -16, 20 -20 h-20 Z M4 4 h12 v4 h-8 v8 h-4 v-12 Z" />
+          </svg>
+        </div>
+        {/* Bottom-Right Royal Gold Arabesque Corner */}
+        <div className="absolute bottom-2.5 right-2.5 w-8 h-8 pointer-events-none text-[#C9A46A] opacity-90 drop-shadow-[0_0_6px_rgba(201,164,106,0.5)] scale-[-1]">
+          <svg viewBox="0 0 40 40" className="w-full h-full fill-current">
+            <path d="M0 0 v20 c4 -8, 12 -16, 20 -20 h-20 Z M4 4 h12 v4 h-8 v8 h-4 v-12 Z" />
+          </svg>
+        </div>
       </>
     );
   }
@@ -400,6 +420,7 @@ export const CardImageModal: React.FC<CardImageModalProps> = ({
   const text = colors.text || '#F7F4EE';
   const fontClass = invitation.customFont || 'font-playfair';
   const layoutType = invitation.layoutType || 'royal';
+  const norm = ((layoutType || '') + ' ' + (invitation.templateId || '')).toLowerCase();
 
   const shareUrl = `${window.location.origin}/i/${encodeURIComponent(invitation.slug || invitation.id)}`;
 
@@ -942,26 +963,63 @@ export const CardImageModal: React.FC<CardImageModalProps> = ({
           {/* Dynamic Static Corner Ornaments for Theme */}
           {renderCardDecorations(layoutType, accent)}
 
-          <div className="space-y-2 relative z-10">
-            <span className="text-[11px] tracking-[0.3em] uppercase font-bold block" style={{ color: accent }}>
-              {isRtl ? 'بسم الله الرحمن الرحيم' : 'IN THE NAME OF GOD'}
-            </span>
-            <div className="w-12 h-0.5 mx-auto" style={{ backgroundColor: `${accent}60` }} />
-            <p className="text-xs font-light pt-2" style={{ color: text, opacity: 0.85 }}>
-              {isRtl ? 'تتشرف عائلة' : 'The families of'}
-            </p>
-            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: accent }}>
-              {invitation.eventDetails.hostNames}
-            </h2>
-            <p className="text-xs" style={{ color: text, opacity: 0.75 }}>
-              {isRtl
-                ? 'بدعوتكم لمشاركتهم فرحتهم الكبرى بمناسبة'
-                : 'request the pleasure of your company to celebrate'}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold py-1" style={{ color: text }}>
-              {invitation.eventDetails.eventTitle}
-            </h1>
-          </div>
+          {norm.includes('arabic') ? (
+            <div className="space-y-2.5 relative z-10">
+              {/* Glowing Golden Living Heart Crest */}
+              <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-[#8C1D24] via-[#5C1117] to-[#2B080B] border-2 border-[#C9A46A] flex items-center justify-center shadow-[0_0_25px_rgba(201,164,106,0.6)]">
+                <Heart className="w-6 h-6 text-[#C9A46A] fill-[#C9A46A] drop-shadow-[0_0_8px_rgba(201,164,106,0.9)]" />
+              </div>
+
+              <span className="text-[12px] tracking-[0.25em] font-serif uppercase font-bold block" style={{ color: accent }}>
+                {isRtl ? 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ' : 'IN THE NAME OF ALLAH'}
+              </span>
+
+              <p className="text-[11px] font-serif text-[#D6CAB7] max-w-sm mx-auto leading-relaxed italic opacity-90">
+                {isRtl
+                  ? '«وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا»'
+                  : '“And of His signs is that He created for you mates that you may find tranquility in them”'}
+              </p>
+
+              <div className="w-16 h-0.5 mx-auto" style={{ backgroundColor: `${accent}60` }} />
+
+              <p className="text-xs font-light pt-1" style={{ color: text, opacity: 0.85 }}>
+                {isRtl
+                  ? (invitation.eventDetails.hostNames ? `تتشرف ${invitation.eventDetails.hostNames} بدعوتكم لحضور حفل زفاف` : 'تتشرف عائلاتنا بدعوتكم لحضور حفل زفاف')
+                  : 'Request the pleasure of your company to celebrate'}
+              </p>
+
+              <h1 className="text-2xl sm:text-3xl font-extrabold py-1 font-serif tracking-wide text-[#F7F1E8] drop-shadow-[0_2px_12px_rgba(201,164,106,0.35)]">
+                <span>{invitation.eventDetails.groomName || (isRtl ? 'يُوسـف الشـريف' : 'Youssef')}</span>
+                <span className="text-[#C9A46A] px-2.5 font-light">&</span>
+                <span>{invitation.eventDetails.brideName || (isRtl ? 'مَريـم غـانم' : 'Maryam')}</span>
+              </h1>
+
+              <p className="text-xs font-medium" style={{ color: accent }}>
+                {invitation.eventDetails.eventTitle}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 relative z-10">
+              <span className="text-[11px] tracking-[0.3em] uppercase font-bold block" style={{ color: accent }}>
+                {isRtl ? 'بسم الله الرحمن الرحيم' : 'IN THE NAME OF GOD'}
+              </span>
+              <div className="w-12 h-0.5 mx-auto" style={{ backgroundColor: `${accent}60` }} />
+              <p className="text-xs font-light pt-2" style={{ color: text, opacity: 0.85 }}>
+                {isRtl ? 'تتشرف عائلة' : 'The families of'}
+              </p>
+              <h2 className="text-xl sm:text-2xl font-bold" style={{ color: accent }}>
+                {invitation.eventDetails.hostNames}
+              </h2>
+              <p className="text-xs" style={{ color: text, opacity: 0.75 }}>
+                {isRtl
+                  ? 'بدعوتكم لمشاركتهم فرحتهم الكبرى بمناسبة'
+                  : 'request the pleasure of your company to celebrate'}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold py-1" style={{ color: text }}>
+                {invitation.eventDetails.eventTitle}
+              </h1>
+            </div>
+          )}
 
           <div
             className="py-4 border-y grid grid-cols-2 gap-4 text-xs relative z-10"
@@ -1008,7 +1066,9 @@ export const CardImageModal: React.FC<CardImageModalProps> = ({
               )}
             </div>
             <span className="text-[10px] font-semibold" style={{ color: accent }}>
-              {isRtl ? 'امسح الرمز لفتح الدعوة وتأكيد الحضور (RSVP)' : 'Scan QR for RSVP & Google Maps'}
+              {norm.includes('arabic')
+                ? (isRtl ? 'امسح الرمز لفتح لوحة الحب الحية وتأكيد الحضور (RSVP) ✨' : 'Scan QR for Living Romantic Canvas & RSVP ✨')
+                : (isRtl ? 'امسح الرمز لفتح الدعوة وتأكيد الحضور (RSVP)' : 'Scan QR for RSVP & Google Maps')}
             </span>
           </div>
         </div>

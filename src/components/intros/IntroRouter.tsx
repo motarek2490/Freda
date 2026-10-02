@@ -20,6 +20,7 @@ import { GiftBoxIntro } from './GiftBoxIntro';
 import { CradleCloudsIntro } from './CradleCloudsIntro';
 import { GraduationScrollIntro } from './GraduationScrollIntro';
 import { AutumnLeavesIntro } from './AutumnLeavesIntro';
+import { RomanticHeartIntro } from './RomanticHeartIntro';
 
 export interface IntroBaseProps {
   invitation: InvitationData;
@@ -56,11 +57,11 @@ export const IntroRouter: React.FC<IntroRouterProps> = ({
   if (hasSkipped) return null;
 
   // Determine intro engine from explicit introType, openingStyle, or fallback layoutType
-  const layout = invitation.layoutType || 'royal';
+  const layout = invitation.layoutType || (invitation.templateId?.includes('arabic') ? 'arabic' : 'royal');
   const introType =
-    invitation.introType ||
-    invitation.openingStyle ||
-    getIntroTypeFromLayout(layout);
+    (layout === 'arabic' || invitation.templateId?.includes('arabic'))
+      ? 'romantic-heart'
+      : (invitation.introType || invitation.openingStyle || getIntroTypeFromLayout(layout));
 
   const renderIntroEngine = () => {
     const commonProps: IntroBaseProps = {
@@ -72,6 +73,9 @@ export const IntroRouter: React.FC<IntroRouterProps> = ({
     };
 
     switch (introType) {
+      case 'romantic-heart':
+      case 'arabic-luxury':
+        return <RomanticHeartIntro {...commonProps} />;
       case 'butterfly':
         return <ButterflyIntro {...commonProps} />;
       case 'curtain':
@@ -152,6 +156,7 @@ function getIntroTypeFromLayout(layout: string): string {
     case 'lavenderFields':
       return 'ribbon';
     case 'arabic':
+      return 'romantic-heart';
     case 'baroque':
     case 'emerald':
       return 'royal-gate';

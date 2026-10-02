@@ -37,18 +37,18 @@ export const TemplateShowcase: React.FC<TemplateShowcaseProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
 
-  // 4 Curated Spotlight Pieces
+  // 5 Curated Spotlight Pieces
   const spotlightPieces = [
     {
-      id: 'elegant-cinematic',
-      templateId: '4237b9ea-0fba-4a61-bb58-51f5c8dc74a7',
-      titleDisplay: 'ELEGANT',
-      taglineAr: 'تصميم سينمائي فخم يبرز صور العروسين بتأثيرات ضوئية أنيقة وإحساس شاعري.',
-      taglineEn: 'Cinematic layout centered around stunning photography with dynamic lighting & smooth parallax.',
-      categoryAr: 'زفاف سينمائي فخم',
-      categoryEn: 'Cinematic Royal Gala',
-      descAr: 'قالب التجربة الرئيسي لعام 2026: توزيع ضوئي ديناميكي، بارالاكس سلس، وتفاصيل ذهبية فاخرة تحاكي السينما العالمية.',
-      descEn: 'The flagship experience template for 2026: dynamic lighting, smooth parallax, and elegant gold details.',
+      id: 'arabic-luxury-living',
+      templateId: 'tmpl-arabic-luxury-001',
+      titleDisplay: 'ROMANTIC CANVAS',
+      taglineAr: '«لوحة الحب الحية» — قالب التجربة الحية الديمو الأرقى مع رسم القلب المتوهج.',
+      taglineEn: 'Living Romantic Canvas — Flagship Live Demo Suite with Glowing Heart Canvas.',
+      categoryAr: 'أعراس وقصور ملكية فاخرة',
+      categoryEn: 'Royal Palace & Luxury Gala',
+      descAr: 'القالب الديمو الرئيسي للتجربة الحية: رسم القلب الذهبي المتوهج بتقنية Canvas المتطورة، تساقط ذرات البريق، وشاشة افتتاح ملكية كاملة.',
+      descEn: 'The flagship live demo template: animated golden heart canvas, floating gold dust, and royal opening experience.',
     },
     {
       id: 'royal-hero',
