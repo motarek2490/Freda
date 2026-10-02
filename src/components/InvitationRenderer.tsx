@@ -27,6 +27,8 @@ import {
   Play,
   Pause,
   Maximize2,
+  Maximize,
+  Minimize,
   Sliders,
   ChevronDown,
   Image as ImageIcon,
@@ -243,6 +245,29 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   const [newWishRelation, setNewWishRelation] = useState('');
   const [newWishMessage, setNewWishMessage] = useState('');
   const [wishSuccess, setWishSuccess] = useState(false);
+
+  // Fullscreen State & Controller
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   // Countdown timer calculation
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -507,7 +532,11 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
       scrollContainer.scrollTop = 0;
     }
     setEnvelopeOpened(true);
-    setIsAutoScrolling(true);
+    // Delay auto-scroll to let the guest enjoy the heart drawing and names reveal at the top
+    setIsAutoScrolling(false);
+    setTimeout(() => {
+      setIsAutoScrolling(true);
+    }, 3200);
     setIsPlayingMusic(true);
     if (audioRef) {
       audioRef
@@ -770,6 +799,29 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
             </button>
           )}
 
+          {/* Fullscreen Toggle Button */}
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#171717]/80 backdrop-blur-md border border-[#B99A65]/40 text-xs font-semibold text-[#F7F4EE] hover:border-[#B99A65] transition-all cursor-pointer shadow-lg"
+            title={
+              isFullscreen
+                ? isRtl ? 'إلغاء ملء الشاشة' : 'Exit Fullscreen'
+                : isRtl ? 'عرض بالشاشة الكاملة' : 'Fullscreen'
+            }
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-3.5 h-3.5 text-[#B99A65]" />
+                <span className="hidden sm:inline">{isRtl ? 'تصغير' : 'Exit'}</span>
+              </>
+            ) : (
+              <>
+                <Maximize className="w-3.5 h-3.5 text-[#B99A65]" />
+                <span className="hidden sm:inline">{isRtl ? 'شاشة كاملة' : 'Fullscreen'}</span>
+              </>
+            )}
+          </button>
+
           {/* Static Card Image View - Hidden on live standalone guest views */}
           {(!isStandaloneView || isDemoInvitation) && (
             <button
@@ -809,9 +861,9 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
       </AnimatePresence>
 
       {/* Main Digital Invitation Suite Content */}
-      <div className="max-w-3xl mx-auto px-4 py-20 relative z-10 space-y-16">
+      <div className="w-full mx-auto relative z-10 space-y-12 pb-16">
         {guestNameParam && (
-          <div className="max-w-xl mx-auto px-5 py-4 bg-gradient-to-r from-[#1F1E1B]/95 via-[#292621]/95 to-[#1F1E1B]/95 border border-[#B99A65]/70 rounded-2xl text-center shadow-[0_4px_30px_rgba(185,154,101,0.25)] backdrop-blur-md animate-in fade-in slide-in-from-top-4 relative overflow-hidden">
+          <div className="max-w-xl mx-auto px-5 py-4 my-8 bg-gradient-to-r from-[#1F1E1B]/95 via-[#292621]/95 to-[#1F1E1B]/95 border border-[#B99A65]/70 rounded-2xl text-center shadow-[0_4px_30px_rgba(185,154,101,0.25)] backdrop-blur-md animate-in fade-in slide-in-from-top-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#B99A65] to-transparent" />
             <span className="text-[11px] font-bold text-[#B99A65] uppercase tracking-wider block mb-1">
               {isRtl ? '👑 دعوة ملكية خاصة موجهة إلى:' : '👑 Royal Invitation Specially For:'}

@@ -11,7 +11,7 @@ import { AnimationController } from './animation';
 
 interface RomanticCanvasProps {
   accentColor: string;
-  onReveal: () => void;
+  onReveal?: () => void;
   interactive?: boolean;
 }
 
@@ -29,87 +29,104 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
   const burstRef = useRef<BurstParticle[]>([]);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
   const lastTimeRef = useRef(0);
-  const revealedRef = useRef(false);
   const isVisibleRef = useRef(true);
-  const reducedMotionRef = useRef(false);
   const sizeRef = useRef({ w: 0, h: 0 });
+  const onRevealRef = useRef(onReveal);
+  const hasRevealedRef = useRef(false);
 
-  // ─── Setup ───
-  const setup = useCallback(() => {
+  // Keep latest onReveal callback without causing lifecycle re-triggers
+  useEffect(() => {
+    onRevealRef.current = onReveal;
+  }, [onReveal]);
+
+  // ─── Setup Canvas Buffer & Systems (Only creates controller ONCE) ───
+  const updateSize = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width || canvas.parentElement?.clientWidth || 600;
-    const h = rect.height || canvas.parentElement?.clientHeight || 500;
+    const w = window.innerWidth || document.documentElement.clientWidth || 600;
+    const h = window.innerHeight || document.documentElement.clientHeight || 800;
 
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    sizeRef.current = { w: w * dpr, h: h * dpr };
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    sizeRef.current = { w: canvas.width, h: canvas.height };
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(dpr, dpr);
     }
 
-    // Detect reduced motion
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reducedMotionRef.current = mq.matches;
-
-    // Initialize systems
     const isMobile = w < 640;
-    heartPointsRef.current = generateHeartPath(300);
 
+    if (heartPointsRef.current.length === 0) {
+      heartPointsRef.current = generateHeartPath(300);
+    }
+
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotion = mq.matches;
+
+    // Initialize controller only ONCE so it never resets or restarts mid-animation
+    if (!controllerRef.current) {
+      controllerRef.current = new AnimationController(reducedMotion);
+    }
+
+    // Init or resize atmosphere and petals
     atmosphereRef.current.init({
-      count: isMobile ? 25 : 55,
+      count: isMobile ? 25 : 50,
       canvasWidth: w,
       canvasHeight: h,
       color: accentColor,
-      reducedMotion: reducedMotionRef.current,
+      reducedMotion,
     });
 
     petalsRef.current.init({
-      count: isMobile ? 4 : 8,
+      count: isMobile ? 5 : 10,
       canvasWidth: w,
       canvasHeight: h,
       color: accentColor,
-      reducedMotion: reducedMotionRef.current,
+      reducedMotion,
     });
-
-    controllerRef.current = new AnimationController(reducedMotionRef.current);
   }, [accentColor]);
 
-  // ─── Render Loop ───
-  const render = useCallback(
-    (timestamp: number) => {
+  // ─── Main Animation Loop ───
+  useEffect(() => {
+    updateSize();
+    lastTimeRef.current = performance.now();
+
+    const loop = (timestamp: number) => {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext('2d');
       const controller = controllerRef.current;
-      if (!canvas || !ctx || !controller) return;
 
-      // Delta time (capped to avoid jumps)
+      if (!canvas || !ctx || !controller) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       const dt = Math.min((timestamp - lastTimeRef.current) / 1000, 0.05);
       lastTimeRef.current = timestamp;
 
       if (!isVisibleRef.current) {
-        rafRef.current = requestAnimationFrame(render);
+        rafRef.current = requestAnimationFrame(loop);
         return;
       }
 
       const { w, h } = sizeRef.current;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const displayW = w / dpr;
-      const displayH = h / dpr;
+      const displayW = w / dpr || window.innerWidth || 600;
+      const displayH = h / dpr || window.innerHeight || 800;
 
-      // Update animation state
+      // Update state
       controller.update(dt);
       const state = controller.state;
 
-      // Fire reveal callback
-      if (state.revealOpacity > 0.5 && !revealedRef.current) {
-        revealedRef.current = true;
-        onReveal();
+      // Trigger onReveal right as the heart finishes drawing
+      if (state.heartProgress >= 0.98 && !hasRevealedRef.current) {
+        hasRevealedRef.current = true;
+        if (onRevealRef.current) {
+          onRevealRef.current();
+        }
       }
 
       // Smooth mouse parallax
@@ -120,50 +137,47 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
       // ── Clear ──
       ctx.clearRect(0, 0, displayW, displayH);
 
-      // ── Background gradient ──
-      const bgGrad = ctx.createRadialGradient(
-        displayW * 0.5,
-        displayH * 0.4,
-        0,
-        displayW * 0.5,
-        displayH * 0.5,
-        displayW * 0.7,
-      );
-      bgGrad.addColorStop(0, '#1A1612');
-      bgGrad.addColorStop(0.5, '#131110');
-      bgGrad.addColorStop(1, '#0D0C0B');
+      // ── 1. Luxury Dark Gradient Background ──
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, displayH);
+      bgGrad.addColorStop(0, '#191512');
+      bgGrad.addColorStop(0.35, '#131110');
+      bgGrad.addColorStop(0.7, '#100E0D');
+      bgGrad.addColorStop(1, '#0C0A09');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, displayW, displayH);
 
-      // ── Ambient warm light ──
-      const lightGrad = ctx.createRadialGradient(
-        displayW * 0.5,
-        displayH * 0.38,
+      // ── 2. Ambient Warm Glow behind Heart ──
+      const isMobile = displayW < 640;
+      const heartCx = displayW * 0.5 + mouse.x * 0.02;
+      const heartCy = (isMobile ? 85 : 95) + mouse.y * 0.015;
+
+      const heroLightGrad = ctx.createRadialGradient(
+        heartCx,
+        heartCy,
         0,
-        displayW * 0.5,
-        displayH * 0.38,
-        displayW * 0.35,
+        heartCx,
+        heartCy,
+        Math.min(displayW * 0.65, 300),
       );
-      lightGrad.addColorStop(0, `rgba(201, 164, 106, ${0.04 * state.glowIntensity})`);
-      lightGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = lightGrad;
+      heroLightGrad.addColorStop(0, `rgba(201, 164, 106, ${0.12 * state.glowIntensity})`);
+      heroLightGrad.addColorStop(0.5, `rgba(201, 164, 106, ${0.03 * state.glowIntensity})`);
+      heroLightGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = heroLightGrad;
       ctx.fillRect(0, 0, displayW, displayH);
 
-      // ── Atmospheric particles (background layer) ──
+      // ── 3. Floating Dust Particles ──
       atmosphereRef.current.update(dt, mouse.x * 0.01, mouse.y * 0.01);
       atmosphereRef.current.draw(ctx, accentColor);
 
-      // ── Petals (midground) ──
+      // ── 4. Floating Petals ──
       petalsRef.current.update(dt, state.globalTime);
       petalsRef.current.draw(ctx);
 
-      // ── Heart ──
-      const heartCx = displayW * 0.5 + mouse.x * 0.02;
-      const heartCy = displayH * 0.38 + mouse.y * 0.015;
-      const heartScale = Math.min(displayW, displayH) * 0.12 * state.zoomLevel;
+      // ── 5. Romantic Luminous Heart (Drawn progressively, then continuously glows) ──
+      const heartScale = (isMobile ? 54 : 64) * state.zoomLevel;
       const effectiveGlow = Math.min(
         state.glowIntensity + state.clickPulse * 0.5,
-        1.5,
+        1.8,
       );
 
       drawHeart(
@@ -178,7 +192,7 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
         state.breathScale + state.clickPulse * 0.03,
       );
 
-      // ── Click pulse ring ──
+      // ── 6. Click Pulse Ring ──
       if (state.clickPulse > 0.01) {
         const ringRadius = heartScale * (1.5 + (1 - state.clickPulse) * 2);
         ctx.beginPath();
@@ -190,43 +204,20 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
         ctx.globalAlpha = 1;
       }
 
-      // ── Burst particles ──
+      // ── 7. Burst Particles ──
       burstRef.current = updateBurstParticles(burstRef.current, dt);
       drawBurstParticles(ctx, burstRef.current);
 
-      // ── Vignette ──
-      const vigGrad = ctx.createRadialGradient(
-        displayW * 0.5,
-        displayH * 0.5,
-        displayW * 0.25,
-        displayW * 0.5,
-        displayH * 0.5,
-        displayW * 0.75,
-      );
-      vigGrad.addColorStop(0, 'transparent');
-      vigGrad.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
-      ctx.fillStyle = vigGrad;
-      ctx.fillRect(0, 0, displayW, displayH);
+      rafRef.current = requestAnimationFrame(loop);
+    };
 
-      rafRef.current = requestAnimationFrame(render);
-    },
-    [accentColor, onReveal],
-  );
+    rafRef.current = requestAnimationFrame(loop);
 
-  // ─── Lifecycle ───
-  useEffect(() => {
-    setup();
-    lastTimeRef.current = performance.now();
-    rafRef.current = requestAnimationFrame(render);
+    const handleResize = () => {
+      updateSize();
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
 
-    // Resize observer
-    const canvas = canvasRef.current;
-    const resizeObserver = new ResizeObserver(() => {
-      setup();
-    });
-    if (canvas) resizeObserver.observe(canvas);
-
-    // Visibility API
     const handleVisibility = () => {
       isVisibleRef.current = document.visibilityState === 'visible';
       if (isVisibleRef.current) {
@@ -235,7 +226,6 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Mouse parallax (desktop only)
     const handleMouseMove = (e: MouseEvent) => {
       const cx = window.innerWidth / 2;
       const cy = window.innerHeight / 2;
@@ -246,11 +236,11 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [setup, render]);
+  }, [updateSize, accentColor]);
 
   // ─── Click Handler ───
   const handleClick = useCallback(
@@ -269,14 +259,14 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
       const displayH = sizeRef.current.h / dpr;
 
       const heartCx = displayW * 0.5;
-      const heartCy = displayH * 0.38;
-      const heartRadius = Math.min(displayW, displayH) * 0.15;
+      const heartCy = Math.min(Math.max(displayH * 0.16, 110), 160);
+      const heartRadius = Math.min(displayW * 0.3, 100);
 
       if (isNearHeart(x, y, heartCx, heartCy, heartRadius)) {
         controller.triggerClickPulse();
         burstRef.current = [
           ...burstRef.current,
-          ...atmosphereRef.current.emitBurst(heartCx, heartCy, 16, accentColor),
+          ...atmosphereRef.current.emitBurst(heartCx, heartCy, 18, accentColor),
         ];
       }
     },
@@ -291,7 +281,7 @@ export const RomanticCanvas: React.FC<RomanticCanvasProps> = ({
       <canvas
         ref={canvasRef}
         onClick={handleClick}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100vw', height: '100vh', display: 'block' }}
       />
     </div>
   );

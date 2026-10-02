@@ -29,15 +29,14 @@ try {
 // Initialize Cloud Functions with regional deployment
 export const functions = getFunctions(app, FUNCTIONS_REGION);
 
-// Initialize Cloud Firestore with resilient fallback and WebChannel auto-detect long-polling
+// Initialize Cloud Firestore with auto-detect long-polling and seamless connection handling
 let firestoreDb: Firestore;
 const rawDbId = firebaseConfig.firestoreDatabaseId;
 const isNamedDb = rawDbId && rawDbId !== '(default)' && rawDbId !== 'default' && rawDbId.length > 0;
 
 const firestoreSettings = {
   ignoreUndefinedProperties: true,
-  experimentalForceLongPolling: true,
-  useFetchStreams: false,
+  experimentalAutoDetectLongPolling: true,
 };
 
 try {

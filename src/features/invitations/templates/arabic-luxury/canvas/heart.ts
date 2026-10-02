@@ -91,11 +91,11 @@ export function drawHeart(
     ctx.lineTo(points[i].x * effectiveScale, points[i].y * effectiveScale);
   }
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.8;
-  ctx.globalAlpha = 0.9;
+  ctx.lineWidth = 2.4;
+  ctx.globalAlpha = 0.98;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.shadowBlur = 15 * glowAmount;
+  ctx.shadowBlur = 18 * Math.max(glowAmount, 0.4);
   ctx.shadowColor = color;
   ctx.stroke();
 

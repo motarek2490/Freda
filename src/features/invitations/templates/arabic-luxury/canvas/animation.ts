@@ -22,14 +22,14 @@ export interface AnimationState {
   clickPulse: number;
 }
 
-// ─── Phase Timeline (seconds) ───
+// ─── Phase Timeline (Optimized for crisp, magical intro) ───
 
 const PHASE_DURATIONS: Record<AnimationPhase, number> = {
-  fade_in: 1.0,
-  draw_heart: 3.0,
-  heart_glow: 1.0,
-  zoom_in: 1.5,
-  zoom_out_reveal: 2.0,
+  fade_in: 0.1,
+  draw_heart: 1.4,
+  heart_glow: 0.3,
+  zoom_in: 0.2,
+  zoom_out_reveal: 0.4,
   idle: Infinity,
 };
 
@@ -73,7 +73,7 @@ export class AnimationController {
     this._state = this.getInitialState();
 
     if (reducedMotion) {
-      // Skip to idle immediately with everything visible
+      // Skip to idle immediately
       this.phaseIndex = PHASE_ORDER.length - 1;
       this._state.phase = 'idle';
       this._state.heartProgress = 1;
@@ -105,7 +105,6 @@ export class AnimationController {
     return PHASE_ORDER[this.phaseIndex];
   }
 
-  /** Returns true when the reveal phase begins (names should appear) */
   get shouldReveal(): boolean {
     return this._state.revealOpacity > 0.01;
   }
@@ -116,7 +115,6 @@ export class AnimationController {
 
   update(dt: number): void {
     if (this.reducedMotion) {
-      // Minimal breathing only
       this._state.globalTime += dt;
       this._state.breathScale = 1 + Math.sin(this._state.globalTime * 0.8) * 0.008;
       this._state.clickPulse = Math.max(0, this._state.clickPulse - dt * 2);
@@ -132,43 +130,43 @@ export class AnimationController {
 
     switch (phase) {
       case 'fade_in':
-        // Just waiting, ambient particles fade in via their own logic
         break;
 
       case 'draw_heart':
         this._state.heartProgress = easeInOutCubic(t);
-        this._state.glowIntensity = t * 0.3;
+        this._state.glowIntensity = t * 0.4;
         break;
 
       case 'heart_glow':
         this._state.heartProgress = 1;
-        this._state.glowIntensity = 0.3 + easeOutQuart(t) * 0.7;
+        this._state.glowIntensity = 0.4 + easeOutQuart(t) * 0.6;
         break;
 
       case 'zoom_in':
+        this._state.heartProgress = 1;
         this._state.glowIntensity = 1.0 - t * 0.2;
-        this._state.zoomLevel = 1 + easeInOutSine(t) * 0.15;
+        this._state.zoomLevel = 1 + easeInOutSine(t) * 0.1;
         break;
 
       case 'zoom_out_reveal':
-        this._state.zoomLevel = 1.15 - easeOutExpo(t) * 0.15;
+        this._state.heartProgress = 1;
+        this._state.zoomLevel = 1.1 - easeOutExpo(t) * 0.1;
         this._state.glowIntensity = 0.8 - t * 0.2;
         this._state.revealOpacity = easeOutQuart(t);
         break;
 
       case 'idle':
         this._state.heartProgress = 1;
-        this._state.glowIntensity = 0.5 + Math.sin(this._state.globalTime * 0.6) * 0.1;
+        this._state.glowIntensity = 0.5 + Math.sin(this._state.globalTime * 0.8) * 0.12;
         this._state.zoomLevel = 1;
         this._state.revealOpacity = 1;
-        // Breathing: very subtle scale oscillation
         this._state.breathScale =
-          1 + Math.sin(this._state.globalTime * 0.8) * 0.012;
+          1 + Math.sin(this._state.globalTime * 0.9) * 0.015;
         break;
     }
 
     // Decay click pulse
-    this._state.clickPulse = Math.max(0, this._state.clickPulse - dt * 1.8);
+    this._state.clickPulse = Math.max(0, this._state.clickPulse - dt * 2.0);
 
     // Advance phase
     if (t >= 1 && phase !== 'idle') {
