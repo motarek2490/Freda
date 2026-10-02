@@ -309,3 +309,55 @@
   .template-arabic-luxury .frida-hero { padding: 122px 0.75rem 2rem; }
   .template-arabic-luxury .frida-countdown { gap: 0.5rem; }
 }
+/* ضمان التجاوب الكامل مع جميع المتصفحات والهواتف */
+.template-arabic-luxury {
+  isolation: isolate;
+  position: relative;
+  width: 100%;
+  /* استخدام dvh لمنع مشاكل أشرطة العنوان في Safari/Chrome على الجوال */
+  min-height: 100dvh; 
+  min-height: 100vh; /* Fallback للمتصفحات القديمة */
+  background-color: #11100F;
+  color: #F7F1E8;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* تمرير سلس وآمن */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* منع السحب الزائد (Overscroll bounce) على iOS أثناء الحركة الأولية */
+.template-arabic-luxury.loading-phase {
+  overflow: hidden;
+  height: 100dvh;
+}
+
+.template-arabic-luxury.loaded-phase {
+  overflow-y: auto;
+  height: auto;
+  min-height: 100dvh;
+}
+
+/* تحسينات الـ Hero ليأخذ كامل الشاشة الأولية */
+.template-arabic-luxury .frida-hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* يبدأ في المنتصف تماماً */
+  padding: 1rem;
+  text-align: center;
+  transition: min-height 0.5s ease;
+}
+
+/* عندما يظهر المحتوى، نسمح بالتمرير الطبيعي */
+.template-arabic-luxury .frida-hero.has-content {
+  min-height: auto;
+  padding-top: 4rem;
+  padding-bottom: 2rem;
+  justify-content: flex-start;
+}
