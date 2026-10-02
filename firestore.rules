@@ -219,6 +219,17 @@ service cloud.firestore {
       allow write, delete: if isAdmin();
     }
 
+    // Used by the FRIDA Admin Android app for its own audio track metadata.
+    // NOTE: this is a different collection from /cloud_audio_files and
+    // /music_library above — all three currently coexist. Consider
+    // consolidating the Android app onto /music_library (the website's real
+    // source of truth for playable tracks) so there's only one place a track
+    // can live, rather than three.
+    match /audio_tracks/{id} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+
     match /custom_templates/{id} {
       allow read: if true;
       allow write: if isAdmin();
@@ -240,6 +251,14 @@ service cloud.firestore {
 
     match /rate_limits/{id} {
       allow read, write: if false;
+    }
+
+    // FRIDA Admin Android app — push-notification device tokens. Each admin
+    // can only read/write their own uid's subtree; the app itself must stay
+    // admin-only since this entire project treats isAdmin() as the gate for
+    // anything admin-dashboard-related.
+    match /admin_fcm_tokens/{uid}/tokens/{tokenId} {
+      allow read, write: if isAdmin() && request.auth.uid == uid;
     }
   }
 }
