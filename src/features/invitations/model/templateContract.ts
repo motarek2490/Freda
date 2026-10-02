@@ -40,6 +40,27 @@ export interface InvitationTemplateProps {
 export type TemplateLayoutProps = InvitationTemplateProps;
 
 /**
+ * Standard Props for an isolated template Opening Screen component
+ */
+export interface TemplateOpeningScreenProps {
+  invitation: InvitationData;
+  guestNameParam: string | null;
+  isRtl: boolean;
+  onComplete: () => void;
+  shouldReduceMotion: boolean;
+}
+
+/**
+ * Standard Props for an isolated template Card Image component
+ */
+export interface TemplateCardImageProps {
+  invitation: InvitationData;
+  currentLang?: Language;
+  qrDataUrl: string;
+  shareUrl: string;
+}
+
+/**
  * Configuration & Metadata for an isolated template module
  */
 export interface TemplateConfig {

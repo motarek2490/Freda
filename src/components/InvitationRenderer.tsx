@@ -35,6 +35,8 @@ import {
   RotateCcw,
   Music,
   Disc3,
+  Lock,
+  Crown,
 } from 'lucide-react';
 import { InvitationData, Language, RSVPResponse, GuestWish, TemplateLayoutType, PaymentAccountType } from '../types';
 import { saveRSVP, getStoredRSVPs } from '../lib/storage';
@@ -85,6 +87,7 @@ interface InvitationRendererProps {
   currentLang?: Language;
   onBackToApp?: () => void;
   isStandaloneView?: boolean;
+  onOpenPricing?: (invitation: InvitationData) => void;
 }
 
 export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
@@ -92,6 +95,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   userLang,
   onBackToApp,
   isStandaloneView = false,
+  onOpenPricing,
 }) => {
   // Canonical Normalization guarantees no malformed Firestore doc or missing field crashes React
   const invitation = normalizeInvitation(rawInvitation, userLang);
@@ -111,7 +115,14 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
 
   // Security Lock: If opened as standalone public URL and invitation is NOT published by admin yet
   if (isStandaloneView && invitation.status !== 'published') {
-    return <PendingApprovalScreen invitation={invitation} currentLang={lang} />;
+    return (
+      <PendingApprovalScreen
+        invitation={invitation}
+        currentLang={lang}
+        onOpenPricing={() => onOpenPricing?.(invitation)}
+        onGoHome={onBackToApp}
+      />
+    );
   }
 
   const [envelopeOpened, setEnvelopeOpened] = useState(false);
@@ -128,15 +139,17 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
   );
   const [musicToastMessage, setMusicToastMessage] = useState<string | null>(null);
 
-  // Determine if this is a demo or preview invitation
-  const isDemoInvitation =
-    !isStandaloneView ||
-    invitation.id.startsWith('preview-') ||
+  // Determine if this is an official system demo invitation
+  const isOfficialDemo =
+    invitation.id.startsWith('preview-tmpl-') ||
     invitation.id.startsWith('demo-') ||
-    Boolean(invitation.slug?.startsWith('preview-')) ||
-    Boolean(invitation.slug?.startsWith('demo-')) ||
-    invitation.hostAccessCode === 'HOST-DEMO' ||
-    invitation.hostAccessCode === 'HOST-PREVIEW';
+    invitation.id === 'vip_1' ||
+    Boolean(invitation.slug?.startsWith('preview-tmpl-')) ||
+    invitation.hostAccessCode === 'HOST-DEMO';
+
+  const isPublished = invitation.status === 'published';
+  const isDraftPreview = !isPublished && !isOfficialDemo;
+  const isDemoInvitation = isOfficialDemo || invitation.hostAccessCode === 'HOST-PREVIEW';
 
   // Synchronize with Admin Default Demo Track for demo invitations and invitations without custom tracks
   useEffect(() => {
@@ -712,6 +725,30 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
       className="min-h-screen text-[#F7F4EE] relative overflow-x-hidden font-sans-body transition-colors duration-500 selection:bg-[#B99A65] selection:text-[#171717]"
       style={{ backgroundColor: customColors.bg }}
     >
+      {/* Security Warning Ribbon for unactivated Draft Previews */}
+      {isDraftPreview && (
+        <div className="sticky top-0 z-50 bg-gradient-to-r from-amber-950/95 via-[#231A0F]/95 to-amber-950/95 border-b border-amber-500/50 text-amber-200 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-3 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="font-bold">
+              {isRtl
+                ? '🔒 وضع المعاينة التجريبية — هذه الدعوة مسودة غير مفعلة للمدعوين بعد'
+                : '🔒 Draft Preview Mode — This invitation is not active for guests yet'}
+            </span>
+          </div>
+          {onOpenPricing && (
+            <button
+              type="button"
+              onClick={() => onOpenPricing(invitation)}
+              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#E60000] to-[#ff3333] text-white font-extrabold text-xs shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-300" />
+              <span>{isRtl ? 'تفعيل واعتماد الدعوة الآن 💳' : 'Activate Invitation 💳'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Background Ambient Glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] blur-[150px] opacity-20 pointer-events-none"
@@ -1220,6 +1257,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
           invitation={invitation}
           currentLang={lang}
           onClose={() => setShowShareModal(false)}
+          onOpenPricing={onOpenPricing}
         />
       )}
 
@@ -1229,6 +1267,7 @@ export const InvitationRenderer: React.FC<InvitationRendererProps> = ({
           invitation={invitation}
           currentLang={lang}
           onClose={() => setShowCardModal(false)}
+          onOpenPricing={onOpenPricing}
         />
       )}
 

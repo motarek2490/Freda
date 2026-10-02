@@ -332,7 +332,7 @@ export const InvitationBuilderModal: React.FC<InvitationBuilderModalProps> = ({
               >
                 <InvitationRenderer
                   invitation={{
-                    id: existingInvitation?.id || 'inv-preview',
+                    id: existingInvitation?.id || 'inv-preview-custom',
                     templateId: selectedTemplate.id,
                     layoutType: selectedTemplate.layoutType,
                     title: invitationTitle || eventDetails.eventTitle,
@@ -347,6 +347,13 @@ export const InvitationBuilderModal: React.FC<InvitationBuilderModalProps> = ({
                     rsvpCount: 0,
                   }}
                   currentLang={invitationLanguage}
+                  onOpenPricing={() => {
+                    if (onOpenPricing) {
+                      const data = savedInvitationData || handleSaveForPayment('draft');
+                      onClose();
+                      onOpenPricing(data);
+                    }
+                  }}
                 />
               </div>
 

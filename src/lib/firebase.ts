@@ -29,14 +29,15 @@ try {
 // Initialize Cloud Functions with regional deployment
 export const functions = getFunctions(app, FUNCTIONS_REGION);
 
-// Initialize Cloud Firestore with auto-detect long-polling and seamless connection handling
+// Initialize Cloud Firestore with immediate long-polling for iframe/proxy resilience
 let firestoreDb: Firestore;
 const rawDbId = firebaseConfig.firestoreDatabaseId;
 const isNamedDb = rawDbId && rawDbId !== '(default)' && rawDbId !== 'default' && rawDbId.length > 0;
 
 const firestoreSettings = {
   ignoreUndefinedProperties: true,
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
 };
 
 try {

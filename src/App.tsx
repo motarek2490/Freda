@@ -650,6 +650,10 @@ export default function App() {
           invitation={standaloneInvitation}
           userLang={currentLang}
           isStandaloneView={true}
+          onOpenPricing={(inv) => {
+            setPricingTargetInvitation(inv);
+            setShowPricingModal(true);
+          }}
           onBackToApp={() => {
             setStandaloneInvitation(null);
             window.history.replaceState({}, '', '/');
@@ -666,6 +670,10 @@ export default function App() {
         <InvitationRenderer
           invitation={livePreviewInvitation}
           userLang={currentLang}
+          onOpenPricing={(inv) => {
+            setPricingTargetInvitation(inv);
+            setShowPricingModal(true);
+          }}
           onBackToApp={() => {
             const prevView = previousViewRef.current || 'home';
             window.history.pushState({}, '', prevView === 'occasion' && activeOccasion ? `/occasions/${activeOccasion}` : '/');
