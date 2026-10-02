@@ -1,20 +1,20 @@
 import { TemplateConfig } from '../../model/templateContract';
 
 export const config: TemplateConfig = {
-  id: 'arabic-luxury',
+  id: 'romantic-canvas',
   name: {
-    ar: '«شمس & بدر» (أصالة الفخامة العربية)',
-    en: 'Shams & Badr (Pure Arabic Grandeur)',
+    ar: '«لوحة الحب الحية» (فخامة سينمائية)',
+    en: 'Living Romantic Canvas (Cinematic Luxury)',
   },
   version: '1.0.0',
   layoutType: 'arabic',
   category: 'weddings',
   themeStyle: 'luxury',
   defaultColors: {
-    bg: '#171717',
-    cardBg: '#1f1e1b',
-    text: '#F7F4EE',
-    accent: '#B99A65',
+    bg: '#11100F',
+    cardBg: '#171412',
+    text: '#F7F1E8',
+    accent: '#C9A46A',
   },
   defaultFont: 'font-playfair',
   supportedLanguages: ['ar', 'en'],
