@@ -1,5 +1,5 @@
-import { ArabicLuxuryLayout } from './Template';
+import { RomanticCanvasLayout } from './Template';
 import { config } from './config';
 
-export { ArabicLuxuryLayout, config };
-export default ArabicLuxuryLayout;
+export { RomanticCanvasLayout, config };
+export default RomanticCanvasLayout;
