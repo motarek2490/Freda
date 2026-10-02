@@ -7,19 +7,30 @@
   isolation: isolate;
   position: relative;
   width: 100%;
-  min-height: 100vh;
-  background-color: transparent;
+  min-height: 100dvh;
+  min-height: 100vh; /* Fallback */
+  background-color: #11100F;
   color: #F7F1E8;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  display: flex;
-  flex-direction: column;
-  gap: 4rem;
-  padding-bottom: 6rem;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ── Canvas Layer (Fixed full viewport background for ultra-smooth 60-120fps) ── */
+/* منع السحب الزائد أثناء حركة القلب الافتتاحية */
+.template-arabic-luxury.loading-phase {
+  overflow: hidden;
+  height: 100dvh;
+}
+
+.template-arabic-luxury.loaded-phase {
+  overflow-y: auto;
+  height: auto;
+  min-height: 100dvh;
+}
+
+/* ── Canvas Layer ── */
 .template-arabic-luxury .frida-canvas-wrap {
   position: fixed;
   top: 0;
@@ -41,19 +52,25 @@
   cursor: pointer;
 }
 
-/* ── Hero Section (Full Viewport Screen Experience) ── */
+/* ── Hero Section ── */
 .template-arabic-luxury .frida-hero {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 138px 1.25rem 3rem;
+  justify-content: center;
+  padding: 1rem;
   text-align: center;
-  box-sizing: border-box;
+  transition: min-height 0.5s ease;
+}
+.template-arabic-luxury .frida-hero.has-content {
+  min-height: auto;
+  padding-top: 4rem;
+  padding-bottom: 2rem;
+  justify-content: flex-start;
 }
 .template-arabic-luxury .frida-hero-overlay {
   position: relative;
@@ -62,7 +79,7 @@
   max-width: 48rem;
 }
 
-/* ── Typography (Pure Floating Text) ── */
+/* ── Typography ── */
 .template-arabic-luxury .frida-eyebrow {
   font-size: 0.75rem;
   letter-spacing: 0.3em;
@@ -98,7 +115,7 @@
   text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Content Sections (100% Borderless & Seamless) ── */
+/* ── Content Sections ── */
 .template-arabic-luxury .frida-section {
   position: relative;
   z-index: 1;
@@ -107,7 +124,6 @@
   margin: 0 auto;
   padding: 0 1rem;
 }
-
 .template-arabic-luxury .frida-section-title {
   font-family: 'Playfair Display', 'Amiri', serif;
   font-size: 1.6rem;
@@ -126,7 +142,7 @@
   margin: 2rem auto;
 }
 
-/* ── Countdown (100% Borderless & Pure Numbers on Background) ── */
+/* ── Countdown ── */
 .template-arabic-luxury .frida-countdown {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -139,7 +155,6 @@
   padding: 0.5rem;
   background: transparent;
   border: none;
-  box-shadow: none;
 }
 .template-arabic-luxury .frida-countdown-number {
   font-family: 'Playfair Display', monospace, serif;
@@ -229,7 +244,7 @@
   padding: 0.35rem 0;
 }
 
-/* ── Timeline (Clean Floating Rows directly on background) ── */
+/* ── Timeline ── */
 .template-arabic-luxury .frida-timeline-item {
   display: flex;
   align-items: center;
@@ -253,7 +268,7 @@
   border: none;
 }
 
-/* ── Guestbook (Seamless Floating Wishes directly on background) ── */
+/* ── Guestbook ── */
 .template-arabic-luxury .frida-wish-card {
   padding: 1rem 0.5rem;
   border-radius: 0;
@@ -277,87 +292,8 @@
   background-size: 128px 128px;
 }
 
-/* ── Scroll Indicator ── */
-.template-arabic-luxury .frida-scroll-hint {
-  position: absolute;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  color: #C9A46A;
-  opacity: 0.6;
-  font-size: 0.65rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-.template-arabic-luxury .frida-scroll-line {
-  width: 1px;
-  height: 40px;
-  background: linear-gradient(to bottom, #C9A46A, transparent);
-  animation: frida-scroll-pulse 2s ease-in-out infinite;
-}
-@keyframes frida-scroll-pulse {
-  0%, 100% { opacity: 0.3; transform: scaleY(0.7); }
-  50% { opacity: 0.8; transform: scaleY(1); }
-}
-
 @media (max-width: 640px) {
   .template-arabic-luxury { gap: 2.5rem; }
   .template-arabic-luxury .frida-hero { padding: 122px 0.75rem 2rem; }
   .template-arabic-luxury .frida-countdown { gap: 0.5rem; }
-}
-/* ضمان التجاوب الكامل مع جميع المتصفحات والهواتف */
-.template-arabic-luxury {
-  isolation: isolate;
-  position: relative;
-  width: 100%;
-  /* استخدام dvh لمنع مشاكل أشرطة العنوان في Safari/Chrome على الجوال */
-  min-height: 100dvh; 
-  min-height: 100vh; /* Fallback للمتصفحات القديمة */
-  background-color: #11100F;
-  color: #F7F1E8;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* تمرير سلس وآمن */
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* منع السحب الزائد (Overscroll bounce) على iOS أثناء الحركة الأولية */
-.template-arabic-luxury.loading-phase {
-  overflow: hidden;
-  height: 100dvh;
-}
-
-.template-arabic-luxury.loaded-phase {
-  overflow-y: auto;
-  height: auto;
-  min-height: 100dvh;
-}
-
-/* تحسينات الـ Hero ليأخذ كامل الشاشة الأولية */
-.template-arabic-luxury .frida-hero {
-  position: relative;
-  z-index: 1;
-  min-height: 100dvh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center; /* يبدأ في المنتصف تماماً */
-  padding: 1rem;
-  text-align: center;
-  transition: min-height 0.5s ease;
-}
-
-/* عندما يظهر المحتوى، نسمح بالتمرير الطبيعي */
-.template-arabic-luxury .frida-hero.has-content {
-  min-height: auto;
-  padding-top: 4rem;
-  padding-bottom: 2rem;
-  justify-content: flex-start;
 }
