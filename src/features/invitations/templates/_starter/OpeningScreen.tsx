@@ -1,60 +1,47 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, Heart } from 'lucide-react';
+import { motion } from 'motion/react';
 import { TemplateOpeningScreenProps } from '../../model/templateContract';
 
-/**
- * Starter / Scaffold Opening Screen component for new templates.
- */
-export const StarterOpeningScreen: React.FC<TemplateOpeningScreenProps> = ({
-  invitation,
-  guestNameParam,
-  isRtl,
-  onComplete,
-  shouldReduceMotion,
+/** Ivory paper with a soft sunrise glow; one tap opens the invitation. */
+export const SunlitGardenOpeningScreen: React.FC<TemplateOpeningScreenProps> = ({
+  invitation, guestNameParam, isRtl, onComplete, shouldReduceMotion,
 }) => {
-  const accent = invitation.customColors?.accent || '#B99A65';
-  const groom = invitation.eventDetails.groomName || (isRtl ? 'العريس' : 'Groom');
-  const bride = invitation.eventDetails.brideName || (isRtl ? 'العروس' : 'Bride');
+  const d = invitation.eventDetails;
+  const groom = d.groomName || (isRtl ? 'أحمد' : 'Ahmed');
+  const bride = d.brideName || (isRtl ? 'ليلى' : 'Layla');
+  const serif = isRtl ? "'Amiri', serif" : "'Cormorant Garamond', serif";
+  const sans = isRtl ? "'Amiri', serif" : "'Jost', sans-serif";
+  const fade = (delay: number) => ({
+    initial: { opacity: 0, y: shouldReduceMotion ? 0 : 10, filter: shouldReduceMotion ? 'none' : 'blur(8px)' },
+    animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+    transition: { duration: shouldReduceMotion ? 0.3 : 1.2, delay: shouldReduceMotion ? 0 : delay },
+  });
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center select-none">
-      <motion.div
-        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8 }}
-        className="max-w-md w-full p-8 rounded-3xl bg-[#171717]/90 border border-[#B99A65]/40 shadow-2xl backdrop-blur-md space-y-6"
-      >
-        {/* Guest Badge */}
-        {guestNameParam && (
-          <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#B99A65]/15 border border-[#B99A65]/40 text-[#B99A65] text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{isRtl ? `مرحباً بك: ${guestNameParam}` : `Welcome: ${guestNameParam}`}</span>
-          </div>
-        )}
-
-        {/* Title / Names */}
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-widest text-[#B99A65] font-bold">
-            {invitation.eventDetails.eventTitle || (isRtl ? 'دعوة زفاف خاصة' : 'Wedding Invitation')}
-          </p>
-          <h1 className="font-playfair text-3xl font-bold text-[#F7F4EE]">
-            {groom} <span style={{ color: accent }}>&</span> {bride}
-          </h1>
-        </div>
-
-        {/* Interactive Open Action */}
-        <button
-          type="button"
-          onClick={onComplete}
-          className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#B99A65] via-[#E6D7B8] to-[#B99A65] text-[#11100F] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-        >
-          <Heart className="w-4 h-4 fill-current" />
-          <span>{isRtl ? 'فتح بطاقة الدعوة' : 'Open Invitation'}</span>
-        </button>
-      </motion.div>
+    <div dir={isRtl ? 'rtl' : 'ltr'} style={{
+      position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '1.5rem', textAlign: 'center', padding: '1.5rem',
+      color: '#3A302A', fontFamily: serif, overflow: 'hidden',
+      background: 'radial-gradient(ellipse at 30% 10%, #F6D98B66, transparent 55%), radial-gradient(ellipse at 80% 90%, #F4B7A355, transparent 55%), #FFF9F0',
+    }}>
+      {guestNameParam && (
+        <motion.p {...fade(0.2)} style={{ margin: 0, fontFamily: sans, fontSize: '0.95rem', opacity: 0.75 }}>
+          {isRtl ? `إلى ${guestNameParam}` : `For ${guestNameParam}`}
+        </motion.p>
+      )}
+      <motion.h1 {...fade(0.6)} style={{ margin: 0, fontWeight: 400, fontSize: 'clamp(3rem,14vw,5.5rem)', lineHeight: isRtl ? 1.3 : 1 }}>
+        {groom}
+        <span style={{ display: 'block', fontStyle: 'italic', fontSize: '0.4em', color: '#D8BC8A' }}>&amp;</span>
+        {bride}
+      </motion.h1>
+      <motion.button {...fade(1.4)} type="button" onClick={onComplete}
+        style={{ marginTop: '1rem', minHeight: 52, padding: '0.9rem 2.6rem', border: 0, borderRadius: 999, cursor: 'pointer',
+          fontFamily: sans, fontSize: isRtl ? '1.05rem' : '0.9rem', letterSpacing: isRtl ? 0 : '0.08em', color: '#3A302A',
+          background: 'linear-gradient(135deg,#F4B7A3,#D8BC8A)', boxShadow: '0 14px 34px -14px rgba(216,150,120,.8)' }}>
+        {isRtl ? 'افتح الدعوة' : 'Open the invitation'}
+      </motion.button>
     </div>
   );
 };
 
-export default StarterOpeningScreen;
+export default SunlitGardenOpeningScreen;

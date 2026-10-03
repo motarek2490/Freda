@@ -1,8 +1,7 @@
-import { StarterTemplate } from './Template';
-import { StarterOpeningScreen } from './OpeningScreen';
-import { StarterCardImage } from './CardImage';
+import { SunlitGardenTemplate } from './Template';
+import { SunlitGardenOpeningScreen } from './OpeningScreen';
+import { SunlitGardenCardImage } from './CardImage';
 import { config } from './config';
 
-export { StarterTemplate, StarterOpeningScreen, StarterCardImage, config };
-export default StarterTemplate;
-
+export { SunlitGardenTemplate, SunlitGardenOpeningScreen, SunlitGardenCardImage, config };
+export default SunlitGardenTemplate;

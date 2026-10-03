@@ -1,30 +1,22 @@
 import { TemplateConfig } from '../../model/templateContract';
 
 export const config: TemplateConfig = {
-  id: 'template-starter',
-  name: {
-    ar: 'قالب البداية النموذجي',
-    en: 'Starter Template Scaffold',
-  },
+  id: 'template-sunlit-garden',
+  name: { ar: 'حديقة الشمس', en: 'Sunlit Garden' },
   version: '1.0.0',
-  layoutType: 'royal',
+  layoutType: 'editorial',
   category: 'weddings',
   themeStyle: 'luxury',
-  defaultColors: {
-    bg: '#171717',
-    cardBg: '#1f1e1b',
-    text: '#F7F4EE',
-    accent: '#B99A65',
-  },
-  defaultFont: 'font-playfair',
+  defaultColors: { bg: '#FFF9F0', cardBg: '#FFFFFF', text: '#3A302A', accent: '#D8BC8A' },
+  defaultFont: 'font-cormorant',
   supportedLanguages: ['ar', 'en'],
   supportsRTL: true,
   supportsRSVP: true,
-  supportsMusic: true,
+  supportsMusic: false,
   supportsGiftRegistry: true,
   supportsGallery: true,
-  supportsTimeline: true,
+  supportsTimeline: false,
   supportsGuestbook: true,
-  introType: 'wax-seal',
+  introType: 'none',
   author: 'FRIDA Atelier',
-};
+} as TemplateConfig;
